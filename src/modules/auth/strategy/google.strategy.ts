@@ -38,7 +38,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const { id, name, emails, photos } = profile;
 
     if (!emails || emails.length === 0) {
-      return done(new Error('No email found in Google profile'), undefined);
+      return done(new Error('No email found in Google profile.'), undefined);
     }
 
     const googleProfileDto = new GoogleProfileDto();

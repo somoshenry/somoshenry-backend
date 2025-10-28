@@ -17,10 +17,8 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
 
-  // ⚙️ Detecta si estás en Render o en local
   const isRender = process.env.RENDER === 'true';
 
-  // Si está en Render, usa /api/docs, si no, usa /docs
   if (isRender) {
     SwaggerModule.setup('api/docs', app, document);
     await app.listen(process.env.PORT || 3000, '0.0.0.0');

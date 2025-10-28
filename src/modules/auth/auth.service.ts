@@ -1,26 +1,64 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { UserRepository } from './module-users/user.repository';
+import { GoogleProfileDto } from './dto/google-profile.dto';
+import { UserEntity } from './module-users/user.entity';
+import { PayloadJwt } from './dto/payload-jwt';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private jwtService: JwtService,
+    private userRepository: UserRepository,
+  ) {}
+
+  generateToken(googleProfile: GoogleProfileDto): string {
+    this.validateGoogleProfileDto(googleProfile);
+    const userEntity = this.mapToUserEntity(googleProfile);
+    const userFindOrCreated = this.userRepository.findOrAddUser(userEntity);
+    const payload = this.mapToPayloadJwt(userFindOrCreated);
+    return this.generateJwt(payload);
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  verifyToken(token: string): any {
+    try {
+      return this.jwtService.verify(token);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid token', error as Error);
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+  private validateGoogleProfileDto(googleProfileDto: GoogleProfileDto) {
+    if (!googleProfileDto)
+      throw new UnauthorizedException('Google no envió datos de usuario');
+    if (!googleProfileDto.verified_email)
+      throw new UnauthorizedException('Email not verified');
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
+  private mapToUserEntity(googleProfile: GoogleProfileDto): UserEntity {
+    const userEntity = new UserEntity();
+    userEntity.email = googleProfile.email;
+    userEntity.name = googleProfile.name;
+    userEntity.firstName = googleProfile.given_name;
+    userEntity.lastName = googleProfile.family_name;
+    userEntity.picture = googleProfile.picture;
+    return userEntity;
   }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  private mapToPayloadJwt(user: UserEntity) {
+    const payload: PayloadJwt = {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      roles: user.roles,
+    };
+    return payload;
+  }
+  private generateJwt(payload: PayloadJwt): string {
+    try {
+      return this.jwtService.sign(payload);
+    } catch (error) {
+      console.log('Error al generar el jwt', error);
+      throw error;
+    }
   }
 }

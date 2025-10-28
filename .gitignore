@@ -4,7 +4,7 @@ dist/
 
 # Env files
 .env
-.env.*        # por si usás .env.local o .env.production
+.env.*
 
 # Logs
 npm-debug.log*

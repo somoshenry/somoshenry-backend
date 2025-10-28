@@ -17,9 +17,15 @@ let UserModule = class UserModule {
 exports.UserModule = UserModule;
 exports.UserModule = UserModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.Usuario])],
-        providers: [user_service_1.UserService],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([user_entity_1.Usuario]),
+        ],
         controllers: [user_controller_1.UserController],
+        providers: [user_service_1.UserService],
+        exports: [
+            user_service_1.UserService,
+            typeorm_1.TypeOrmModule,
+        ],
     })
 ], UserModule);
 //# sourceMappingURL=user.module.js.map

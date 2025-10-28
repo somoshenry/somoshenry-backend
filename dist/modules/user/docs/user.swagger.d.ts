@@ -7,6 +7,14 @@ export declare const SwaggerUserExamples: {
         tipo: string;
         estado: string;
     };
+    updateUserBody: {
+        email: string;
+        password: string;
+        nombre: string;
+        apellido: string;
+        tipo: string;
+        estado: string;
+    };
     userResponse: {
         message: string;
         user: {
@@ -26,4 +34,6 @@ export declare const SwaggerUserDocs: {
     findOne: MethodDecorator[];
     update: MethodDecorator[];
     delete: MethodDecorator[];
+    restore: MethodDecorator[];
+    hardDelete: MethodDecorator[];
 };

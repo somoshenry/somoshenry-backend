@@ -24,4 +24,5 @@ export declare class Usuario {
     estado: EstadoUsuario;
     creadoEn: Date;
     actualizadoEn: Date;
+    eliminadoEn?: Date | null;
 }

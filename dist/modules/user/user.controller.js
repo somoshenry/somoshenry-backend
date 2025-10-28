@@ -19,6 +19,7 @@ const user_service_1 = require("./user.service");
 const create_user_dto_1 = require("./dto/create-user.dto");
 const update_user_dto_1 = require("./dto/update-user.dto");
 const user_swagger_1 = require("./docs/user.swagger");
+const user_entity_1 = require("./entities/user.entity");
 let UserController = class UserController {
     userService;
     constructor(userService) {
@@ -28,9 +29,14 @@ let UserController = class UserController {
         const user = await this.userService.create(dto);
         return { message: 'Usuario creado exitosamente', user };
     }
-    async findAll() {
-        const users = await this.userService.findAll();
-        return { message: 'Lista de usuarios obtenida correctamente', users };
+    async findAll(page = 1, limit = 10, nombre, tipo, estado) {
+        const filters = { nombre, tipo, estado };
+        const { data, total } = await this.userService.findAll(+page, +limit, filters);
+        return {
+            message: 'Lista de usuarios obtenida correctamente',
+            total,
+            usuarios: data,
+        };
     }
     async findOne(id) {
         const user = await this.userService.findOne(id);
@@ -40,8 +46,18 @@ let UserController = class UserController {
         const updated = await this.userService.update(id, dto);
         return { message: 'Usuario actualizado correctamente', user: updated };
     }
-    async delete(id) {
-        return await this.userService.delete(id);
+    async softDelete(id) {
+        const result = await this.userService.softDelete(id);
+        return result;
+    }
+    async restore(id) {
+        const result = await this.userService.restore(id);
+        return result;
+    }
+    async hardDelete(id, req) {
+        const userRole = req.user?.tipo || user_entity_1.TipoUsuario.ADMINISTRADOR;
+        const result = await this.userService.hardDelete(id, userRole);
+        return result;
     }
 };
 exports.UserController = UserController;
@@ -56,8 +72,18 @@ __decorate([
 __decorate([
     (0, common_1.Get)(),
     (0, common_1.applyDecorators)(...user_swagger_1.SwaggerUserDocs.findAll),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, example: 1 }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, example: 10 }),
+    (0, swagger_1.ApiQuery)({ name: 'nombre', required: false, example: 'Valen' }),
+    (0, swagger_1.ApiQuery)({ name: 'tipo', required: false, enum: user_entity_1.TipoUsuario }),
+    (0, swagger_1.ApiQuery)({ name: 'estado', required: false, enum: user_entity_1.EstadoUsuario }),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)('nombre')),
+    __param(3, (0, common_1.Query)('tipo')),
+    __param(4, (0, common_1.Query)('estado')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object, Object, String, String, String]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "findAll", null);
 __decorate([
@@ -84,10 +110,27 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
-], UserController.prototype, "delete", null);
+], UserController.prototype, "softDelete", null);
+__decorate([
+    (0, common_1.Patch)('restore/:id'),
+    (0, common_1.applyDecorators)(...user_swagger_1.SwaggerUserDocs.restore),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "restore", null);
+__decorate([
+    (0, common_1.Delete)('hard/:id'),
+    (0, common_1.applyDecorators)(...user_swagger_1.SwaggerUserDocs.delete),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "hardDelete", null);
 exports.UserController = UserController = __decorate([
-    (0, swagger_1.ApiTags)('User'),
-    (0, common_1.Controller)('user'),
+    (0, swagger_1.ApiTags)('Usuarios'),
+    (0, common_1.Controller)('usuarios'),
     __metadata("design:paramtypes", [user_service_1.UserService])
 ], UserController);
 //# sourceMappingURL=user.controller.js.map

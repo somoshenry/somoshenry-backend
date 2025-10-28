@@ -40,6 +40,7 @@ let Usuario = class Usuario {
     estado;
     creadoEn;
     actualizadoEn;
+    eliminadoEn;
 };
 exports.Usuario = Usuario;
 __decorate([
@@ -104,6 +105,10 @@ __decorate([
     (0, typeorm_1.UpdateDateColumn)({ name: 'actualizado_en' }),
     __metadata("design:type", Date)
 ], Usuario.prototype, "actualizadoEn", void 0);
+__decorate([
+    (0, typeorm_1.DeleteDateColumn)({ name: 'eliminado_en', nullable: true }),
+    __metadata("design:type", Object)
+], Usuario.prototype, "eliminadoEn", void 0);
 exports.Usuario = Usuario = __decorate([
     (0, typeorm_1.Entity)({ name: 'usuarios' })
 ], Usuario);

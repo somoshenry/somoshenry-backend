@@ -9,8 +9,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors();
 
-  await app.listen(process.env.PORT || 3000);
-
   const config = new DocumentBuilder()
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
@@ -18,8 +16,20 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
 
-  console.log(`🚀 Swagger disponible en /docs`);
+  // ⚙️ Detecta si estás en Render o en local
+  const isRender = process.env.RENDER === 'true';
+
+  // Si está en Render, usa /api/docs, si no, usa /docs
+  if (isRender) {
+    SwaggerModule.setup('api/docs', app, document);
+    await app.listen(process.env.PORT || 3000, '0.0.0.0');
+    console.log('🚀 Swagger Render: /api/docs');
+  } else {
+    SwaggerModule.setup('docs', app, document);
+    await app.listen(process.env.PORT || 3000);
+    console.log('🚀 Swagger Local: /docs');
+  }
 }
+
 bootstrap();

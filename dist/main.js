@@ -14,8 +14,17 @@ async function bootstrap() {
         .setVersion('1.0')
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
-    swagger_1.SwaggerModule.setup('docs', app, document);
-    await app.listen(process.env.PORT || 3000);
+    const isRender = process.env.RENDER === 'true';
+    if (isRender) {
+        swagger_1.SwaggerModule.setup('api/docs', app, document);
+        await app.listen(process.env.PORT || 3000, '0.0.0.0');
+        console.log('🚀 Swagger Render: /api/docs');
+    }
+    else {
+        swagger_1.SwaggerModule.setup('docs', app, document);
+        await app.listen(process.env.PORT || 3000);
+        console.log('🚀 Swagger Local: /docs');
+    }
 }
 bootstrap();
 //# sourceMappingURL=main.js.map

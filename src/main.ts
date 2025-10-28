@@ -6,14 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(
-    new ValidationPipe({  
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors();
 
   const config = new DocumentBuilder()
@@ -23,9 +16,18 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
 
-  await app.listen(process.env.PORT || 3000);
-  console.log(`🚀 Swagger disponible en http://localhost:3000/docs`);
+  const isRender = process.env.RENDER === 'true';
+
+  if (isRender) {
+    SwaggerModule.setup('api/docs', app, document);
+    await app.listen(process.env.PORT || 3000, '0.0.0.0');
+    console.log('🚀 Swagger Render: /api/docs');
+  } else {
+    SwaggerModule.setup('docs', app, document);
+    await app.listen(process.env.PORT || 3000);
+    console.log('🚀 Swagger Local: /docs');
+  }
 }
+
 bootstrap();

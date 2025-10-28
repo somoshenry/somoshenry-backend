@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
@@ -68,4 +69,7 @@ export class Usuario {
 
   @UpdateDateColumn({ name: 'actualizado_en' })
   actualizadoEn: Date;
+
+  @DeleteDateColumn({ name: 'eliminado_en', nullable: true })
+  eliminadoEn?: Date | null;
 }

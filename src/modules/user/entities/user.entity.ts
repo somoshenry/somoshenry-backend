@@ -4,9 +4,13 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { OneToMany } from 'typeorm';
+import { Follow } from '../../follow/entities/follow.entity';
+
 
 export enum TipoUsuario {
   ADMINISTRADOR = 'ADMINISTRADOR',
@@ -68,4 +72,15 @@ export class Usuario {
 
   @UpdateDateColumn({ name: 'actualizado_en' })
   actualizadoEn: Date;
+
+  @DeleteDateColumn({ name: 'eliminado_en', nullable: true })
+  eliminadoEn?: Date | null;
+
+  @OneToMany(() => Follow, (follow) => follow.follower)
+  siguiendo: Follow[];
+
+  @OneToMany(() => Follow, (follow) => follow.following)
+  seguidores: Follow[];
+
 }
+

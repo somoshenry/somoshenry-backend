@@ -22,12 +22,12 @@ import { EstadoUsuario, TipoUsuario } from './entities/user.entity';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
-  @applyDecorators(...SwaggerUserDocs.create)
-  async create(@Body() dto: CreateUserDto) {
-    const user = await this.userService.create(dto);
-    return { message: 'Usuario creado exitosamente', user };
-  }
+  // @Post()
+  // @applyDecorators(...SwaggerUserDocs.create)
+  // async create(@Body() dto: CreateUserDto) {
+  //   const user = await this.userService.create(dto);
+  //   return { message: 'Usuario creado exitosamente', user };
+  // }
 
   @Get()
   @applyDecorators(...SwaggerUserDocs.findAll)

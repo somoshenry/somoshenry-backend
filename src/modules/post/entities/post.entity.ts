@@ -7,8 +7,10 @@ import {
   UpdateDateColumn,
   Index,
   JoinColumn,
+  OneToMany
 } from 'typeorm';
-import { Usuario } from '../../user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
+import { Comment } from '../../comment/entities/comment.entity';
 
 export enum PostType {
   TEXT = 'TEXT',
@@ -25,9 +27,9 @@ export class Post {
   @Index()
   userId: string;
 
-  @ManyToOne(() => Usuario, (usuario) => usuario.posts, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (usuario) => usuario.posts, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: Usuario;
+  user: User;
 
   @Column({ type: 'text', nullable: false })
   content: string;
@@ -51,4 +53,7 @@ export class Post {
 
   @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
+
+  @OneToMany(() => Comment, (comment) => comment.post)
+  comments: Comment[];
 }

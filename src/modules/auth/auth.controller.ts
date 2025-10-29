@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto'; // Asumo que este DTO existe
 import { CredentialDto } from './dto/credential.dto'; // Asumo que este DTO existe
-import { Usuario } from '../user/entities/user.entity'; // Asumo que este Entity existe
+import { User } from '../user/entities/user.entity'; // Asumo que este Entity existe
 import { LoginResponseOkDto } from './dto/login.response.ok.dto'; // Asumo que este DTO existe
 
 @ApiTags('Auth') // Etiqueta principal para agrupar las rutas en Swagger
@@ -21,17 +21,17 @@ export class AuthController {
   @ApiResponse({
     status: 201,
     description: 'Usuario creado exitosamente.',
-    type: Usuario, // Muestra el esquema de la entidad Usuario como respuesta
+    type: User, // Muestra el esquema de la entidad Usuario como respuesta
   })
   @ApiResponse({
     status: 400,
     description:
       'Datos de entrada inválidos (ej. email duplicado o password débil).',
   })
-  registerUser(@Body() user: CreateUserDto): Promise<Usuario> {
+  registerUser(@Body() user: CreateUserDto): Promise<User> {
     console.log(user);
-    // Nota: El servicio debe mapear el DTO a la entidad Usuario antes de guardar
-    return this.authService.registerUser(user as Usuario);
+  // Nota: El servicio debe mapear el DTO a la entidad User antes de guardar
+  return this.authService.registerUser(user as User);
   }
 
   @Post('login')

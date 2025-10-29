@@ -10,7 +10,7 @@ import {
 import { Exclude } from 'class-transformer';
 import { OneToMany } from 'typeorm';
 import { Follow } from '../../follow/entities/follow.entity';
-
+import { Post } from '../../post/entities/post.entity';
 
 export enum TipoUsuario {
   ADMINISTRADOR = 'ADMINISTRADOR',
@@ -81,6 +81,6 @@ export class Usuario {
 
   @OneToMany(() => Follow, (follow) => follow.following)
   seguidores: Follow[];
-
+  @OneToMany(() => Post, (post) => post.user)
+  posts: Post[];
 }
-

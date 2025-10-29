@@ -69,4 +69,17 @@ export class FollowService {
     });
     return siguiendo.map((f) => f.following);
   }
+
+  async contarSeguidores(idUsuario: string): Promise<number> {
+  return this.followRepo.count({
+    where: { following: { id: idUsuario } },
+  });
+}
+
+async contarSiguiendo(idUsuario: string): Promise<number> {
+  return this.followRepo.count({
+    where: { follower: { id: idUsuario } },
+  });
+}
+
 }

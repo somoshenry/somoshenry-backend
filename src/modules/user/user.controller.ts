@@ -33,7 +33,7 @@ export class UserController {
   @applyDecorators(...SwaggerUserDocs.findAll)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiQuery({ name: 'nombre', required: false, example: 'Valen' })
+  @ApiQuery({ name: 'nombre', required: false })
   @ApiQuery({ name: 'tipo', required: false, enum: TipoUsuario })
   @ApiQuery({ name: 'estado', required: false, enum: EstadoUsuario })
   async findAll(
@@ -81,7 +81,7 @@ export class UserController {
   }
 
   @Delete('hard/:id')
-  @applyDecorators(...SwaggerUserDocs.delete)
+  @applyDecorators(...SwaggerUserDocs.hardDelete)
   async hardDelete(@Param('id') id: string, @Req() req) {
 
     const userRole: TipoUsuario = req.user?.tipo || TipoUsuario.ADMINISTRADOR;

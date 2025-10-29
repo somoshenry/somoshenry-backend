@@ -27,14 +27,6 @@ import { JwtModule } from '@nestjs/jwt';
         };
       },
     }),
-    JwtModule.registerAsync({
-      global: true,
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' },
-      }),
-    }),
     UserModule,
     AuthModule,
     PostModule,

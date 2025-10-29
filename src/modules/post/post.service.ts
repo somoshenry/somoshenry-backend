@@ -1,26 +1,147 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
+import { Post } from './entities/post.entity';
+import { Usuario } from '../user/entities/user.entity';
+
 @Injectable()
 export class PostService {
-  create(createPostDto: CreatePostDto) {
-    return 'This action adds a new post';
+  constructor(
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
+    @InjectRepository(Usuario)
+    private readonly userRepository: Repository<Usuario>,
+  ) {}
+
+  async create(createPostDto: CreatePostDto): Promise<Post> {
+    const user = await this.userRepository.findOne({
+      where: { id: createPostDto.userId },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${createPostDto.userId} not found`);
+    }
+
+    const post = this.postRepository.create({
+      userId: createPostDto.userId,
+      content: createPostDto.content,
+      type: createPostDto.type,
+      mediaURL: createPostDto.mediaURL,
+    });
+
+    const savedPost = await this.postRepository.save(post);
+
+    const createdPost = await this.postRepository.findOne({
+      where: { id: savedPost.id },
+      relations: ['user'],
+    });
+
+    if (!createdPost) {
+      throw new Error('Failed to retrieve created post');
+    }
+
+    return createdPost;
   }
 
-  findAll() {
-    return `This action returns all post`;
+  async findAll(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await this.postRepository.findAndCount({
+      relations: ['user'],
+      order: {
+        createdAt: 'DESC',
+      },
+      skip,
+      take: limit,
+      where: {
+        isInappropriate: false,
+      },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: posts,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} post`;
+  async findOne(id: string) {
+    const post = await this.postRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+
+    if (!post) {
+      throw new Error(`Post with ID ${id} not found`);
+    }
+
+    return post;
   }
 
-  update(id: number, updatePostDto: UpdatePostDto) {
-    return `This action updates a #${id} post`;
+  async update(id: string, updatePostDto: UpdatePostDto): Promise<Post> {
+    const post = await this.postRepository.findOne({
+      where: { id },
+    });
+
+    if (!post) {
+      throw new Error(`Post with ID ${id} not found`);
+    }
+
+    const updatedPost = this.postRepository.merge(post, {
+      content: updatePostDto.content,
+      type: updatePostDto.type,
+      mediaURL: updatePostDto.mediaURL,
+    });
+
+    await this.postRepository.save(updatedPost);
+
+    const result = await this.postRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+
+    if (!result) {
+      throw new Error('Failed to retrieve updated post');
+    }
+
+    return result;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} post`;
+  async remove(id: string): Promise<{ message: string; deletedPost: Post }> {
+    const post = await this.postRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+
+    if (!post) {
+      throw new Error(`Post with ID ${id} not found`);
+    }
+
+    await this.postRepository.remove(post);
+
+    return {
+      message: 'Post deleted successfully',
+      deletedPost: post,
+    };
   }
+  //   findOne(id: number) {
+  //     return `This action returns a #${id} post`;
+  //   }
+  //   update(id: number, updatePostDto: UpdatePostDto) {
+  //     return `This action updates a #${id} post`;
+  //   }
+  //   remove(id: number) {
+  //     return `This action removes a #${id} post`;
+  //   }
 }

@@ -4,7 +4,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 export default registerAs('typeorm', () => {
-  const isRender = !!process.env.DATABASE_URL; // detecta si está corriendo en Render
+  const isRender = !!process.env.DATABASE_URL;
 
   if (isRender) {
     console.log('🟢 Conectando a base de datos Render...');
@@ -13,7 +13,7 @@ export default registerAs('typeorm', () => {
       url: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       autoLoadEntities: true,
-      synchronize: true, // ⚠️ solo en desarrollo
+      synchronize: true,
     };
   }
 
@@ -26,6 +26,6 @@ export default registerAs('typeorm', () => {
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'socialdb',
     autoLoadEntities: true,
-    synchronize: true, // ⚠️ solo mientras desarrollás
+    synchronize: true,
   };
 });

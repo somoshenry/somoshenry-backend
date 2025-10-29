@@ -6,4 +6,5 @@ export class UserEntity {
   lastName: string;
   picture: string;
   roles: string[];
+  password: string;
 }

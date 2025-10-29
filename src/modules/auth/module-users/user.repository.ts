@@ -12,6 +12,7 @@ export class UserRepository {
       lastName: 'Berdeja',
       picture: 'Imagen',
       roles: ['user', 'admin'],
+      password: '$2b$10$oRh/ZyCaYsAIYy6nU9yxGOY99nFDL1qEz8ZaGqBzPT7n1Y9QD.LWe',
     },
     {
       id: '123456788',
@@ -21,6 +22,7 @@ export class UserRepository {
       lastName: 'Martin',
       picture: 'Imagen',
       roles: ['user', 'admin'],
+      password: '$2b$10$oRh/ZyCaYsAIYy6nU9yxGOY99nFDL1qEz8ZaGqBzPT7n1Y9QD.LWe',
     },
     {
       id: '123456787',
@@ -30,6 +32,7 @@ export class UserRepository {
       lastName: 'Leonardo',
       picture: 'Imagen',
       roles: ['user', 'admin'],
+      password: '$2b$10$oRh/ZyCaYsAIYy6nU9yxGOY99nFDL1qEz8ZaGqBzPT7n1Y9QD.LWe',
     },
     {
       id: '123456786',
@@ -39,6 +42,7 @@ export class UserRepository {
       lastName: 'Mauro',
       picture: 'Imagen',
       roles: ['user', 'admin'],
+      password: '$2b$10$oRh/ZyCaYsAIYy6nU9yxGOY99nFDL1qEz8ZaGqBzPT7n1Y9QD.LWe',
     },
     {
       id: '123456785',
@@ -48,6 +52,7 @@ export class UserRepository {
       lastName: 'Rotceh',
       picture: 'Imagen',
       roles: ['user', 'admin'],
+      password: '$2b$10$oRh/ZyCaYsAIYy6nU9yxGOY99nFDL1qEz8ZaGqBzPT7n1Y9QD.LWe',
     },
     {
       id: '123456784',
@@ -57,6 +62,7 @@ export class UserRepository {
       lastName: 'Valentin',
       picture: 'Imagen',
       roles: ['user', 'admin'],
+      password: '$2b$10$oRh/ZyCaYsAIYy6nU9yxGOY99nFDL1qEz8ZaGqBzPT7n1Y9QD.LWe',
     },
   ];
   findUserByEmail(email: string) {
@@ -65,5 +71,9 @@ export class UserRepository {
   findOrAddUser(user: UserEntity) {
     // si existe actualizar el lastLogin
     return this.findUserByEmail(user.email) as UserEntity; //buscar o crear el usuario si no existe
+  }
+
+  create(user: UserEntity) {
+    this.users.push(user);
   }
 }

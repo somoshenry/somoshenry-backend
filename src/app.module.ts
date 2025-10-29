@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PostModule } from './modules/post/post.module';
 import { FollowModule } from './modules/follow/follow.module';
 import typeOrmConfig from './config/typeorm.config';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -26,7 +27,14 @@ import typeOrmConfig from './config/typeorm.config';
         };
       },
     }),
-
+    JwtModule.registerAsync({
+      global: true,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
+    }),
     UserModule,
     AuthModule,
     PostModule,

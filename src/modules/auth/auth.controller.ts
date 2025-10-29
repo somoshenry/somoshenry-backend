@@ -5,6 +5,8 @@ import {
   UseGuards,
   HttpStatus,
   Req,
+  Post,
+  Body,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -14,6 +16,8 @@ import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { ProfileResponseDto } from './dto/profile.response.dto';
 import { GetUserProfile } from './decorator/get-user.decorator';
 import { ResponseOkDto } from './dto/response.ok.dto';
+import { CredentialDto } from './dto/credential.dto';
+import { UserEntity } from './module-users/user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -37,6 +41,16 @@ export class AuthController {
       const urlWhitError = `${process.env.FRONTEND_URL}/auth/error?error=${error}`;
       return res.redirect(urlWhitError);
     }
+  }
+
+  @Post('register')
+  registerUser(@Body() user: UserEntity) {
+    return this.authService.registerUser(user);
+  }
+
+  @Post('login')
+  login(@Body() credenctial: CredentialDto) {
+    return this.authService.login(credenctial);
   }
 
   @Get('profile')

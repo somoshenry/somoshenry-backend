@@ -1,15 +1,23 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from './module-users/user.repository';
 import { GoogleProfileDto } from './dto/google-profile.dto';
 import { UserEntity } from './module-users/user.entity';
 import { PayloadJwt } from './dto/payload-jwt';
+import { UserService } from '../user/user.service';
+import * as bcrypt from 'bcrypt';
+import { CredentialDto } from './dto/credential.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private userRepository: UserRepository,
+    private userServide: UserService,
   ) {}
 
   generateToken(googleProfile: GoogleProfileDto): string {
@@ -18,6 +26,32 @@ export class AuthService {
     const userFindOrCreated = this.userRepository.findOrAddUser(userEntity);
     const payload = this.mapToPayloadJwt(userFindOrCreated);
     return this.generateJwt(payload);
+  }
+
+  async registerUser(createUserDto: UserEntity): Promise<UserEntity> {
+    const hashedPassword = await this.hashPassword(createUserDto.password);
+    const user: UserEntity = { ...createUserDto, password: hashedPassword };
+    this.userRepository.create(user);
+    return user;
+  }
+
+  async login(credential: CredentialDto): Promise<string> {
+    const user = this.userRepository.findUserByEmail(credential.username);
+    if (!user) throw new BadRequestException('Username or pass invalid');
+    const isPasswordValid = await bcrypt.compare(
+      credential.password,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new BadRequestException('Username or pass invalid');
+    }
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      roles: user.roles,
+    });
+    return token;
   }
 
   verifyToken(token: string): any {
@@ -44,6 +78,7 @@ export class AuthService {
     userEntity.picture = googleProfile.picture;
     return userEntity;
   }
+
   private mapToPayloadJwt(user: UserEntity) {
     const payload: PayloadJwt = {
       sub: user.id,
@@ -60,5 +95,8 @@ export class AuthService {
       console.log('Error al generar el jwt', error);
       throw error;
     }
+  }
+  private async hashPassword(password: string): Promise<string> {
+    return await bcrypt.hash(password, 10);
   }
 }

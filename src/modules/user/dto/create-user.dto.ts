@@ -28,7 +28,9 @@ export class CreateUserDto {
   })
   @IsNotEmpty({ message: 'La contraseña es obligatoria.' })
   @IsString()
-  @Length(8, 32, { message: 'La contraseña debe tener entre 8 y 32 caracteres.' })
+  @Length(8, 32, {
+    message: 'La contraseña debe tener entre 8 y 32 caracteres.',
+  })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
     message:
       'La contraseña debe incluir al menos una letra mayúscula, una minúscula y un número.',

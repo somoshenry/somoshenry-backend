@@ -12,7 +12,7 @@ export class UserService {
   constructor(
     @InjectRepository(Usuario)
     private readonly userRepository: Repository<Usuario>,
-  ) { }
+  ) {}
 
   async create(data: Partial<Usuario>): Promise<Usuario> {
     const user = this.userRepository.create(data);
@@ -64,14 +64,13 @@ export class UserService {
     const user = await this.findOne(id);
 
     const validData = Object.fromEntries(
-      Object.entries(data).filter(([_, value]) => value !== undefined)
+      Object.entries(data).filter(([_, value]) => value !== undefined),
     );
 
     Object.assign(user, validData);
 
     return await this.userRepository.save(user);
   }
-
 
   async softDelete(id: string): Promise<{ message: string }> {
     const user = await this.findOne(id);
@@ -94,7 +93,6 @@ export class UserService {
 
     return { message: 'Usuario restaurado correctamente' };
   }
-
 
   async hardDelete(
     id: string,

@@ -1,0 +1,22 @@
+[
+  { "title": "¡Bienvenidos a la red social de Henry!", "content": "Estamos muy contentos de lanzar esta plataforma para conectar estudiantes y docentes 🎓", "userEmail": "valen@henry.com" },
+  { "title": "Nuevo desafío semanal", "content": "Les dejo el reto de código para esta semana. Pueden hacerlo en parejas 👯", "userEmail": "martin@henry.com" },
+  { "title": "¡Primer deploy completado!", "content": "Subí mi primer proyecto full stack a Render, y funcionó 💥", "userEmail": "andre@henry.com" },
+  { "title": "Tips para mejorar tu código", "content": "Usen linters, revisen commits y mantengan nombres descriptivos ✍️", "userEmail": "juan@henry.com" },
+  { "title": "Diseñando mi portfolio", "content": "Estoy haciendo mi primer portfolio responsive con React y Tailwind 🌈", "userEmail": "sofia@henry.com" },
+  { "title": "Reunión de proyecto final", "content": "El equipo se junta mañana a repasar los endpoints y testear la API 🚀", "userEmail": "tomas@henry.com" },
+  { "title": "Nuevo módulo de NestJS", "content": "Hoy explicamos cómo usar interceptors y pipes. ¡Excelente clase!", "userEmail": "franco@henry.com" },
+  { "title": "Mockeo de datos completado", "content": "Ya tengo 20 usuarios y 20 posts cargados en la base 😎", "userEmail": "valen@henry.com" },
+  { "title": "Error 500 en producción 😭", "content": "Nunca subestimen un try/catch. Siempre revisen logs antes de deployar.", "userEmail": "carlos@henry.com" },
+  { "title": "Configurando Docker", "content": "Ya tengo los contenedores para backend, base de datos y Swagger listos 🐳", "userEmail": "alejandro@henry.com" },
+  { "title": "Nuevo diseño de login", "content": "Me encantó cómo quedó la pantalla de inicio con el nuevo color palette 🎨", "userEmail": "natalia@henry.com" },
+  { "title": "Postgres en la nube", "content": "Configurar Render fue más fácil de lo esperado. ¡Base corriendo online!", "userEmail": "pablo@henry.com" },
+  { "title": "Organización con Trello", "content": "El equipo ya tiene todas las tareas divididas por módulos 🔧", "userEmail": "carla@henry.com" },
+  { "title": "Clase de testing", "content": "Mañana vemos Jest en acción con NestJS, prepárense 💪", "userEmail": "diego@henry.com" },
+  { "title": "Experiencia en Henry", "content": "Cada sprint aprendo algo nuevo. Gracias docentes 💛", "userEmail": "julieta@henry.com" },
+  { "title": "Deploy final en Render", "content": "Después de varios intentos, la API corre perfecta. Gracias mentor 🙌", "userEmail": "agustina@henry.com" },
+  { "title": "Integrando el front", "content": "Ya tenemos comunicación entre React y NestJS vía Axios 🎯", "userEmail": "lucia@henry.com" },
+  { "title": "Notificaciones listas", "content": "Sistema de alertas implementado con websockets 🔔", "userEmail": "marina@henry.com" },
+  { "title": "Estructura de base de datos", "content": "Me quedó impecable el DER, todo normalizado 😎", "userEmail": "carlos@henry.com" },
+  { "title": "Aprendiendo CI/CD", "content": "Implementé mi primer workflow en GitHub Actions 🤖", "userEmail": "diego@henry.com" }
+]

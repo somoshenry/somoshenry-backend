@@ -1,0 +1,22 @@
+[
+  { "email": "valen@henry.com", "password": "Password123", "nombre": "Valentín", "apellido": "Hernández", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "andre@henry.com", "password": "Password123", "nombre": "Andrés", "apellido": "Silva", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "martin@henry.com", "password": "Password123", "nombre": "Martín", "apellido": "Rojas", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "lucia@henry.com", "password": "Password123", "nombre": "Lucía", "apellido": "González", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "sofia@henry.com", "password": "Password123", "nombre": "Sofía", "apellido": "Pérez", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "juan@henry.com", "password": "Password123", "nombre": "Juan", "apellido": "Domínguez", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "carlos@henry.com", "password": "Password123", "nombre": "Carlos", "apellido": "Fernández", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "natalia@henry.com", "password": "Password123", "nombre": "Natalia", "apellido": "Moreno", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "sebastian@henry.com", "password": "Password123", "nombre": "Sebastián", "apellido": "Torres", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "marina@henry.com", "password": "Password123", "nombre": "Marina", "apellido": "Sosa", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "alejandro@henry.com", "password": "Password123", "nombre": "Alejandro", "apellido": "Castro", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "florencia@henry.com", "password": "Password123", "nombre": "Florencia", "apellido": "Vega", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "pablo@henry.com", "password": "Password123", "nombre": "Pablo", "apellido": "Mendoza", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "carla@henry.com", "password": "Password123", "nombre": "Carla", "apellido": "López", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "diego@henry.com", "password": "Password123", "nombre": "Diego", "apellido": "Navarro", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "julieta@henry.com", "password": "Password123", "nombre": "Julieta", "apellido": "Campos", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "tomas@henry.com", "password": "Password123", "nombre": "Tomás", "apellido": "Benítez", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "agustina@henry.com", "password": "Password123", "nombre": "Agustina", "apellido": "Martínez", "tipo": "MIEMBRO", "estado": "ACTIVO" },
+  { "email": "franco@henry.com", "password": "Password123", "nombre": "Franco", "apellido": "García", "tipo": "DOCENTE", "estado": "ACTIVO" },
+  { "email": "melina@henry.com", "password": "Password123", "nombre": "Melina", "apellido": "Ramos", "tipo": "MIEMBRO", "estado": "ACTIVO" }
+]

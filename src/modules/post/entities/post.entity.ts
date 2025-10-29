@@ -7,10 +7,11 @@ import {
   UpdateDateColumn,
   Index,
   JoinColumn,
-  OneToMany
+  OneToMany,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Comment } from '../../comment/entities/comment.entity';
+import { PostLike } from './post-like.entity'; // 👈 IMPORTANTE
 
 export enum PostType {
   TEXT = 'TEXT',
@@ -56,4 +57,7 @@ export class Post {
 
   @OneToMany(() => Comment, (comment) => comment.post)
   comments: Comment[];
+
+  @OneToMany(() => PostLike, (like) => like.post, { cascade: true })
+  likes: PostLike[];
 }

@@ -4,53 +4,39 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UserRepository } from './module-users/user.repository';
-import { GoogleProfileDto } from './dto/google-profile.dto';
-import { UserEntity } from './module-users/user.entity';
-import { PayloadJwt } from './dto/payload-jwt';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { CredentialDto } from './dto/credential.dto';
+import { Usuario } from '../user/entities/user.entity';
+import { PayloadJwt } from './dto/payload-jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    private userRepository: UserRepository,
     private userServide: UserService,
   ) {}
 
-  generateToken(googleProfile: GoogleProfileDto): string {
+  /*   generateToken(googleProfile: GoogleProfileDto): string {
     this.validateGoogleProfileDto(googleProfile);
     const userEntity = this.mapToUserEntity(googleProfile);
     const userFindOrCreated = this.userRepository.findOrAddUser(userEntity);
     const payload = this.mapToPayloadJwt(userFindOrCreated);
     return this.generateJwt(payload);
-  }
+  } */
 
-  async registerUser(createUserDto: UserEntity): Promise<UserEntity> {
-    const hashedPassword = await this.hashPassword(createUserDto.password);
-    const user: UserEntity = { ...createUserDto, password: hashedPassword };
-    this.userRepository.create(user);
-    return user;
+  async registerUser(user: Usuario): Promise<Usuario> {
+    const hashedPassword = await this.hashPassword(user.password as string);
+    const newUser: Usuario = { ...user, password: hashedPassword };
+    return this.userServide.create(newUser);
   }
 
   async login(credential: CredentialDto): Promise<string> {
-    const user = this.userRepository.findUserByEmail(credential.username);
+    const user = this.userServide.findUserByEmail(credential.username);
     if (!user) throw new BadRequestException('Username or pass invalid');
-    const isPasswordValid = await bcrypt.compare(
-      credential.password,
-      user.password,
-    );
-    if (!isPasswordValid) {
-      throw new BadRequestException('Username or pass invalid');
-    }
-    const token = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-      name: user.name,
-      roles: user.roles,
-    });
+    await this.validatePassword(credential.password, user.password as string);
+    const payload = this.mapToPayloadJwt(user);
+    const token = this.jwtService.sign(payload);
     return token;
   }
 
@@ -61,7 +47,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid token', error as Error);
     }
   }
-
+  /* 
   private validateGoogleProfileDto(googleProfileDto: GoogleProfileDto) {
     if (!googleProfileDto)
       throw new UnauthorizedException('Google no envió datos de usuario');
@@ -95,8 +81,25 @@ export class AuthService {
       console.log('Error al generar el jwt', error);
       throw error;
     }
-  }
+  } */
   private async hashPassword(password: string): Promise<string> {
     return await bcrypt.hash(password, 10);
+  }
+  private mapToPayloadJwt(user: Usuario) {
+    const payload: PayloadJwt = {
+      sub: user.id,
+      email: user.email,
+      name: user.nombre as string,
+    };
+    return payload;
+  }
+  private async validatePassword(
+    password: string,
+    passwordDb: string,
+  ): Promise<void> {
+    const isPasswordValid = await bcrypt.compare(password, passwordDb);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Username or pass invalid');
+    }
   }
 }

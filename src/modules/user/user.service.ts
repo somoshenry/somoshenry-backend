@@ -117,4 +117,9 @@ export class UserService {
 
     return { message: 'Usuario eliminado definitivamente de la base de datos' };
   }
+
+  findUserByEmail(email: string) {
+    console.log(email);
+    return new Usuario();
+  }
 }

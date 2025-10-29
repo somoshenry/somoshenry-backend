@@ -15,7 +15,7 @@ import { GoogleProfileDto } from './dto/google-profile.dto';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { ProfileResponseDto } from './dto/profile.response.dto';
 import { GetUserProfile } from './decorator/get-user.decorator';
-import { ResponseOkDto } from './dto/response.ok.dto';
+import { ResponseOkDto } from './dto/login.response.ok.dto';
 import { CredentialDto } from './dto/credential.dto';
 import { UserEntity } from './module-users/user.entity';
 

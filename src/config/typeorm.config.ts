@@ -2,7 +2,6 @@ import { registerAs } from '@nestjs/config';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
-
 export default registerAs('typeorm', () => {
   const isRender = !!process.env.DATABASE_URL;
 
@@ -27,5 +26,6 @@ export default registerAs('typeorm', () => {
     database: process.env.DB_NAME || 'socialdb',
     autoLoadEntities: true,
     synchronize: true,
+    ssl: { rejectUnauthorized: false },
   };
 });

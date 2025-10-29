@@ -12,7 +12,7 @@ export class UserService {
   constructor(
     @InjectRepository(Usuario)
     private readonly userRepository: Repository<Usuario>,
-  ) { }
+  ) {}
 
   async create(data: Partial<Usuario>): Promise<Usuario> {
     const user = this.userRepository.create(data);
@@ -60,11 +60,23 @@ export class UserService {
     return user;
   }
 
+  async findOneByEmail(email: string): Promise<Usuario> {
+    const user = await this.userRepository.findOne({
+      where: { email, eliminadoEn: IsNull() },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return user;
+  }
+
   async update(id: string, data: Partial<Usuario>): Promise<Usuario> {
     const user = await this.findOne(id);
 
     const validData = Object.fromEntries(
-      Object.entries(data).filter(([_, value]) => value !== undefined)
+      Object.entries(data).filter(([_, value]) => value !== undefined),
     );
 
     Object.assign(user, validData);
@@ -72,6 +84,17 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
+  async updateByEmail(email: string, data: Partial<Usuario>): Promise<Usuario> {
+    const user = await this.findOneByEmail(email);
+
+    const validData = Object.fromEntries(
+      Object.entries(data).filter(([_, value]) => value !== undefined),
+    );
+
+    Object.assign(user, validData);
+
+    return await this.userRepository.save(user);
+  }
 
   async softDelete(id: string): Promise<{ message: string }> {
     const user = await this.findOne(id);
@@ -95,7 +118,6 @@ export class UserService {
     return { message: 'Usuario restaurado correctamente' };
   }
 
-
   async hardDelete(
     id: string,
     userRole: TipoUsuario,
@@ -118,5 +140,22 @@ export class UserService {
     await this.userRepository.remove(user);
 
     return { message: 'Usuario eliminado definitivamente de la base de datos' };
+  }
+
+  async findUserByEmailWithPassword(email: string): Promise<Usuario | null> {
+    const user = await this.userRepository.findOne({
+      where: { email, eliminadoEn: IsNull() },
+      // ⚠️ ESTO ES CRUCIAL: Debes seleccionar explícitamente los campos
+      // incluyendo 'password' para anular 'select: false' en la Entity.
+      select: [
+        'id',
+        'email',
+        'password', // <--- ¡DEBE ESTAR AQUÍ!
+        'nombre',
+        'apellido',
+        // Agrega otros campos que necesites, pero 'password' es vital.
+      ],
+    });
+    return user;
   }
 }

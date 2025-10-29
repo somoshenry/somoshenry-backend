@@ -60,8 +60,32 @@ export class UserService {
     return user;
   }
 
+  async findOneByEmail(email: string): Promise<Usuario> {
+    const user = await this.userRepository.findOne({
+      where: { email, eliminadoEn: IsNull() },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return user;
+  }
+
   async update(id: string, data: Partial<Usuario>): Promise<Usuario> {
     const user = await this.findOne(id);
+
+    const validData = Object.fromEntries(
+      Object.entries(data).filter(([_, value]) => value !== undefined),
+    );
+
+    Object.assign(user, validData);
+
+    return await this.userRepository.save(user);
+  }
+
+  async updateByEmail(email: string, data: Partial<Usuario>): Promise<Usuario> {
+    const user = await this.findOneByEmail(email);
 
     const validData = Object.fromEntries(
       Object.entries(data).filter(([_, value]) => value !== undefined),
@@ -118,8 +142,20 @@ export class UserService {
     return { message: 'Usuario eliminado definitivamente de la base de datos' };
   }
 
-  findUserByEmail(email: string) {
-    console.log(email);
-    return new Usuario();
+  async findUserByEmailWithPassword(email: string): Promise<Usuario | null> {
+    const user = await this.userRepository.findOne({
+      where: { email, eliminadoEn: IsNull() },
+      // ⚠️ ESTO ES CRUCIAL: Debes seleccionar explícitamente los campos
+      // incluyendo 'password' para anular 'select: false' en la Entity.
+      select: [
+        'id',
+        'email',
+        'password', // <--- ¡DEBE ESTAR AQUÍ!
+        'nombre',
+        'apellido',
+        // Agrega otros campos que necesites, pero 'password' es vital.
+      ],
+    });
+    return user;
   }
 }

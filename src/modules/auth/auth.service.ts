@@ -15,21 +15,38 @@ import { LoginResponseOkDto } from './dto/login.response.ok.dto';
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    private userServide: UserService,
+    private userService: UserService,
   ) {}
 
-  async registerUser(user: Usuario): Promise<Usuario> {
+  async registerUser(user: Partial<Usuario>): Promise<Usuario> {
     const hashedPassword = await this.hashPassword(user.password as string);
-    const newUser: Usuario = { ...user, password: hashedPassword };
-    return this.userServide.create(newUser);
+    const newUser = { ...user, password: hashedPassword };
+    return this.userService.create(newUser);
   }
 
   async login(credential: CredentialDto): Promise<LoginResponseOkDto> {
-    const user = this.findUserByEmail(credential.username);
+    const user = await this.findUserByEmail(credential.username);
     await this.validatePassword(credential.password, user.password as string);
     const payload = this.mapToPayloadJwt(user);
     const token = this.jwtService.sign(payload);
     return this.buildLoginResponseOkDto(token);
+  }
+
+  async updatePassword(
+    email: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    try {
+      await this.findUserByEmail(email);
+      const hashedPassword = await this.hashPassword(password);
+      const updateUser = new Usuario();
+      updateUser.password = hashedPassword;
+      await this.userService.updateByEmail(email, updateUser);
+      return { message: 'Update successful' };
+    } catch (err) {
+      console.error('Error to change password ', err);
+      throw new UnauthorizedException(err);
+    }
   }
 
   verifyToken(token: string): any {
@@ -40,8 +57,8 @@ export class AuthService {
     }
   }
 
-  private findUserByEmail(email: string) {
-    const user = this.userServide.findUserByEmail(email);
+  private async findUserByEmail(email: string) {
+    const user = await this.userService.findUserByEmailWithPassword(email);
     if (!user) throw new BadRequestException('Username or pass invalid');
     return user;
   }

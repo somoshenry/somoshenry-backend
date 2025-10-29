@@ -15,4 +15,5 @@ export default registerAs('typeorm', () => ({
   ssl: {
     rejectUnauthorized: false,
   },
+  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
 }));

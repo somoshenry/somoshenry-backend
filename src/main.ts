@@ -24,6 +24,7 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
+    .addTag('App')
     .addTag('Auth')
     .addTag('User')
     .build();

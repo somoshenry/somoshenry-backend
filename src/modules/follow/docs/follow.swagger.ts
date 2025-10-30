@@ -78,4 +78,19 @@ export const SwaggerFollowDocs = {
       description: 'Cantidad de seguidos obtenida exitosamente.',
     }),
   ],
+  removeFollower: [
+    ApiOperation({
+      summary: 'Eliminar seguidor',
+      description:
+        'Permite al usuario autenticado eliminar a un seguidor de su lista de seguidores.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Seguidor eliminado correctamente.',
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'El usuario indicado no es un seguidor.',
+    }),
+  ],
 };

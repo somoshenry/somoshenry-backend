@@ -5,9 +5,13 @@ import {
   Get,
   Param,
   applyDecorators,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { FollowService } from './follow.service';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { SwaggerFollowDocs } from './docs/follow.swagger';
 
 @ApiTags('Follows')
@@ -15,22 +19,39 @@ import { SwaggerFollowDocs } from './docs/follow.swagger';
 export class FollowController {
   constructor(private readonly followService: FollowService) {}
 
-  @Post(':idSeguidor/:idSeguido')
+  @Post(':idSeguido')
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerFollowDocs.seguir)
   seguir(
-    @Param('idSeguidor') idSeguidor: string,
+    @Req() req: Request & { user: { id: string } },
     @Param('idSeguido') idSeguido: string,
   ) {
+    const idSeguidor = req.user.id;
     return this.followService.seguirUsuario(idSeguidor, idSeguido);
   }
 
-  @Delete(':idSeguidor/:idSeguido')
+  // Unfollow: the authenticated user stops following idSeguido
+  @Delete('unfollow/:idSeguido')
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerFollowDocs.dejarDeSeguir)
   dejarDeSeguir(
-    @Param('idSeguidor') idSeguidor: string,
+    @Req() req: Request & { user: { id: string } },
     @Param('idSeguido') idSeguido: string,
   ) {
-    return this.followService.dejarDeSeguir(idSeguidor, idSeguido);
+    const idSeguidor = req.user.id;
+    return this.followService.dejarDeSeguirByFollower(idSeguidor, idSeguido);
+  }
+
+  // Remove follower: the authenticated user removes someone who follows them
+  @Delete('remove-follower/:idSeguidor')
+  @UseGuards(JwtAuthGuard)
+  @applyDecorators(...SwaggerFollowDocs.removeFollower)
+  removeFollower(
+    @Req() req: Request & { user: { id: string } },
+    @Param('idSeguidor') idSeguidor: string,
+  ) {
+    const idSeguido = req.user.id;
+    return this.followService.removeFollower(idSeguido, idSeguidor);
   }
 
   @Get('seguidores/:idUsuario')

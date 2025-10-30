@@ -78,10 +78,10 @@ export class User {
   deletedAt?: Date | null;
 
   @OneToMany(() => Follow, 'follower')
-  siguiendo!: Follow[];
+  following!: Follow[];
 
   @OneToMany(() => Follow, 'following')
-  seguidores!: Follow[];
+  followers!: Follow[];
 
   @OneToMany(() => Post, 'user')
   posts!: Post[];

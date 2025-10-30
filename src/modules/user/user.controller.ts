@@ -72,7 +72,8 @@ export class UserController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findOne)
   async findOne(@Param('id') id: string) {
     const user = await this.userService.findOne(id);
@@ -80,7 +81,8 @@ export class UserController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.update)
   async update(
     @Param('id') id: string,
@@ -99,13 +101,13 @@ export class UserController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.delete)
   async softDelete(
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string; role: UserRole } },
   ) {
-    // Allow owner or admin to soft-delete
     if (req.user.id !== id && req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'No tienes permisos para eliminar este usuario',

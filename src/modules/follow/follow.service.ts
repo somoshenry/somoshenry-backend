@@ -65,6 +65,37 @@ export class FollowService {
     return { mensaje: 'Has dejado de seguir a este usuario' };
   }
 
+  async dejarDeSeguirByFollower(idSeguidor: string, idSeguido: string) {
+    // Unfollow action performed by follower (auth user)
+    const follow = await this.followRepo.findOne({
+      where: {
+        follower: { id: idSeguidor },
+        following: { id: idSeguido },
+      },
+    });
+
+    if (!follow) throw new NotFoundException('No sigues a este usuario');
+
+    await this.followRepo.remove(follow);
+    return { mensaje: 'Has dejado de seguir a este usuario' };
+  }
+
+  async removeFollower(idSeguido: string, idSeguidor: string) {
+    // Remove a follower from the authenticated user's followers
+    const follow = await this.followRepo.findOne({
+      where: {
+        follower: { id: idSeguidor },
+        following: { id: idSeguido },
+      },
+    });
+
+    if (!follow) throw new NotFoundException('Este usuario no te sigue');
+
+    // At this point the controller should have validated that idSeguido is the authenticated user
+    await this.followRepo.remove(follow);
+    return { mensaje: 'Seguidor eliminado correctamente' };
+  }
+
   async obtenerSeguidores(idUsuario: string) {
     const seguidores = await this.followRepo.find({
       where: { following: { id: idUsuario } },

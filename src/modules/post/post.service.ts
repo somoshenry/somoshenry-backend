@@ -22,7 +22,7 @@ export class PostService {
     });
 
     if (!user) {
-      throw new Error(`User with ID ${createPostDto.userId} not found`);
+      throw new Error(`Usuario con ID ${createPostDto.userId} no encontrado`);
     }
 
     const post = this.postRepository.create({
@@ -40,7 +40,7 @@ export class PostService {
     });
 
     if (!createdPost) {
-      throw new Error('Failed to retrieve created post');
+      throw new Error('No se pudo obtener la publicación creada');
     }
 
     return createdPost;
@@ -83,7 +83,7 @@ export class PostService {
     });
 
     if (!post) {
-      throw new Error(`Post with ID ${id} not found`);
+      throw new Error(`Publicación con ID ${id} no encontrada`);
     }
 
     return post;
@@ -95,7 +95,7 @@ export class PostService {
     });
 
     if (!post) {
-      throw new Error(`Post with ID ${id} not found`);
+      throw new Error(`Publicación con ID ${id} no encontrada`);
     }
 
     const updatedPost = this.postRepository.merge(post, {
@@ -112,7 +112,7 @@ export class PostService {
     });
 
     if (!result) {
-      throw new Error('Failed to retrieve updated post');
+      throw new Error('No se pudo obtener la publicación actualizada');
     }
 
     return result;
@@ -125,13 +125,13 @@ export class PostService {
     });
 
     if (!post) {
-      throw new Error(`Post with ID ${id} not found`);
+      throw new Error(`Publicación con ID ${id} no encontrada`);
     }
 
     await this.postRepository.remove(post);
 
     return {
-      message: 'Post deleted successfully',
+      message: 'Publicación eliminada correctamente',
       deletedPost: post,
     };
   }

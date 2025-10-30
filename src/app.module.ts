@@ -30,7 +30,7 @@ import { GmailModule } from './modules/gmail/gmail.module';
       },
     }),
     UserModule,
-    AuthModule,
+    AuthModule.register(new ConfigService()),
     PostModule,
     FollowModule,
     CommentModule,

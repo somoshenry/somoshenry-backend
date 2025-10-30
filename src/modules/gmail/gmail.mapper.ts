@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { GmailDataDto } from './dto/gmail.data.dto';
 import { GmailMessageEncode } from './dto/gmail.message.encode';
-import { gmail_v1 } from 'googleapis';
 import { GmailResponseDto } from './dto/gmail.response.dto';
+import { gmail_v1 } from '@googleapis/gmail';
 
 @Injectable()
 export class GmailMapper {

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { gmail_v1, google } from 'googleapis';
+import { gmail_v1 } from '@googleapis/gmail';
+import { gmail } from '@googleapis/gmail';
 import { OAuth2Client } from 'google-auth-library';
 import { GmailMessageEncode } from './dto/gmail.message.encode';
 import { ConfigService } from '@nestjs/config';
@@ -20,7 +21,7 @@ export class GmailConnector {
   }
 
   private createOAuthClient(): OAuth2Client {
-    const client = new google.auth.OAuth2(
+    const client = new OAuth2Client(
       this.clientId,
       this.clientSecret,
       this.redirectUri,
@@ -31,14 +32,14 @@ export class GmailConnector {
   }
 
   private createGmailClient(auth: OAuth2Client): gmail_v1.Gmail {
-    return google.gmail({ version: 'v1', auth });
+    return gmail({ version: 'v1', auth });
   }
 
   private async sendEncodedMessage(
-    gmail: gmail_v1.Gmail,
+    gmailClient: gmail_v1.Gmail,
     encodedMessage: string,
   ) {
-    return await gmail.users.messages.send({
+    return await gmailClient.users.messages.send({
       userId: this.GMAIL_USER_ID,
       requestBody: { raw: encodedMessage },
     });
@@ -49,9 +50,9 @@ export class GmailConnector {
   ): Promise<gmail_v1.Schema$Message> {
     try {
       const oauth = this.createOAuthClient();
-      const gmail = this.createGmailClient(oauth);
+      const gmailClient = this.createGmailClient(oauth);
       const encoded = emailMessageEncode.messageEncoded;
-      const result = await this.sendEncodedMessage(gmail, encoded);
+      const result = await this.sendEncodedMessage(gmailClient, encoded);
       return result.data;
     } catch (error) {
       console.error('❌ Error:', error);

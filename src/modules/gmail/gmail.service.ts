@@ -5,18 +5,18 @@ import { GmailConnector } from './gmail.connector';
 import { GmailMapper } from './gmail.mapper';
 import { GmailDataDto } from './dto/gmail.data.dto';
 import { GmailResponseDto } from './dto/gmail.response.dto';
-
-dotenv.config({ path: path.resolve(process.cwd(), '.env.development') });
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class GmailService {
   private userEmail: string;
 
   constructor(
+    private configService: ConfigService,
     private gmailConnector: GmailConnector,
     private gmailMapper: GmailMapper,
   ) {
-    this.userEmail = process.env.GMAIL_USER_EMAIL || '';
+    this.userEmail = this.configService.get('GMAIL_USER_EMAIL') || '';
   }
 
   async sendMessage(emailDataDto: GmailDataDto): Promise<GmailResponseDto> {

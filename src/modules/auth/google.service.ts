@@ -2,6 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PayloadJwt } from './dto/payload-jwt';
 import { UserService } from '../user/user.service';
+import { GoogleProfileDto } from './dto/google-profile.dto';
+import { Usuario } from '../user/entities/user.entity';
 
 @Injectable()
 export class GoogleService {
@@ -59,5 +61,3 @@ export class GoogleService {
     }
   }
 }
-import { GoogleProfileDto } from './dto/google-profile.dto';
-import { Usuario } from '../user/entities/user.entity';

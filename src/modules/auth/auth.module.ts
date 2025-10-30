@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-//import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UserRepository } from './module-users/user.repository';
 import { UserModule } from '../user/user.module';
+import { AuthGoogleController } from './auth-google.controller';
+import { GoogleStrategy } from './strategy/google.strategy';
+import { GoogleService } from './google.service';
 
 @Module({
   imports: [
-    //PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -23,8 +23,8 @@ import { UserModule } from '../user/user.module';
     }),
     UserModule,
   ],
-  controllers: [AuthController],
-  providers: [AuthService, UserRepository],
+  controllers: [AuthController, AuthGoogleController],
+  providers: [AuthService, GoogleStrategy, GoogleService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

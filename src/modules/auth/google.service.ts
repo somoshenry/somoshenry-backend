@@ -24,7 +24,7 @@ export class GoogleService {
     try {
       return this.jwtService.verify(token);
     } catch (error) {
-      throw new UnauthorizedException('Invalid token', error as Error);
+      throw new UnauthorizedException('Token inválido', error as Error);
     }
   }
 
@@ -32,15 +32,15 @@ export class GoogleService {
     if (!googleProfileDto)
       throw new UnauthorizedException('Google no envió datos de usuario');
     if (!googleProfileDto.verified_email)
-      throw new UnauthorizedException('Email not verified');
+      throw new UnauthorizedException('Correo electrónico no verificado');
   }
 
   private mapToUsuario(googleProfile: GoogleProfileDto): User {
     const user = new User();
     user.email = googleProfile.email;
-    user.nombre = googleProfile.name;
-    user.apellido = googleProfile.family_name;
-    user.imagenPerfil = googleProfile.picture;
+    user.name = googleProfile.name;
+    user.lastName = googleProfile.family_name;
+    user.profilePicture = googleProfile.picture;
     return user;
   }
 
@@ -48,7 +48,7 @@ export class GoogleService {
     const payload: PayloadJwt = {
       sub: user.id,
       email: user.email,
-      name: user.nombre as string,
+      name: user.name as string,
     };
     return payload;
   }

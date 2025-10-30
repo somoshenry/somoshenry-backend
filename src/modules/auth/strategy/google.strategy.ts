@@ -16,16 +16,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const clientSecret = configService.get<string>('GOOGLE_CLIENT_SECRET');
     const callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL');
 
-    if (!clientID || !clientSecret || !callbackURL) {
-      throw new Error('Missing Google OAuth configuration');
-    }
+    // En desarrollo, si no hay configuración de Google, usar valores mock
     const options: StrategyOptions = {
-      clientID: clientID,
-      clientSecret: clientSecret,
-      callbackURL: callbackURL,
+      clientID: clientID || 'mock_client_id',
+      clientSecret: clientSecret || 'mock_client_secret',
+      callbackURL: callbackURL || 'http://localhost:3000/auth/google/callback',
       scope: ['email', 'profile'],
     };
-    console.log('GoogleStrategy');
+
     super(options);
   }
 
@@ -38,7 +36,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const { id, name, emails, photos } = profile;
 
     if (!emails || emails.length === 0) {
-      return done(new Error('No email found in Google profile.'), undefined);
+      return done(
+        new Error('No se encontró correo electrónico en el perfil de Google.'),
+        undefined,
+      );
     }
 
     const googleProfileDto = new GoogleProfileDto();

@@ -1,22 +1,142 @@
 [
-  { "nombre": "Valen", "email": "valen@example.com", "password": "123456", "biografia": "Backend developer", "ubicacion": "Buenos Aires" },
-  { "nombre": "Andre", "email": "andre@example.com", "password": "123456", "biografia": "Frontend developer", "ubicacion": "Córdoba" },
-  { "nombre": "Gael", "email": "gael@example.com", "password": "123456", "biografia": "QA tester", "ubicacion": "Rosario" },
-  { "nombre": "Lisandro", "email": "lisandro@example.com", "password": "123456", "biografia": "UX designer", "ubicacion": "La Plata" },
-  { "nombre": "Charly", "email": "charly@example.com", "password": "123456", "biografia": "Fullstack dev", "ubicacion": "Mendoza" },
-  { "nombre": "Mora", "email": "mora@example.com", "password": "123456", "biografia": "PM del equipo", "ubicacion": "Neuquén" },
-  { "nombre": "Bruno", "email": "bruno@example.com", "password": "123456", "biografia": "Mobile dev", "ubicacion": "Santa Fe" },
-  { "nombre": "Nico", "email": "nico@example.com", "password": "123456", "biografia": "Data analyst", "ubicacion": "Buenos Aires" },
-  { "nombre": "Luna", "email": "luna@example.com", "password": "123456", "biografia": "Diseñadora UI", "ubicacion": "Córdoba" },
-  { "nombre": "Emma", "email": "emma@example.com", "password": "123456", "biografia": "QA automation", "ubicacion": "Rosario" },
-  { "nombre": "Sofi", "email": "sofi@example.com", "password": "123456", "biografia": "Frontend dev", "ubicacion": "La Plata" },
-  { "nombre": "Tomás", "email": "tomas@example.com", "password": "123456", "biografia": "Backend dev", "ubicacion": "Buenos Aires" },
-  { "nombre": "Martu", "email": "martu@example.com", "password": "123456", "biografia": "UX/UI", "ubicacion": "Santa Fe" },
-  { "nombre": "Camilo", "email": "camilo@example.com", "password": "123456", "biografia": "Data engineer", "ubicacion": "San Luis" },
-  { "nombre": "Ambar", "email": "ambar@example.com", "password": "123456", "biografia": "Community manager", "ubicacion": "San Juan" },
-  { "nombre": "Lautaro", "email": "lautaro@example.com", "password": "123456", "biografia": "Backend dev", "ubicacion": "Chaco" },
-  { "nombre": "Julia", "email": "julia@example.com", "password": "123456", "biografia": "UX researcher", "ubicacion": "Tucumán" },
-  { "nombre": "Pedro", "email": "pedro@example.com", "password": "123456", "biografia": "Sysadmin", "ubicacion": "Formosa" },
-  { "nombre": "Mati", "email": "mati@example.com", "password": "123456", "biografia": "Frontend dev", "ubicacion": "Corrientes" },
-  { "nombre": "Isa", "email": "isa@example.com", "password": "123456", "biografia": "Data scientist", "ubicacion": "Salta" }
+  {
+    "name": "Valen",
+    "email": "valen@example.com",
+    "password": "123456",
+    "biography": "Backend developer",
+    "location": "Buenos Aires"
+  },
+  {
+    "name": "Andre",
+    "email": "andre@example.com",
+    "password": "123456",
+    "biography": "Frontend developer",
+    "location": "Córdoba"
+  },
+  {
+    "name": "Gael",
+    "email": "gael@example.com",
+    "password": "123456",
+    "biography": "QA tester",
+    "location": "Rosario"
+  },
+  {
+    "name": "Lisandro",
+    "email": "lisandro@example.com",
+    "password": "123456",
+    "biography": "UX designer",
+    "location": "La Plata"
+  },
+  {
+    "name": "Charly",
+    "email": "charly@example.com",
+    "password": "123456",
+    "biography": "Fullstack dev",
+    "location": "Mendoza"
+  },
+  {
+    "name": "Mora",
+    "email": "mora@example.com",
+    "password": "123456",
+    "biography": "PM del equipo",
+    "location": "Neuquén"
+  },
+  {
+    "name": "Bruno",
+    "email": "bruno@example.com",
+    "password": "123456",
+    "biography": "Mobile dev",
+    "location": "Santa Fe"
+  },
+  {
+    "name": "Nico",
+    "email": "nico@example.com",
+    "password": "123456",
+    "biography": "Data analyst",
+    "location": "Buenos Aires"
+  },
+  {
+    "name": "Luna",
+    "email": "luna@example.com",
+    "password": "123456",
+    "biography": "Diseñadora UI",
+    "location": "Córdoba"
+  },
+  {
+    "name": "Emma",
+    "email": "emma@example.com",
+    "password": "123456",
+    "biography": "QA automation",
+    "location": "Rosario"
+  },
+  {
+    "name": "Sofi",
+    "email": "sofi@example.com",
+    "password": "123456",
+    "biography": "Frontend dev",
+    "location": "La Plata"
+  },
+  {
+    "name": "Tomás",
+    "email": "tomas@example.com",
+    "password": "123456",
+    "biography": "Backend dev",
+    "location": "Buenos Aires"
+  },
+  {
+    "name": "Martu",
+    "email": "martu@example.com",
+    "password": "123456",
+    "biography": "UX/UI",
+    "location": "Santa Fe"
+  },
+  {
+    "name": "Camilo",
+    "email": "camilo@example.com",
+    "password": "123456",
+    "biography": "Data engineer",
+    "location": "San Luis"
+  },
+  {
+    "name": "Ambar",
+    "email": "ambar@example.com",
+    "password": "123456",
+    "biography": "Community manager",
+    "location": "San Juan"
+  },
+  {
+    "name": "Lautaro",
+    "email": "lautaro@example.com",
+    "password": "123456",
+    "biography": "Backend dev",
+    "location": "Chaco"
+  },
+  {
+    "name": "Julia",
+    "email": "julia@example.com",
+    "password": "123456",
+    "biography": "UX researcher",
+    "location": "Tucumán"
+  },
+  {
+    "name": "Pedro",
+    "email": "pedro@example.com",
+    "password": "123456",
+    "biography": "Sysadmin",
+    "location": "Formosa"
+  },
+  {
+    "name": "Mati",
+    "email": "mati@example.com",
+    "password": "123456",
+    "biography": "Frontend dev",
+    "location": "Corrientes"
+  },
+  {
+    "name": "Isa",
+    "email": "isa@example.com",
+    "password": "123456",
+    "biography": "Data scientist",
+    "location": "Salta"
+  }
 ]

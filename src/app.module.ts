@@ -8,7 +8,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PostModule } from './modules/post/post.module';
 import { FollowModule } from './modules/follow/follow.module';
 import typeOrmConfig from './config/typeorm.config';
-import { JwtModule } from '@nestjs/jwt';
+
+import { CommentModule } from './modules/comment/comment.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { JwtModule } from '@nestjs/jwt';
     AuthModule,
     PostModule,
     FollowModule,
+    CommentModule,
   ],
 
   controllers: [AppController],

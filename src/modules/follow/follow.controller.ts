@@ -1,4 +1,11 @@
-import { Controller, Post, Delete, Get, Param, applyDecorators } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Param,
+  applyDecorators,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { FollowService } from './follow.service';
 import { SwaggerFollowDocs } from './docs/follow.swagger';

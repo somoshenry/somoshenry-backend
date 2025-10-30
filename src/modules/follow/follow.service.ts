@@ -1,16 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Follow } from './entities/follow.entity';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class FollowService {
   constructor(
     @InjectRepository(Follow)
     private followRepo: Repository<Follow>,
-    @InjectRepository(Usuario)
-    private usuarioRepo: Repository<Usuario>,
+    @InjectRepository(User)
+    private usuarioRepo: Repository<User>,
   ) {}
 
   async seguirUsuario(idSeguidor: string, idSeguido: string) {
@@ -18,8 +22,12 @@ export class FollowService {
       throw new BadRequestException('No puedes seguirte a ti mismo');
     }
 
-    const seguidor = await this.usuarioRepo.findOne({ where: { id: idSeguidor } });
-    const seguido = await this.usuarioRepo.findOne({ where: { id: idSeguido } });
+    const seguidor = await this.usuarioRepo.findOne({
+      where: { id: idSeguidor },
+    });
+    const seguido = await this.usuarioRepo.findOne({
+      where: { id: idSeguido },
+    });
 
     if (!seguidor || !seguido) {
       throw new NotFoundException('Usuario no encontrado');
@@ -36,7 +44,10 @@ export class FollowService {
       throw new BadRequestException('Ya sigues a este usuario');
     }
 
-    const follow = this.followRepo.create({ follower: seguidor, following: seguido });
+    const follow = this.followRepo.create({
+      follower: seguidor,
+      following: seguido,
+    });
     return this.followRepo.save(follow);
   }
 
@@ -71,15 +82,14 @@ export class FollowService {
   }
 
   async contarSeguidores(idUsuario: string): Promise<number> {
-  return this.followRepo.count({
-    where: { following: { id: idUsuario } },
-  });
-}
+    return this.followRepo.count({
+      where: { following: { id: idUsuario } },
+    });
+  }
 
-async contarSiguiendo(idUsuario: string): Promise<number> {
-  return this.followRepo.count({
-    where: { follower: { id: idUsuario } },
-  });
-}
-
+  async contarSiguiendo(idUsuario: string): Promise<number> {
+    return this.followRepo.count({
+      where: { follower: { id: idUsuario } },
+    });
+  }
 }

@@ -12,7 +12,8 @@ export const SwaggerFollowDocs = {
     }),
     ApiResponse({
       status: 400,
-      description: 'Los IDs proporcionados no son válidos o ya existe la relación.',
+      description:
+        'Los IDs proporcionados no son válidos o ya existe la relación.',
     }),
   ],
 
@@ -34,7 +35,8 @@ export const SwaggerFollowDocs = {
   obtenerSeguidores: [
     ApiOperation({
       summary: 'Obtener seguidores',
-      description: 'Devuelve la lista de usuarios que siguen al usuario indicado.',
+      description:
+        'Devuelve la lista de usuarios que siguen al usuario indicado.',
     }),
     ApiResponse({
       status: 200,
@@ -45,7 +47,8 @@ export const SwaggerFollowDocs = {
   obtenerSiguiendo: [
     ApiOperation({
       summary: 'Obtener seguidos',
-      description: 'Devuelve la lista de usuarios que el usuario indicado está siguiendo.',
+      description:
+        'Devuelve la lista de usuarios que el usuario indicado está siguiendo.',
     }),
     ApiResponse({
       status: 200,
@@ -67,7 +70,8 @@ export const SwaggerFollowDocs = {
   contarSiguiendo: [
     ApiOperation({
       summary: 'Contar seguidos',
-      description: 'Devuelve la cantidad total de usuarios que el usuario indicado sigue.',
+      description:
+        'Devuelve la cantidad total de usuarios que el usuario indicado sigue.',
     }),
     ApiResponse({
       status: 200,

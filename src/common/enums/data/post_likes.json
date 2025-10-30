@@ -1,0 +1,22 @@
+[
+  { "userId": 1, "postId": 1 },
+  { "userId": 2, "postId": 1 },
+  { "userId": 3, "postId": 2 },
+  { "userId": 4, "postId": 2 },
+  { "userId": 5, "postId": 3 },
+  { "userId": 6, "postId": 3 },
+  { "userId": 7, "postId": 4 },
+  { "userId": 8, "postId": 4 },
+  { "userId": 9, "postId": 5 },
+  { "userId": 10, "postId": 6 },
+  { "userId": 11, "postId": 7 },
+  { "userId": 12, "postId": 8 },
+  { "userId": 13, "postId": 9 },
+  { "userId": 14, "postId": 10 },
+  { "userId": 15, "postId": 11 },
+  { "userId": 16, "postId": 12 },
+  { "userId": 17, "postId": 13 },
+  { "userId": 18, "postId": 14 },
+  { "userId": 19, "postId": 15 },
+  { "userId": 20, "postId": 16 }
+]

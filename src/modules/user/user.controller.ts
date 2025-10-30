@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Post,
   Patch,
   Delete,
   Param,
@@ -10,9 +9,10 @@ import {
   Req,
   applyDecorators,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags, ApiQuery } from '@nestjs/swagger';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
+
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SwaggerUserDocs } from './docs/user.swagger';
 import { EstadoUsuario, TipoUsuario } from './entities/user.entity';
@@ -22,12 +22,12 @@ import { EstadoUsuario, TipoUsuario } from './entities/user.entity';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
-  @applyDecorators(...SwaggerUserDocs.create)
-  async create(@Body() dto: CreateUserDto) {
-    const user = await this.userService.create(dto);
-    return { message: 'Usuario creado exitosamente', user };
-  }
+  // @Post()
+  // @applyDecorators(...SwaggerUserDocs.create)
+  // async create(@Body() dto: CreateUserDto) {
+  //   const user = await this.userService.create(dto);
+  //   return { message: 'Usuario creado exitosamente', user };
+  // }
 
   @Get()
   @applyDecorators(...SwaggerUserDocs.findAll)
@@ -44,7 +44,11 @@ export class UserController {
     @Query('estado') estado?: EstadoUsuario,
   ) {
     const filters = { nombre, tipo, estado };
-    const { data, total } = await this.userService.findAll(+page, +limit, filters);
+    const { data, total } = await this.userService.findAll(
+      +page,
+      +limit,
+      filters,
+    );
     return {
       message: 'Lista de usuarios obtenida correctamente',
       total,
@@ -82,9 +86,11 @@ export class UserController {
 
   @Delete('hard/:id')
   @applyDecorators(...SwaggerUserDocs.hardDelete)
-  async hardDelete(@Param('id') id: string, @Req() req) {
-
-    const userRole: TipoUsuario = req.user?.tipo || TipoUsuario.ADMINISTRADOR;
+  async hardDelete(
+    @Param('id') id: string,
+    @Req() req: Request & { user?: { tipo: TipoUsuario } },
+  ) {
+    const userRole = req.user?.tipo || TipoUsuario.ADMINISTRADOR;
 
     const result = await this.userService.hardDelete(id, userRole);
     return result;

@@ -6,11 +6,12 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { OneToMany } from 'typeorm';
 import { Follow } from '../../follow/entities/follow.entity';
 import { Post } from '../../post/entities/post.entity';
+import { Comment } from '../../comment/entities/comment.entity';
 
 export enum TipoUsuario {
   ADMINISTRADOR = 'ADMINISTRADOR',
@@ -24,8 +25,8 @@ export enum EstadoUsuario {
   ELIMINADO = 'ELIMINADO',
 }
 
-@Entity({ name: 'usuarios' })
-export class Usuario {
+@Entity('users')
+export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -76,11 +77,15 @@ export class Usuario {
   @DeleteDateColumn({ name: 'eliminado_en', nullable: true })
   eliminadoEn?: Date | null;
 
-  @OneToMany(() => Follow, (follow) => follow.follower)
-  siguiendo: Follow[];
+  @OneToMany(() => Follow, 'follower')
+  siguiendo!: Follow[];
 
-  @OneToMany(() => Follow, (follow) => follow.following)
-  seguidores: Follow[];
-  @OneToMany(() => Post, (post) => post.user)
-  posts: Post[];
+  @OneToMany(() => Follow, 'following')
+  seguidores!: Follow[];
+
+  @OneToMany(() => Post, 'user')
+  posts!: Post[];
+
+  @OneToMany(() => Comment, 'author')
+  comments!: Comment[];
 }

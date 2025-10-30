@@ -13,6 +13,8 @@ async function bootstrap() {
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
     .setVersion('1.0')
+    .addTag('Auth')
+    .addTag('Usuarios')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -30,4 +32,7 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Error during application bootstrap:', error);
+  process.exit(1);
+});

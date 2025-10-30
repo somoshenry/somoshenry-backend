@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { CredentialDto } from './dto/credential.dto';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 import { PayloadJwt } from './dto/payload-jwt';
 import { LoginResponseOkDto } from './dto/login.response.ok.dto';
 
@@ -18,7 +18,7 @@ export class AuthService {
     private userService: UserService,
   ) {}
 
-  async registerUser(user: Partial<Usuario>): Promise<Usuario> {
+  async registerUser(user: Partial<User>): Promise<User> {
     const hashedPassword = await this.hashPassword(user.password as string);
     const newUser = { ...user, password: hashedPassword };
     return this.userService.create(newUser);
@@ -39,7 +39,7 @@ export class AuthService {
     try {
       await this.findUserByEmail(email);
       const hashedPassword = await this.hashPassword(password);
-      const updateUser = new Usuario();
+      const updateUser = new User();
       updateUser.password = hashedPassword;
       await this.userService.updateByEmail(email, updateUser);
       return { message: 'Update successful' };
@@ -49,9 +49,9 @@ export class AuthService {
     }
   }
 
-  verifyToken(token: string): any {
+  verifyToken(token: string): PayloadJwt {
     try {
-      return this.jwtService.verify(token);
+      return this.jwtService.verify<PayloadJwt>(token);
     } catch (error) {
       throw new UnauthorizedException('Invalid token', error as Error);
     }
@@ -72,7 +72,7 @@ export class AuthService {
   private async hashPassword(password: string): Promise<string> {
     return await bcrypt.hash(password, 10);
   }
-  private mapToPayloadJwt(user: Usuario) {
+  private mapToPayloadJwt(user: User) {
     const payload: PayloadJwt = {
       sub: user.id,
       email: user.email,

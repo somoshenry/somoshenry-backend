@@ -34,7 +34,6 @@ export const SwaggerUserExamples = {
 };
 
 export const SwaggerUserDocs = {
-
   create: [
     ApiOperation({
       summary: 'Crear un nuevo usuario',

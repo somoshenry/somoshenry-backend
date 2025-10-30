@@ -30,8 +30,8 @@ export class AuthController {
   })
   registerUser(@Body() user: CreateUserDto): Promise<User> {
     console.log(user);
-  // Nota: El servicio debe mapear el DTO a la entidad User antes de guardar
-  return this.authService.registerUser(user as User);
+    // Nota: El servicio debe mapear el DTO a la entidad User antes de guardar
+    return this.authService.registerUser(user as User);
   }
 
   @Post('login')

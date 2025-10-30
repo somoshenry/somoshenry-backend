@@ -4,19 +4,19 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 
 @Injectable()
 export class CommentService {
-  create(createCommentDto: CreateCommentDto) {
+  create(_createCommentDto: CreateCommentDto) {
     return 'This action adds a new comment';
   }
 
   findAll() {
-    return `This action returns all comment`;
+    return 'This action returns all comment';
   }
 
   findOne(id: number) {
     return `This action returns a #${id} comment`;
   }
 
-  update(id: number, updateCommentDto: UpdateCommentDto) {
+  update(id: number, _updateCommentDto: UpdateCommentDto) {
     return `This action updates a #${id} comment`;
   }
 

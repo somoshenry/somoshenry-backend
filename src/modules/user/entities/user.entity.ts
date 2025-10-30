@@ -6,9 +6,9 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { OneToMany } from 'typeorm';
 import { Follow } from '../../follow/entities/follow.entity';
 import { Post } from '../../post/entities/post.entity';
 import { Comment } from '../../comment/entities/comment.entity';
@@ -77,14 +77,15 @@ export class User {
   @DeleteDateColumn({ name: 'eliminado_en', nullable: true })
   eliminadoEn?: Date | null;
 
-  @OneToMany(() => Follow, (follow) => follow.follower)
-  siguiendo: Follow[];
+  @OneToMany(() => Follow, 'follower')
+  siguiendo!: Follow[];
 
-  @OneToMany(() => Follow, (follow) => follow.following)
-  seguidores: Follow[];
-  @OneToMany(() => Post, (post) => post.user)
-  posts: Post[];
-  @OneToMany(() => Comment, (comment) => comment.author)
-  comments: Comment[];
+  @OneToMany(() => Follow, 'following')
+  seguidores!: Follow[];
 
+  @OneToMany(() => Post, 'user')
+  posts!: Post[];
+
+  @OneToMany(() => Comment, 'author')
+  comments!: Comment[];
 }

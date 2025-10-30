@@ -20,9 +20,12 @@ export class SeederService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Post) private readonly postRepo: Repository<Post>,
-    @InjectRepository(Comment) private readonly commentRepo: Repository<Comment>,
-    @InjectRepository(PostLike) private readonly postLikeRepo: Repository<PostLike>,
-    @InjectRepository(CommentLike) private readonly commentLikeRepo: Repository<CommentLike>,
+    @InjectRepository(Comment)
+    private readonly commentRepo: Repository<Comment>,
+    @InjectRepository(PostLike)
+    private readonly postLikeRepo: Repository<PostLike>,
+    @InjectRepository(CommentLike)
+    private readonly commentLikeRepo: Repository<CommentLike>,
   ) {}
 
   async run(): Promise<void> {
@@ -30,7 +33,7 @@ export class SeederService {
 
     // 1️⃣ Guardar usuarios
     const savedUsers = await this.userRepo.save(
-      usersData.map((u) => this.userRepo.create(u))
+      usersData.map((u) => this.userRepo.create(u)),
     );
 
     const getUser = (index: number): User =>
@@ -95,7 +98,9 @@ export class SeederService {
       this.commentLikeRepo.count(),
     ]);
 
-    console.log(`✅ Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`);
+    console.log(
+      `✅ Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`,
+    );
     console.log('✅ Mockeo completado.');
   }
 }

@@ -13,7 +13,9 @@ class RootSeedModule {}
 
 async function bootstrap() {
   const logger = new Logger('Seeder');
-  const app = await NestFactory.createApplicationContext(RootSeedModule, { logger: ['error', 'log', 'warn'] });
+  const app = await NestFactory.createApplicationContext(RootSeedModule, {
+    logger: ['error', 'log', 'warn'],
+  });
   try {
     const seeder = app.get(SeederService);
     await seeder.run();
@@ -25,4 +27,7 @@ async function bootstrap() {
     await app.close();
   }
 }
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Error during seeder bootstrap:', error);
+  process.exit(1);
+});

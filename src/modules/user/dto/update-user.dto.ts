@@ -29,7 +29,9 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   })
   @IsOptional()
   @IsString()
-  @Length(8, 32, { message: 'La contraseña debe tener entre 8 y 32 caracteres.' })
+  @Length(8, 32, {
+    message: 'La contraseña debe tener entre 8 y 32 caracteres.',
+  })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
     message:
       'La contraseña debe incluir al menos una letra mayúscula, una minúscula y un número.',
@@ -63,7 +65,8 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @ApiPropertyOptional({
     example: SwaggerUserExamples.updateUserBody.tipo,
     enum: TipoUsuario,
-    description: 'Cambio de tipo de usuario (requiere permisos administrativos).',
+    description:
+      'Cambio de tipo de usuario (requiere permisos administrativos).',
   })
   @IsOptional()
   @IsEnum(TipoUsuario, { message: 'Tipo de usuario inválido.' })

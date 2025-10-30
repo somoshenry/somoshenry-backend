@@ -49,9 +49,9 @@ export class AuthService {
     }
   }
 
-  verifyToken(token: string): any {
+  verifyToken(token: string): PayloadJwt {
     try {
-      return this.jwtService.verify(token);
+      return this.jwtService.verify<PayloadJwt>(token);
     } catch (error) {
       throw new UnauthorizedException('Invalid token', error as Error);
     }

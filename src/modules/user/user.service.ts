@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, IsNull } from 'typeorm';
+import { Repository, ILike, IsNull, FindOptionsWhere } from 'typeorm';
 import { User, EstadoUsuario, TipoUsuario } from './entities/user.entity';
 
 @Injectable()
@@ -24,7 +24,9 @@ export class UserService {
     limit = 10,
     filters?: { nombre?: string; tipo?: TipoUsuario; estado?: EstadoUsuario },
   ): Promise<{ data: User[]; total: number }> {
-    const where: any = { eliminadoEn: IsNull() };
+    const where: FindOptionsWhere<User> = {
+      eliminadoEn: IsNull(),
+    };
 
     if (filters?.nombre) {
       where.nombre = ILike(`%${filters.nombre}%`);
@@ -145,13 +147,7 @@ export class UserService {
   async findUserByEmailWithPassword(email: string): Promise<User | null> {
     const user = await this.userRepository.findOne({
       where: { email, eliminadoEn: IsNull() },
-      select: [
-        'id',
-        'email',
-        'password',
-        'nombre',
-        'apellido',
-      ],
+      select: ['id', 'email', 'password', 'nombre', 'apellido'],
     });
     return user;
   }

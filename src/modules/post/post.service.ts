@@ -5,15 +5,15 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
 import { Post } from './entities/post.entity';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class PostService {
   constructor(
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
-    @InjectRepository(Usuario)
-    private readonly userRepository: Repository<Usuario>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async create(createPostDto: CreatePostDto): Promise<Post> {

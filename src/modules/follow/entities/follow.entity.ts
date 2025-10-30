@@ -1,16 +1,16 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn } from 'typeorm';
-import { Usuario } from '../../user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
 
 @Entity('follows')
 export class Follow {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Usuario, (usuario) => usuario.siguiendo, { onDelete: 'CASCADE' })
-  follower: Usuario;
+  @ManyToOne(() => User, (usuario) => usuario.siguiendo, { onDelete: 'CASCADE' })
+  follower: User;
 
-  @ManyToOne(() => Usuario, (usuario) => usuario.seguidores, { onDelete: 'CASCADE' })
-  following: Usuario;
+  @ManyToOne(() => User, (usuario) => usuario.seguidores, { onDelete: 'CASCADE' })
+  following: User;
 
   @CreateDateColumn()
   creadoEn: Date;

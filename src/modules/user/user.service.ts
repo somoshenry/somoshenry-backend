@@ -5,16 +5,16 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, IsNull } from 'typeorm';
-import { Usuario, EstadoUsuario, TipoUsuario } from './entities/user.entity';
+import { User, EstadoUsuario, TipoUsuario } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(Usuario)
-    private readonly userRepository: Repository<Usuario>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(data: Partial<Usuario>): Promise<Usuario> {
+  async create(data: Partial<User>): Promise<User> {
     const user = this.userRepository.create(data);
     return await this.userRepository.save(user);
   }
@@ -23,7 +23,7 @@ export class UserService {
     page = 1,
     limit = 10,
     filters?: { nombre?: string; tipo?: TipoUsuario; estado?: EstadoUsuario },
-  ): Promise<{ data: Usuario[]; total: number }> {
+  ): Promise<{ data: User[]; total: number }> {
     const where: any = { eliminadoEn: IsNull() };
 
     if (filters?.nombre) {
@@ -48,7 +48,7 @@ export class UserService {
     return { data, total };
   }
 
-  async findOne(id: string): Promise<Usuario> {
+  async findOne(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id, eliminadoEn: IsNull() },
     });
@@ -60,7 +60,7 @@ export class UserService {
     return user;
   }
 
-  async findOneByEmail(email: string): Promise<Usuario> {
+  async findOneByEmail(email: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { email, eliminadoEn: IsNull() },
     });
@@ -72,7 +72,7 @@ export class UserService {
     return user;
   }
 
-  async update(id: string, data: Partial<Usuario>): Promise<Usuario> {
+  async update(id: string, data: Partial<User>): Promise<User> {
     const user = await this.findOne(id);
 
     const validData = Object.fromEntries(
@@ -84,7 +84,7 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async updateByEmail(email: string, data: Partial<Usuario>): Promise<Usuario> {
+  async updateByEmail(email: string, data: Partial<User>): Promise<User> {
     const user = await this.findOneByEmail(email);
 
     const validData = Object.fromEntries(
@@ -142,18 +142,15 @@ export class UserService {
     return { message: 'Usuario eliminado definitivamente de la base de datos' };
   }
 
-  async findUserByEmailWithPassword(email: string): Promise<Usuario | null> {
+  async findUserByEmailWithPassword(email: string): Promise<User | null> {
     const user = await this.userRepository.findOne({
       where: { email, eliminadoEn: IsNull() },
-      // ⚠️ ESTO ES CRUCIAL: Debes seleccionar explícitamente los campos
-      // incluyendo 'password' para anular 'select: false' en la Entity.
       select: [
         'id',
         'email',
-        'password', // <--- ¡DEBE ESTAR AQUÍ!
+        'password',
         'nombre',
         'apellido',
-        // Agrega otros campos que necesites, pero 'password' es vital.
       ],
     });
     return user;

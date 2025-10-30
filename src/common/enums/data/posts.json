@@ -1,0 +1,22 @@
+[
+  { "content": "Mi primer post en la red social de Henry!", "type": "TEXT", "userId": 1 },
+  { "content": "Hoy aprendí sobre TypeORM y relaciones 👨‍💻", "type": "TEXT", "userId": 2 },
+  { "content": "Diseñando el feed de publicaciones 🖌️", "type": "TEXT", "userId": 3 },
+  { "content": "Terminamos el módulo de autenticación 🔑", "type": "TEXT", "userId": 4 },
+  { "content": "El deploy en Render fue un éxito 🚀", "type": "TEXT", "userId": 5 },
+  { "content": "Organizando tareas en Trello 📋", "type": "TEXT", "userId": 6 },
+  { "content": "Me encanta NestJS ❤️", "type": "TEXT", "userId": 7 },
+  { "content": "Hoy hicimos pairing de debugging 🧩", "type": "TEXT", "userId": 8 },
+  { "content": "Nuevo diseño del perfil implementado 💅", "type": "TEXT", "userId": 9 },
+  { "content": "Aprendiendo sobre sockets en tiempo real ⚡", "type": "TEXT", "userId": 10 },
+  { "content": "Testeando controladores con Jest 🧪", "type": "TEXT", "userId": 11 },
+  { "content": "Explorando Cloudinary para imágenes ☁️", "type": "TEXT", "userId": 12 },
+  { "content": "Semana 2 del sprint: avanzamos fuerte 💪", "type": "TEXT", "userId": 13 },
+  { "content": "Configurando la base de datos en Render 🧱", "type": "TEXT", "userId": 14 },
+  { "content": "Frontend listo para conectar con backend 🌐", "type": "TEXT", "userId": 15 },
+  { "content": "El chat ya funciona con websockets 💬", "type": "TEXT", "userId": 16 },
+  { "content": "Implementamos likes y comentarios ❤️", "type": "TEXT", "userId": 17 },
+  { "content": "El dashboard de admin se ve genial 🎛️", "type": "TEXT", "userId": 18 },
+  { "content": "Integración completa de Cloudinary 📸", "type": "TEXT", "userId": 19 },
+  { "content": "Demo final lista para presentar 🎉", "type": "TEXT", "userId": 20 }
+]

@@ -60,4 +60,5 @@ export class Post {
 
   @OneToMany(() => PostLike, (like) => like.post, { cascade: true })
   likes: PostLike[];
+  
 }

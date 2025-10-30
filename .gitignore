@@ -1,38 +1,3 @@
-# Node
-node_modules/
-dist/
-/node_modules
-
-# Env files
-.env
-.env.*
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-*.log
-
-# System files
-.DS_Store
-Thumbs.db
-
-# IDEs
-.vscode/
-.idea/
-
-# Test coverage
-coverage/
-
-# Build artifacts
-*.tgz
-
-# NestJS cache
-.cache/
-.nestcli.json
-
-# Cloudinary / uploads
-uploads/
 # compiled output
 /dist
 /node_modules
@@ -89,4 +54,3 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-

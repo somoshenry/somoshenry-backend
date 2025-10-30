@@ -2,15 +2,15 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Follow } from './entities/follow.entity';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class FollowService {
   constructor(
     @InjectRepository(Follow)
     private followRepo: Repository<Follow>,
-    @InjectRepository(Usuario)
-    private usuarioRepo: Repository<Usuario>,
+    @InjectRepository(User)
+    private usuarioRepo: Repository<User>,
   ) {}
 
   async seguirUsuario(idSeguidor: string, idSeguido: string) {
@@ -69,4 +69,17 @@ export class FollowService {
     });
     return siguiendo.map((f) => f.following);
   }
+
+  async contarSeguidores(idUsuario: string): Promise<number> {
+  return this.followRepo.count({
+    where: { following: { id: idUsuario } },
+  });
+}
+
+async contarSiguiendo(idUsuario: string): Promise<number> {
+  return this.followRepo.count({
+    where: { follower: { id: idUsuario } },
+  });
+}
+
 }

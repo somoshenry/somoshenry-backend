@@ -10,7 +10,8 @@ import {
 import { Exclude } from 'class-transformer';
 import { OneToMany } from 'typeorm';
 import { Follow } from '../../follow/entities/follow.entity';
-
+import { Post } from '../../post/entities/post.entity';
+import { Comment } from '../../comment/entities/comment.entity';
 
 export enum TipoUsuario {
   ADMINISTRADOR = 'ADMINISTRADOR',
@@ -24,8 +25,8 @@ export enum EstadoUsuario {
   ELIMINADO = 'ELIMINADO',
 }
 
-@Entity({ name: 'usuarios' })
-export class Usuario {
+@Entity('users')
+export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -81,6 +82,9 @@ export class Usuario {
 
   @OneToMany(() => Follow, (follow) => follow.following)
   seguidores: Follow[];
+  @OneToMany(() => Post, (post) => post.user)
+  posts: Post[];
+  @OneToMany(() => Comment, (comment) => comment.author)
+  comments: Comment[];
 
 }
-

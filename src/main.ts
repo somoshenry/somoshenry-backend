@@ -6,13 +6,15 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(new ValidationPipe({ whitelist: false, transform: true }));
   app.enableCors();
 
-  const config = new DocumentBuilder()
+   const config = new DocumentBuilder()
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
     .setVersion('1.0')
+    .addTag('Auth')
+    .addTag('Usuarios')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

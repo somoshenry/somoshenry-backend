@@ -1,6 +1,7 @@
 # Node
 node_modules/
 dist/
+/node_modules
 
 # Env files
 .env

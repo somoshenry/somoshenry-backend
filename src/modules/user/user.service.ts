@@ -152,7 +152,7 @@ export class UserService {
     return user;
   }
 
-  findOrAddUser(user: Usuario) {
+  findOrAddUser(user: User) {
     user.id = 'cb308116-5ad7-4368-b1ce-fd0b8a1c4354';
     user.nombre = 'Ejemplo';
     user.email = 'email@example.com';

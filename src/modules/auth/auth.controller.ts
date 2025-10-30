@@ -11,6 +11,7 @@ import { CreateUserDto } from '../user/dto/create-user.dto'; // Asumo que este D
 import { CredentialDto } from './dto/credential.dto'; // Asumo que este DTO existe
 import { User } from '../user/entities/user.entity'; // Asumo que este Entity existe
 import { LoginResponseOkDto } from './dto/login.response.ok.dto'; // Asumo que este DTO existe
+import { SwaggerAuthDocs } from './docs/swagger-auth.docs';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -18,22 +19,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  @HttpCode(201) // Código 201 Created para creación exitosa
-  @ApiOperation({ summary: 'Registra un nuevo usuario en la plataforma.' })
-  @ApiBody({
-    type: CreateUserDto,
-    description: 'Datos necesarios para la creación del usuario.',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Usuario creado exitosamente.',
-    type: User, // Muestra el esquema de la entidad Usuario como respuesta
-  })
-  @ApiResponse({
-    status: 400,
-    description:
-      'Datos de entrada inválidos (ej. email duplicado o password débil).',
-  })
+  @applyDecorators(...SwaggerAuthDocs.register)
   registerUser(@Body() user: CreateUserDto): Promise<User> {
     console.log(user);
     // Nota: El servicio debe mapear el DTO a la entidad User antes de guardar
@@ -41,7 +27,6 @@ export class AuthController {
   }
 
   @Post('login')
-  @HttpCode(200)
   @applyDecorators(...SwaggerAuthDocs.login)
   login(@Body() credenctial: CredentialDto): Promise<LoginResponseOkDto> {
     return this.authService.login(credenctial);

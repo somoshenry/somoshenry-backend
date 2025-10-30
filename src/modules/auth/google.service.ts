@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PayloadJwt } from './dto/payload-jwt';
 import { UserService } from '../user/user.service';
 import { GoogleProfileDto } from './dto/google-profile.dto';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class GoogleService {
@@ -35,8 +35,8 @@ export class GoogleService {
       throw new UnauthorizedException('Email not verified');
   }
 
-  private mapToUsuario(googleProfile: GoogleProfileDto): Usuario {
-    const user = new Usuario();
+  private mapToUsuario(googleProfile: GoogleProfileDto): User {
+    const user = new User();
     user.email = googleProfile.email;
     user.nombre = googleProfile.name;
     user.apellido = googleProfile.family_name;
@@ -44,7 +44,7 @@ export class GoogleService {
     return user;
   }
 
-  private mapToPayloadJwt(user: Usuario) {
+  private mapToPayloadJwt(user: User) {
     const payload: PayloadJwt = {
       sub: user.id,
       email: user.email,

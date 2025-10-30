@@ -29,7 +29,7 @@ import { CommentModule } from './modules/comment/comment.module';
       },
     }),
     UserModule,
-    AuthModule,
+    AuthModule.register(new ConfigService()),
     PostModule,
     FollowModule,
     CommentModule,

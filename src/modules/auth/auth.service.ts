@@ -42,9 +42,9 @@ export class AuthService {
       const updateUser = new User();
       updateUser.password = hashedPassword;
       await this.userService.updateByEmail(email, updateUser);
-      return { message: 'Update successful' };
+      return { message: 'Contraseña actualizada correctamente' };
     } catch (err) {
-      console.error('Error to change password ', err);
+      console.error('Error al cambiar la contraseña', err);
       throw new UnauthorizedException(err);
     }
   }
@@ -53,13 +53,13 @@ export class AuthService {
     try {
       return this.jwtService.verify<PayloadJwt>(token);
     } catch (error) {
-      throw new UnauthorizedException('Invalid token', error as Error);
+      throw new UnauthorizedException('Token inválido', error as Error);
     }
   }
 
   private async findUserByEmail(email: string) {
     const user = await this.userService.findUserByEmailWithPassword(email);
-    if (!user) throw new BadRequestException('Username or pass invalid');
+    if (!user) throw new BadRequestException('Usuario o contraseña inválidos');
     return user;
   }
 
@@ -76,7 +76,7 @@ export class AuthService {
     const payload: PayloadJwt = {
       sub: user.id,
       email: user.email,
-      name: user.nombre as string,
+      name: user.name as string,
     };
     return payload;
   }
@@ -86,7 +86,7 @@ export class AuthService {
   ): Promise<void> {
     const isPasswordValid = await bcrypt.compare(password, passwordDb);
     if (!isPasswordValid) {
-      throw new BadRequestException('Username or pass invalid');
+      throw new BadRequestException('Usuario o contraseña inválidos');
     }
   }
 }

@@ -21,6 +21,6 @@ export class Follow {
   })
   following: User;
 
-  @CreateDateColumn()
-  creadoEn: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 }

@@ -25,7 +25,7 @@ async function bootstrap() {
       'JWT-auth',
     )
     .addTag('Auth')
-    .addTag('Usuarios')
+    .addTag('User')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

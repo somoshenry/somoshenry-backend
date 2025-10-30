@@ -13,14 +13,17 @@ import {
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { Request } from 'express';
 import { ApiTags, ApiQuery } from '@nestjs/swagger';
+import { Roles } from '../auth/decorator/roles.decorator';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { ForbiddenException } from '@nestjs/common';
 import { UserService } from './user.service';
 
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SwaggerUserDocs } from './docs/user.swagger';
-import { EstadoUsuario, TipoUsuario } from './entities/user.entity';
+import { UserStatus, UserRole } from './entities/user.entity';
 
-@ApiTags('Usuarios')
-@Controller('usuarios')
+@ApiTags('User')
+@Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -40,21 +43,22 @@ export class UserController {
   // }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findAll)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiQuery({ name: 'nombre', required: false })
-  @ApiQuery({ name: 'tipo', required: false, enum: TipoUsuario })
-  @ApiQuery({ name: 'estado', required: false, enum: EstadoUsuario })
+  @ApiQuery({ name: 'name', required: false })
+  @ApiQuery({ name: 'role', required: false, enum: UserRole })
+  @ApiQuery({ name: 'status', required: false, enum: UserStatus })
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 10,
-    @Query('nombre') nombre?: string,
-    @Query('tipo') tipo?: TipoUsuario,
-    @Query('estado') estado?: EstadoUsuario,
+    @Query('name') name?: string,
+    @Query('role') role?: UserRole,
+    @Query('status') status?: UserStatus,
   ) {
-    const filters = { nombre, tipo, estado };
+    const filters = { name, role, status };
     const { data, total } = await this.userService.findAll(
       +page,
       +limit,
@@ -63,7 +67,7 @@ export class UserController {
     return {
       message: 'Lista de usuarios obtenida correctamente',
       total,
-      usuarios: data,
+      users: data,
     };
   }
 
@@ -78,7 +82,18 @@ export class UserController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.update)
-  async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @Req() req: Request & { user: { id: string; role: UserRole } },
+  ) {
+    // Allow owner to update their profile or admins to update any
+    if (req.user.id !== id && req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permisos para actualizar este usuario',
+      );
+    }
+
     const updated = await this.userService.update(id, dto);
     return { message: 'Usuario actualizado correctamente', user: updated };
   }
@@ -86,13 +101,24 @@ export class UserController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.delete)
-  async softDelete(@Param('id') id: string) {
+  async softDelete(
+    @Param('id') id: string,
+    @Req() req: Request & { user: { id: string; role: UserRole } },
+  ) {
+    // Allow owner or admin to soft-delete
+    if (req.user.id !== id && req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permisos para eliminar este usuario',
+      );
+    }
+
     const result = await this.userService.softDelete(id);
     return result;
   }
 
   @Patch('restore/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.restore)
   async restore(@Param('id') id: string) {
     const result = await this.userService.restore(id);
@@ -100,13 +126,14 @@ export class UserController {
   }
 
   @Delete('hard/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.hardDelete)
   async hardDelete(
     @Param('id') id: string,
-    @Req() req: Request & { user?: { tipo: TipoUsuario } },
+    @Req() req: Request & { user?: { role: UserRole } },
   ) {
-    const userRole = req.user?.tipo || TipoUsuario.ADMINISTRADOR;
+    const userRole = req.user?.role || UserRole.ADMIN;
 
     const result = await this.userService.hardDelete(id, userRole);
     return result;

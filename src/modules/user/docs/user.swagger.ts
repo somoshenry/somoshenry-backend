@@ -1,22 +1,27 @@
-import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiHeader,
+} from '@nestjs/swagger';
 
 export const SwaggerUserExamples = {
   createUserBody: {
     email: 'valen@henry.com',
     password: 'Password123',
-    nombre: 'Valentín',
-    apellido: 'Hernández',
-    tipo: 'DOCENTE',
-    estado: 'ACTIVO',
+    name: 'Valentín',
+    lastName: 'Hernández',
+    role: 'TEACHER',
+    status: 'ACTIVE',
   },
 
   updateUserBody: {
     email: 'nuevo_valen@henry.com',
     password: 'NuevaPass123',
-    nombre: 'Valentín D.',
-    apellido: 'Hernández López',
-    tipo: 'MENTOR',
-    estado: 'ACTIVO',
+    name: 'Valentín D.',
+    lastName: 'Hernández López',
+    role: 'TEACHER',
+    status: 'ACTIVE',
   },
 
   userResponse: {
@@ -24,11 +29,11 @@ export const SwaggerUserExamples = {
     user: {
       id: '2f1a4c3b-7f9d-43a2-9bb1-dcefe1b6b123',
       email: 'valen@henry.com',
-      nombre: 'Valentín',
-      apellido: 'Hernández',
-      tipo: 'DOCENTE',
-      estado: 'ACTIVO',
-      creadoEn: '2025-10-27T15:45:00.000Z',
+      name: 'Valentín',
+      lastName: 'Hernández',
+      role: 'TEACHER',
+      status: 'ACTIVE',
+      createdAt: '2025-10-27T15:45:00.000Z',
     },
   },
 };
@@ -71,9 +76,9 @@ export const SwaggerUserDocs = {
   findAll: [
     ApiBearerAuth('JWT-auth'),
     ApiOperation({
-      summary: 'Obtener todos los usuarios',
+      summary: 'Obtener todos los usuarios (solo docentes y administradores)',
       description:
-        'Devuelve una lista paginada de usuarios activos (no eliminados). Se pueden aplicar filtros por nombre, tipo o estado.',
+        'Devuelve una lista paginada de usuarios activos (no eliminados). Se pueden aplicar filtros por nombre, tipo o estado. Requiere rol de DOCENTE o ADMINISTRADOR.',
     }),
     ApiResponse({
       status: 200,
@@ -82,7 +87,7 @@ export const SwaggerUserDocs = {
         example: {
           message: 'Lista de usuarios obtenida correctamente',
           total: 1,
-          usuarios: [SwaggerUserExamples.userResponse.user],
+          users: [SwaggerUserExamples.userResponse.user],
         },
       },
     }),
@@ -114,9 +119,9 @@ export const SwaggerUserDocs = {
   update: [
     ApiBearerAuth('JWT-auth'),
     ApiOperation({
-      summary: 'Actualizar un usuario existente',
+      summary: 'Actualizar un usuario existente (propietario o administrador)',
       description:
-        'Permite modificar los campos de un usuario existente. Solo los campos enviados en el cuerpo de la solicitud serán actualizados.',
+        'Permite modificar los campos de un usuario existente. Solo el propietario del perfil o un administrador pueden realizar esta operación. Solo los campos enviados en el cuerpo de la solicitud serán actualizados.',
     }),
     ApiResponse({
       status: 200,
@@ -127,7 +132,7 @@ export const SwaggerUserDocs = {
           user: {
             ...SwaggerUserExamples.userResponse.user,
             email: SwaggerUserExamples.updateUserBody.email,
-            nombre: SwaggerUserExamples.updateUserBody.nombre,
+            name: SwaggerUserExamples.updateUserBody.name,
           },
         },
       },
@@ -142,9 +147,10 @@ export const SwaggerUserDocs = {
   delete: [
     ApiBearerAuth('JWT-auth'),
     ApiOperation({
-      summary: 'Eliminar (soft delete) un usuario',
+      summary:
+        'Eliminar (soft delete) un usuario (propietario o administrador)',
       description:
-        'Marca un usuario como eliminado sin borrarlo físicamente de la base de datos. El campo `eliminadoEn` se completa y el estado pasa a `ELIMINADO`.',
+        'Marca un usuario como eliminado sin borrarlo físicamente de la base de datos. Solo el propietario del perfil o un administrador pueden realizar esta operación. El campo `deletedAt` se completa y el estado pasa a `DELETED`.',
     }),
     ApiResponse({
       status: 200,
@@ -163,9 +169,9 @@ export const SwaggerUserDocs = {
   restore: [
     ApiBearerAuth('JWT-auth'),
     ApiOperation({
-      summary: 'Restaurar un usuario eliminado',
+      summary: 'Restaurar un usuario eliminado (solo administradores)',
       description:
-        'Restaura un usuario que fue previamente eliminado mediante soft delete, devolviéndolo al estado `ACTIVO`.',
+        'Restaura un usuario que fue previamente eliminado mediante soft delete, devolviéndolo al estado `ACTIVO`. Solo los administradores pueden realizar esta operación.',
     }),
     ApiResponse({
       status: 200,
@@ -189,7 +195,7 @@ export const SwaggerUserDocs = {
     ApiOperation({
       summary: 'Eliminar definitivamente un usuario (solo administradores)',
       description:
-        'Elimina completamente al usuario de la base de datos. Esta acción no se puede deshacer. Solo los administradores pueden realizar esta operación.',
+        'Elimina completamente al usuario de la base de datos. Esta acción no se puede deshacer y requiere rol de ADMINISTRADOR.',
     }),
     ApiResponse({
       status: 200,

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, IsNull, FindOptionsWhere } from 'typeorm';
-import { User, EstadoUsuario, TipoUsuario } from './entities/user.entity';
+import { User, UserStatus, UserRole } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
@@ -22,29 +22,29 @@ export class UserService {
   async findAll(
     page = 1,
     limit = 10,
-    filters?: { nombre?: string; tipo?: TipoUsuario; estado?: EstadoUsuario },
+    filters?: { name?: string; role?: UserRole; status?: UserStatus },
   ): Promise<{ data: User[]; total: number }> {
     const where: FindOptionsWhere<User> = {
-      eliminadoEn: IsNull(),
+      deletedAt: IsNull(),
     };
 
-    if (filters?.nombre) {
-      where.nombre = ILike(`%${filters.nombre}%`);
+    if (filters?.name) {
+      where.name = ILike(`%${filters.name}%`);
     }
 
-    if (filters?.tipo) {
-      where.tipo = filters.tipo;
+    if (filters?.role) {
+      where.role = filters.role;
     }
 
-    if (filters?.estado) {
-      where.estado = filters.estado;
+    if (filters?.status) {
+      where.status = filters.status;
     }
 
     const [data, total] = await this.userRepository.findAndCount({
       where,
       skip: (page - 1) * limit,
       take: limit,
-      order: { creadoEn: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
 
     return { data, total };
@@ -52,7 +52,7 @@ export class UserService {
 
   async findOne(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: { id, eliminadoEn: IsNull() },
+      where: { id, deletedAt: IsNull() },
     });
 
     if (!user) {
@@ -64,7 +64,7 @@ export class UserService {
 
   async findOneByEmail(email: string): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: { email, eliminadoEn: IsNull() },
+      where: { email, deletedAt: IsNull() },
     });
 
     if (!user) {
@@ -101,7 +101,7 @@ export class UserService {
   async softDelete(id: string): Promise<{ message: string }> {
     const user = await this.findOne(id);
 
-    user.estado = EstadoUsuario.ELIMINADO;
+    user.status = UserStatus.DELETED;
     await this.userRepository.save(user);
     await this.userRepository.softDelete(id);
 
@@ -115,16 +115,16 @@ export class UserService {
       throw new NotFoundException('Usuario no encontrado o no eliminado');
     }
 
-    await this.userRepository.update(id, { estado: EstadoUsuario.ACTIVO });
+    await this.userRepository.update(id, { status: UserStatus.ACTIVE });
 
     return { message: 'Usuario restaurado correctamente' };
   }
 
   async hardDelete(
     id: string,
-    userRole: TipoUsuario,
+    userRole: UserRole,
   ): Promise<{ message: string }> {
-    if (userRole !== TipoUsuario.ADMINISTRADOR) {
+    if (userRole !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'No tienes permisos para eliminar usuarios permanentemente',
       );
@@ -146,15 +146,15 @@ export class UserService {
 
   async findUserByEmailWithPassword(email: string): Promise<User | null> {
     const user = await this.userRepository.findOne({
-      where: { email, eliminadoEn: IsNull() },
-      select: ['id', 'email', 'password', 'nombre', 'apellido'],
+      where: { email, deletedAt: IsNull() },
+      select: ['id', 'email', 'password', 'name', 'lastName'],
     });
     return user;
   }
 
   findOrAddUser(user: User) {
     user.id = 'cb308116-5ad7-4368-b1ce-fd0b8a1c4354';
-    user.nombre = 'Ejemplo';
+    user.name = 'Ejemplo';
     user.email = 'email@example.com';
     return user;
   }

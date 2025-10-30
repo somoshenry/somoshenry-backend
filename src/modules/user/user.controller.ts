@@ -7,8 +7,10 @@ import {
   Body,
   Query,
   Req,
+  UseGuards,
   applyDecorators,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { Request } from 'express';
 import { ApiTags, ApiQuery } from '@nestjs/swagger';
 import { UserService } from './user.service';
@@ -22,6 +24,14 @@ import { EstadoUsuario, TipoUsuario } from './entities/user.entity';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @applyDecorators(...SwaggerUserDocs.me)
+  async getProfile(@Req() req: Request & { user: { id: string } }) {
+    const user = await this.userService.findOne(req.user.id);
+    return { message: 'Perfil del usuario', user };
+  }
+
   // @Post()
   // @applyDecorators(...SwaggerUserDocs.create)
   // async create(@Body() dto: CreateUserDto) {
@@ -30,6 +40,7 @@ export class UserController {
   // }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.findAll)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -57,6 +68,7 @@ export class UserController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.findOne)
   async findOne(@Param('id') id: string) {
     const user = await this.userService.findOne(id);
@@ -64,6 +76,7 @@ export class UserController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.update)
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     const updated = await this.userService.update(id, dto);
@@ -71,6 +84,7 @@ export class UserController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.delete)
   async softDelete(@Param('id') id: string) {
     const result = await this.userService.softDelete(id);
@@ -78,6 +92,7 @@ export class UserController {
   }
 
   @Patch('restore/:id')
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.restore)
   async restore(@Param('id') id: string) {
     const result = await this.userService.restore(id);
@@ -85,6 +100,7 @@ export class UserController {
   }
 
   @Delete('hard/:id')
+  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerUserDocs.hardDelete)
   async hardDelete(
     @Param('id') id: string,

@@ -1,4 +1,4 @@
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 export const SwaggerUserExamples = {
   createUserBody: {
@@ -34,6 +34,23 @@ export const SwaggerUserExamples = {
 };
 
 export const SwaggerUserDocs = {
+  me: [
+    ApiBearerAuth('JWT-auth'),
+    ApiOperation({
+      summary: 'Obtener el perfil del usuario autenticado',
+      description:
+        'Devuelve los datos del usuario autenticado basado en el token JWT.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Perfil del usuario autenticado',
+      schema: { example: SwaggerUserExamples.userResponse },
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'No autenticado - Token JWT faltante o inválido',
+    }),
+  ],
   create: [
     ApiOperation({
       summary: 'Crear un nuevo usuario',
@@ -52,6 +69,7 @@ export const SwaggerUserDocs = {
   ],
 
   findAll: [
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({
       summary: 'Obtener todos los usuarios',
       description:
@@ -68,9 +86,14 @@ export const SwaggerUserDocs = {
         },
       },
     }),
+    ApiResponse({
+      status: 401,
+      description: 'No autenticado - Token JWT faltante o inválido',
+    }),
   ],
 
   findOne: [
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({
       summary: 'Obtener un usuario por ID',
       description:
@@ -81,10 +104,15 @@ export const SwaggerUserDocs = {
       description: 'Usuario encontrado',
       schema: { example: SwaggerUserExamples.userResponse },
     }),
+    ApiResponse({
+      status: 401,
+      description: 'No autenticado - Token JWT faltante o inválido',
+    }),
     ApiResponse({ status: 404, description: 'Usuario no encontrado' }),
   ],
 
   update: [
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({
       summary: 'Actualizar un usuario existente',
       description:
@@ -104,10 +132,15 @@ export const SwaggerUserDocs = {
         },
       },
     }),
+    ApiResponse({
+      status: 401,
+      description: 'No autenticado - Token JWT faltante o inválido',
+    }),
     ApiResponse({ status: 404, description: 'Usuario no encontrado' }),
   ],
 
   delete: [
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({
       summary: 'Eliminar (soft delete) un usuario',
       description:
@@ -120,10 +153,15 @@ export const SwaggerUserDocs = {
         example: { message: 'Usuario marcado como eliminado (soft delete)' },
       },
     }),
+    ApiResponse({
+      status: 401,
+      description: 'No autenticado - Token JWT faltante o inválido',
+    }),
     ApiResponse({ status: 404, description: 'Usuario no encontrado' }),
   ],
 
   restore: [
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({
       summary: 'Restaurar un usuario eliminado',
       description:
@@ -137,12 +175,17 @@ export const SwaggerUserDocs = {
       },
     }),
     ApiResponse({
+      status: 401,
+      description: 'No autenticado - Token JWT faltante o inválido',
+    }),
+    ApiResponse({
       status: 404,
       description: 'Usuario no encontrado o no eliminado',
     }),
   ],
 
   hardDelete: [
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({
       summary: 'Eliminar definitivamente un usuario (solo administradores)',
       description:
@@ -156,6 +199,10 @@ export const SwaggerUserDocs = {
           message: 'Usuario eliminado definitivamente de la base de datos',
         },
       },
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'No autenticado - Token JWT faltante o inválido',
     }),
     ApiResponse({
       status: 403,

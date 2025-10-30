@@ -13,6 +13,17 @@ async function bootstrap() {
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
     .addTag('Auth')
     .addTag('Usuarios')
     .build();

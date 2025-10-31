@@ -3,20 +3,26 @@ import { ConfigFactory, ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { JwtModule } from '@nestjs/jwt';
+import typeOrmConfig from './config/typeorm.config';
+
+// Modules
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostModule } from './modules/post/post.module';
 import { FollowModule } from './modules/follow/follow.module';
-import typeOrmConfig from './config/typeorm.config';
-import { JwtModule } from '@nestjs/jwt';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
+    // Config
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env.development',
       load: [typeOrmConfig],
     }),
+
+    // Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -27,10 +33,13 @@ import { JwtModule } from '@nestjs/jwt';
         };
       },
     }),
+
+    // Feature modules
     UserModule,
     AuthModule,
     PostModule,
     FollowModule,
+    FilesModule,
   ],
 
   controllers: [AppController],

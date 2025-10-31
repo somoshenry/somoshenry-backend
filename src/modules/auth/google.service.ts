@@ -41,7 +41,7 @@ export class GoogleService {
       sub: user.id,
       email: user.email,
       name: user.name as string,
-      type: user.role,
+      role: user.role,
     };
     return payload;
   }

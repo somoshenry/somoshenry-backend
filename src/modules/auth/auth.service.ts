@@ -82,17 +82,18 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       name: user.name as string,
-      type: user.role,
+      role: user.role,
     };
     return payload;
   }
+
   private async validatePassword(
     password: string,
     passwordDb: string,
   ): Promise<void> {
     const isPasswordValid = await bcrypt.compare(password, passwordDb);
     if (!isPasswordValid) {
-      throw new BadRequestException('Usuario o contraseña inválidos');
+      throw new BadRequestException('Email o contraseña incorrectos');
     }
   }
   private generateJwt(payload: PayloadJwt): string {

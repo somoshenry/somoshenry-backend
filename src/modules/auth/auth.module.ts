@@ -1,4 +1,4 @@
-import { DynamicModule, Module, Provider, Type } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
@@ -30,8 +30,8 @@ import { JwtStrategy } from './strategy/jwt.strategy';
 })
 export class AuthModule {
   static register(config: ConfigService): DynamicModule {
-    const googleClientId = config.get('GOOGLE_CLIENT_ID');
-    const googleClientSecret = config.get('GOOGLE_CLIENT_SECRET');
+    const googleClientId = config.get('GOOGLE_CLIENT_ID') as string;
+    const googleClientSecret = config.get('GOOGLE_CLIENT_SECRET') as string;
 
     const providers: any[] = [AuthService, JwtStrategy];
     const controllers: any[] = [AuthController];

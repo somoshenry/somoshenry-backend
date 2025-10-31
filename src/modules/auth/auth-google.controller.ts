@@ -11,6 +11,7 @@ import { GoogleProfileDto } from './dto/google-profile.dto';
 import { GoogleService } from './google.service';
 import { GoogleAuthGuard } from './guard/google-auth.guard';
 import { SwaggerGoogleDocs } from './docs/auth-google.swagger';
+import { envs } from 'src/config/envs.config';
 
 @Controller('auth')
 export class AuthGoogleController {
@@ -26,15 +27,14 @@ export class AuthGoogleController {
   @applyDecorators(...SwaggerGoogleDocs.callback)
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     try {
-      const token = await this.googleService.generateToken(
-        req.user as GoogleProfileDto,
-      );
-      const urlWhitToken = `${process.env.FRONTEND_URL}/auth/callback?token=${token}`;
-      return res.redirect(urlWhitToken);
+      const userProfile = req.user as GoogleProfileDto;
+      const token = await this.googleService.generateToken(userProfile);
+      const urlToken = `${envs.frontend.host}/auth/callback?token=${token}`;
+      return res.redirect(urlToken);
     } catch (error) {
       console.error(error);
-      const urlWhitError = `${process.env.FRONTEND_URL}/auth/error?error=${error}`;
-      return res.redirect(urlWhitError);
+      const urlError = `${envs.frontend.host}/auth/error?error=${error}`;
+      return res.redirect(urlError);
     }
   }
 }

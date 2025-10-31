@@ -2,11 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Follow } from './entities/follow.entity';
-import { User } from '../user/entities/user.entity';
+import { User, UserRole } from '../user/entities/user.entity';
 
 @Injectable()
 export class FollowService {
@@ -65,7 +66,12 @@ export class FollowService {
     return { mensaje: 'Has dejado de seguir a este usuario' };
   }
 
-  async dejarDeSeguirByFollower(idSeguidor: string, idSeguido: string) {
+  async dejarDeSeguirByFollower(
+    idSeguidor: string,
+    idSeguido: string,
+    requestUserId: string,
+    userRole: UserRole,
+  ) {
     const follow = await this.followRepo.findOne({
       where: {
         follower: { id: idSeguidor },
@@ -73,13 +79,26 @@ export class FollowService {
       },
     });
 
-    if (!follow) throw new NotFoundException('No sigues a este usuario');
+    if (!follow) {
+      throw new NotFoundException('No sigues a este usuario');
+    }
+
+    if (requestUserId !== idSeguidor && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para dejar de seguir por otro usuario',
+      );
+    }
 
     await this.followRepo.remove(follow);
     return { mensaje: 'Has dejado de seguir a este usuario' };
   }
 
-  async removeFollower(idSeguido: string, idSeguidor: string) {
+  async removeFollower(
+    idSeguido: string,
+    idSeguidor: string,
+    requestUserId: string,
+    userRole: UserRole,
+  ) {
     const follow = await this.followRepo.findOne({
       where: {
         follower: { id: idSeguidor },
@@ -87,7 +106,15 @@ export class FollowService {
       },
     });
 
-    if (!follow) throw new NotFoundException('Este usuario no te sigue');
+    if (!follow) {
+      throw new NotFoundException('Este usuario no te sigue');
+    }
+
+    if (requestUserId !== idSeguido && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para eliminar este seguidor',
+      );
+    }
 
     await this.followRepo.remove(follow);
     return { mensaje: 'Seguidor eliminado correctamente' };

@@ -1,8 +1,9 @@
 import {
   Injectable,
   NotFoundException,
-  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
+import { UserRole } from '../user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -97,22 +98,31 @@ export class CommentService {
     id: string,
     updateCommentDto: UpdateCommentDto,
     userId: string,
+    userRole: UserRole,
   ): Promise<Comment> {
     const comment = await this.findOne(id);
 
-    if (comment.authorId !== userId) {
-      throw new UnauthorizedException('You can only update your own comments');
+    if (comment.authorId !== userId && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para actualizar este comentario',
+      );
     }
 
     Object.assign(comment, updateCommentDto);
     return this.commentRepository.save(comment);
   }
 
-  async remove(id: string, userId: string): Promise<Comment> {
+  async remove(
+    id: string,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<Comment> {
     const comment = await this.findOne(id);
 
-    if (comment.authorId !== userId) {
-      throw new UnauthorizedException('You can only delete your own comments');
+    if (comment.authorId !== userId && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para eliminar este comentario',
+      );
     }
 
     comment.isDeleted = true;

@@ -154,7 +154,7 @@ export class UserService {
   }
 
   async findOrAddUser(user: User): Promise<User> {
-    const userExist = await await this.userRepository.findOne({
+    const userExist = await this.userRepository.findOne({
       where: { email: user.email },
     });
     if (userExist) return userExist;

@@ -14,18 +14,10 @@ export class GoogleService {
 
   async generateToken(googleProfile: GoogleProfileDto): Promise<string> {
     this.validateGoogleProfileDto(googleProfile);
-    const user = this.mapToUsuario(googleProfile);
+    const user = this.mapToUser(googleProfile);
     const userFindOrCreated = await this.userService.findOrAddUser(user);
     const payload = this.mapToPayloadJwt(userFindOrCreated);
     return this.generateJwt(payload);
-  }
-
-  verifyToken(token: string): any {
-    try {
-      return this.jwtService.verify(token);
-    } catch (error) {
-      throw new UnauthorizedException('Token inválido', error as Error);
-    }
   }
 
   private validateGoogleProfileDto(googleProfileDto: GoogleProfileDto) {
@@ -35,7 +27,7 @@ export class GoogleService {
       throw new UnauthorizedException('Correo electrónico no verificado');
   }
 
-  private mapToUsuario(googleProfile: GoogleProfileDto): User {
+  private mapToUser(googleProfile: GoogleProfileDto): User {
     const user = new User();
     user.email = googleProfile.email;
     user.name = googleProfile.name;

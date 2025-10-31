@@ -6,24 +6,18 @@ import {
   Profile,
   StrategyOptions,
 } from 'passport-google-oauth20';
-import { ConfigService } from '@nestjs/config';
 import { GoogleProfileDto } from '../dto/google-profile.dto';
+import { envs } from 'src/config/envs.config';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  constructor(configService: ConfigService) {
-    const clientID = configService.get<string>('GOOGLE_CLIENT_ID');
-    const clientSecret = configService.get<string>('GOOGLE_CLIENT_SECRET');
-    const callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL');
-
-    // En desarrollo, si no hay configuración de Google, usar valores mock
+  constructor() {
     const options: StrategyOptions = {
-      clientID: clientID || 'mock_client_id',
-      clientSecret: clientSecret || 'mock_client_secret',
-      callbackURL: callbackURL || 'http://localhost:3000/auth/google/callback',
+      clientID: envs.google.clientId,
+      clientSecret: envs.google.clientSecret,
+      callbackURL: envs.google.callbackUrl,
       scope: ['email', 'profile'],
     };
-
     super(options);
   }
 
@@ -33,7 +27,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: Profile,
     done: VerifyCallback,
   ) {
-    const { id, name, emails, photos } = profile;
+    this.validateEmail(profile, done);
+    const googleProfileDto = this.mapToGoogleProfileDto(profile);
+    done(undefined, googleProfileDto);
+  }
+
+  private validateEmail(profile: Profile, done: VerifyCallback) {
+    const { emails } = profile;
 
     if (!emails || emails.length === 0) {
       return done(
@@ -41,7 +41,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         undefined,
       );
     }
+  }
 
+  private mapToGoogleProfileDto(profile: Profile) {
+    const { id, name, emails, photos } = profile;
+    if (!emails) throw new Error('No llego el email');
     const googleProfileDto = new GoogleProfileDto();
     googleProfileDto.id = id;
     googleProfileDto.email = emails[0].value;
@@ -54,7 +58,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     googleProfileDto.family_name = name?.familyName || '';
     googleProfileDto.picture =
       photos && photos.length > 0 ? photos[0].value : '';
-
-    done(null, googleProfileDto);
+    return googleProfileDto;
   }
 }

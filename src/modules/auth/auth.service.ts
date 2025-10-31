@@ -20,7 +20,7 @@ export class AuthService {
 
   async registerUser(user: Partial<User>): Promise<User> {
     const hashedPassword = await this.hashPassword(user.password as string);
-    const newUser = { ...user, password: hashedPassword };
+    const newUser = { ...user, password: hashedPassword } as User;
     return this.userService.create(newUser);
   }
 
@@ -28,7 +28,7 @@ export class AuthService {
     const user = await this.findUserByEmail(credential.username);
     await this.validatePassword(credential.password, user.password as string);
     const payload = this.mapToPayloadJwt(user);
-    const token = this.jwtService.sign(payload);
+    const token = this.generateJwt(payload);
     return this.buildLoginResponseOkDto(token);
   }
 
@@ -36,17 +36,11 @@ export class AuthService {
     email: string,
     password: string,
   ): Promise<{ message: string }> {
-    try {
-      await this.findUserByEmail(email);
-      const hashedPassword = await this.hashPassword(password);
-      const updateUser = new User();
-      updateUser.password = hashedPassword;
-      await this.userService.updateByEmail(email, updateUser);
-      return { message: 'Contraseña actualizada correctamente' };
-    } catch (err) {
-      console.error('Error al cambiar la contraseña', err);
-      throw new UnauthorizedException(err);
-    }
+    await this.findUserByEmail(email);
+    const hashedPassword = await this.hashPassword(password);
+    const updateUser = this.buildUser(hashedPassword);
+    await this.userService.updateByEmail(email, updateUser);
+    return { message: 'Password successfully updated' };
   }
 
   verifyToken(token: string): PayloadJwt {
@@ -55,6 +49,12 @@ export class AuthService {
     } catch (error) {
       throw new UnauthorizedException('Token inválido', error as Error);
     }
+  }
+
+  private buildUser(password: string) {
+    const user = new User();
+    user.password = password;
+    return user;
   }
 
   private async findUserByEmail(email: string) {
@@ -70,7 +70,12 @@ export class AuthService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, 10);
+    try {
+      return await bcrypt.hash(password, 10);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
   private mapToPayloadJwt(user: User): PayloadJwt {
     const payload: PayloadJwt = {
@@ -88,6 +93,14 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, passwordDb);
     if (!isPasswordValid) {
       throw new BadRequestException('Usuario o contraseña inválidos');
+    }
+  }
+  private generateJwt(payload: PayloadJwt): string {
+    try {
+      return this.jwtService.sign(payload);
+    } catch (error) {
+      console.log('Error al generar el jwt', error);
+      throw error;
     }
   }
 }

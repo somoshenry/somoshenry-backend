@@ -93,7 +93,7 @@ export class AuthService {
   ): Promise<void> {
     const isPasswordValid = await bcrypt.compare(password, passwordDb);
     if (!isPasswordValid) {
-      throw new BadRequestException('Usuario o contraseña inválidos');
+      throw new BadRequestException('Email o contraseña incorrectos');
     }
   }
   private generateJwt(payload: PayloadJwt): string {

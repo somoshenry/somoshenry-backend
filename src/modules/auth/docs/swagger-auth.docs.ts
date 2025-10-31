@@ -10,8 +10,8 @@ export const SwaggerAuthExamples = {
   registerBody: {
     email: 'test@ejemplo.com',
     password: 'Password123',
-    nombre: 'Usuario',
-    apellido: 'Prueba',
+    name: 'Usuario',
+    lastName: 'Prueba',
     // Opcional: incluir tipo y estado si son requeridos por CreateUserDto
   },
 

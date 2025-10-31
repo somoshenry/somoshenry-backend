@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../user/dto/create-user.dto'; // Asumo que este DTO existe
-import { CredentialDto } from './dto/credential.dto'; // Asumo que este DTO existe
-import { User } from '../user/entities/user.entity'; // Asumo que este Entity existe
-import { LoginResponseOkDto } from './dto/login.response.ok.dto'; // Asumo que este DTO existe
+import { CreateUserDto } from '../user/dto/create-user.dto';
+import { CredentialDto } from './dto/credential.dto';
+import { User } from '../user/entities/user.entity';
+import { LoginResponseOkDto } from './dto/login.response.ok.dto';
 import { SwaggerAuthDocs } from './docs/swagger-auth.docs';
 
 @ApiTags('Auth')
@@ -22,8 +22,7 @@ export class AuthController {
   @applyDecorators(...SwaggerAuthDocs.register)
   registerUser(@Body() user: CreateUserDto): Promise<User> {
     console.log(user);
-    // Nota: El servicio debe mapear el DTO a la entidad User antes de guardar
-    return this.authService.registerUser(user as User);
+    return this.authService.registerUser(user as unknown as User);
   }
 
   @Post('login')

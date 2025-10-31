@@ -69,7 +69,6 @@ export class Comment {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // relación inversa con CommentLike
   @OneToMany(() => CommentLike, (like) => like.comment)
   likes: CommentLike[];
 }

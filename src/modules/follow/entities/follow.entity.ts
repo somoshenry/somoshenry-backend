@@ -11,16 +11,16 @@ export class Follow {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (usuario) => usuario.siguiendo, {
+  @ManyToOne(() => User, (usuario) => usuario.following, {
     onDelete: 'CASCADE',
   })
   follower: User;
 
-  @ManyToOne(() => User, (usuario) => usuario.seguidores, {
+  @ManyToOne(() => User, (usuario) => usuario.followers, {
     onDelete: 'CASCADE',
   })
   following: User;
 
-  @CreateDateColumn()
-  creadoEn: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 }

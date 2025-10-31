@@ -74,7 +74,12 @@ export class CommentController {
     @Body() updateCommentDto: UpdateCommentDto,
     @Req() req: Request & { user: { id: string; role: UserRole } },
   ): Promise<Comment> {
-    return this.commentService.update(id, updateCommentDto, req.user.id);
+    return this.commentService.update(
+      id,
+      updateCommentDto,
+      req.user.id,
+      req.user.role,
+    );
   }
 
   @Delete('comment/:id')
@@ -88,7 +93,7 @@ export class CommentController {
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string; role: UserRole } },
   ): Promise<Comment> {
-    return this.commentService.remove(id, req.user.id);
+    return this.commentService.remove(id, req.user.id, req.user.role);
   }
 
   @Post('comment/:id/like')

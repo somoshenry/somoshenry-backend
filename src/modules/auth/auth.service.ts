@@ -82,10 +82,11 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       name: user.name as string,
-      type: user.role,
+      role: user.role,
     };
     return payload;
   }
+
   private async validatePassword(
     password: string,
     passwordDb: string,

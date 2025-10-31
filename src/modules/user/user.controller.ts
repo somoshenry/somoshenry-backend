@@ -32,7 +32,7 @@ export class UserController {
     return { message: 'Perfil del usuario', user };
   }
   @Get()
-  @AuthProtected(UserRole.TEACHER, UserRole.ADMIN)
+  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findAll)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -60,7 +60,7 @@ export class UserController {
   }
 
   @Get(':id')
-  @AuthProtected(UserRole.TEACHER, UserRole.ADMIN)
+  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findOne)
   async findOne(@Param('id') id: string) {
     const user = await this.userService.findOne(id);

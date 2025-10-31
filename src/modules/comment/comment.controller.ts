@@ -7,9 +7,8 @@ import {
   Param,
   Delete,
   Req,
-  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -25,46 +24,46 @@ export class CommentController {
 
   @Post('comment/post/:postId')
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new comment on a post' })
+  @ApiOperation({ summary: 'Crea un nuevo comentario en una publicación' })
   @ApiResponse({
     status: 201,
     description: 'El comentario ha sido creado exitosamente.',
     type: Comment,
   })
-  create(
+  async create(
     @Param('postId') postId: string,
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request & { user: { id: string; role: UserRole } },
-  ) {
-    createCommentDto.postId = postId;
-    return this.commentService.create(createCommentDto, req.user.id);
+  ): Promise<Comment> {
+    const dtoWithPostId = { ...createCommentDto, postId };
+    return this.commentService.create(dtoWithPostId, req.user.id);
   }
 
   @Get('post/:postId/comments')
-  @ApiOperation({ summary: 'Get all comments from a post' })
+  @ApiOperation({ summary: 'Obtiene todos los comentarios de un post' })
   @ApiResponse({
     status: 200,
-    description: 'Return all comments from the post',
+    description: 'Comentarios obtenidos exitosamente.',
     type: [Comment],
   })
-  findAll(@Param('postId') postId: string) {
+  findAll(@Param('postId') postId: string): Promise<Comment[]> {
     return this.commentService.findAll(postId);
   }
 
   @Get('comment/:id')
-  @ApiOperation({ summary: 'Get a comment by id' })
+  @ApiOperation({ summary: 'Obtiene un comentario por su ID' })
   @ApiResponse({
     status: 200,
-    description: 'Return the comment',
+    description: 'Comentario obtenido exitosamente.',
     type: Comment,
   })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string): Promise<Comment> {
     return this.commentService.findOne(id);
   }
 
   @Patch('comment/:id')
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update a comment' })
+  @ApiOperation({ summary: 'Actualiza un comentario existente' })
   @ApiResponse({
     status: 200,
     description: 'El comentario ha sido actualizado exitosamente.',
@@ -74,13 +73,13 @@ export class CommentController {
     @Param('id') id: string,
     @Body() updateCommentDto: UpdateCommentDto,
     @Req() req: Request & { user: { id: string; role: UserRole } },
-  ) {
+  ): Promise<Comment> {
     return this.commentService.update(id, updateCommentDto, req.user.id);
   }
 
   @Delete('comment/:id')
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a comment' })
+  @ApiOperation({ summary: 'Elimina un comentario' })
   @ApiResponse({
     status: 200,
     description: 'El comentario ha sido eliminado exitosamente.',
@@ -88,13 +87,13 @@ export class CommentController {
   remove(
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string; role: UserRole } },
-  ) {
+  ): Promise<Comment> {
     return this.commentService.remove(id, req.user.id);
   }
 
   @Post('comment/:id/like')
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Like or unlike a comment' })
+  @ApiOperation({ summary: 'Agrega o quita un like en un comentario' })
   @ApiResponse({
     status: 200,
     description: 'El like ha sido actualizado exitosamente.',
@@ -102,28 +101,29 @@ export class CommentController {
   likeComment(
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string; role: UserRole } },
-  ) {
+  ): Promise<{ message: string }> {
     return this.commentService.likeComment(id, req.user.id);
   }
 
   @Post('comment/:commentId/reply')
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Reply to a comment' })
+  @ApiOperation({ summary: 'Crea una respuesta a un comentario existente' })
   @ApiResponse({
     status: 201,
     description: 'La respuesta ha sido creada exitosamente.',
     type: Comment,
   })
-  reply(
+  async reply(
     @Param('commentId') commentId: string,
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request & { user: { id: string; role: UserRole } },
-  ) {
-    const comment = this.commentService.findOne(commentId).then((comment) => {
-      createCommentDto.postId = comment.postId;
-      createCommentDto.parentId = commentId;
-      return this.commentService.create(createCommentDto, req.user.id);
-    });
-    return comment;
+  ): Promise<Comment> {
+    const parentComment = await this.commentService.findOne(commentId);
+    const dtoWithRelations = {
+      ...createCommentDto,
+      postId: parentComment.postId,
+      parentId: commentId,
+    };
+    return this.commentService.create(dtoWithRelations, req.user.id);
   }
 }

@@ -17,9 +17,11 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "seed": "ts-node src/common/enums/data/seeds/main-seed.ts"
   },
   "dependencies": {
+    "@googleapis/gmail": "^15.0.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -29,16 +31,21 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.1",
     "@nestjs/typeorm": "^11.0.0",
+<<<<<<< HEAD
     "@types/multer": "^2.0.0",
-    "bcrypt": "^6.0.0",
     "buffer-to-stream": "^1.0.0",
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.2",
     "cloudinary": "^2.8.0",
     "passport": "^0.7.0",
+=======
+    "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "google-auth-library": "^10.5.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
+    "randomatic": "^3.1.1",
+>>>>>>> d8afc548ece0848e020afbff31170caaa99e0b1a
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
@@ -50,6 +57,8 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+
+    "@stylistic/eslint-plugin": "^5.5.0",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
@@ -57,7 +66,9 @@
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
-    "eslint": "^9.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
@@ -70,7 +81,11 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+
+
+    "typescript-eslint": "^8.20.0",
+    "@types/randomatic": "^3.1.5"
+
   },
   "jest": {
     "moduleFileExtensions": [

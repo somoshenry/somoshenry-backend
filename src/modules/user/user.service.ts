@@ -4,17 +4,18 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, IsNull } from 'typeorm';
-import { Usuario, EstadoUsuario, TipoUsuario } from './entities/user.entity';
+import { Repository, ILike, IsNull, FindOptionsWhere } from 'typeorm';
+import { User, UserStatus, UserRole } from './entities/user.entity';
+import randomatic from 'randomatic';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(Usuario)
-    private readonly userRepository: Repository<Usuario>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(data: Partial<Usuario>): Promise<Usuario> {
+  async create(data: Partial<User>): Promise<User> {
     const user = this.userRepository.create(data);
     return await this.userRepository.save(user);
   }
@@ -22,35 +23,37 @@ export class UserService {
   async findAll(
     page = 1,
     limit = 10,
-    filters?: { nombre?: string; tipo?: TipoUsuario; estado?: EstadoUsuario },
-  ): Promise<{ data: Usuario[]; total: number }> {
-    const where: any = { eliminadoEn: IsNull() };
+    filters?: { name?: string; role?: UserRole; status?: UserStatus },
+  ): Promise<{ data: User[]; total: number }> {
+    const where: FindOptionsWhere<User> = {
+      deletedAt: IsNull(),
+    };
 
-    if (filters?.nombre) {
-      where.nombre = ILike(`%${filters.nombre}%`);
+    if (filters?.name) {
+      where.name = ILike(`%${filters.name}%`);
     }
 
-    if (filters?.tipo) {
-      where.tipo = filters.tipo;
+    if (filters?.role) {
+      where.role = filters.role;
     }
 
-    if (filters?.estado) {
-      where.estado = filters.estado;
+    if (filters?.status) {
+      where.status = filters.status;
     }
 
     const [data, total] = await this.userRepository.findAndCount({
       where,
       skip: (page - 1) * limit,
       take: limit,
-      order: { creadoEn: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
 
     return { data, total };
   }
 
-  async findOne(id: string): Promise<Usuario> {
+  async findOne(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: { id, eliminadoEn: IsNull() },
+      where: { id, deletedAt: IsNull() },
     });
 
     if (!user) {
@@ -60,9 +63,9 @@ export class UserService {
     return user;
   }
 
-  async findOneByEmail(email: string): Promise<Usuario> {
+  async findOneByEmail(email: string): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: { email, eliminadoEn: IsNull() },
+      where: { email, deletedAt: IsNull() },
     });
 
     if (!user) {
@@ -72,7 +75,7 @@ export class UserService {
     return user;
   }
 
-  async update(id: string, data: Partial<Usuario>): Promise<Usuario> {
+  async update(id: string, data: Partial<User>): Promise<User> {
     const user = await this.findOne(id);
 
     const validData = Object.fromEntries(
@@ -84,7 +87,7 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async updateByEmail(email: string, data: Partial<Usuario>): Promise<Usuario> {
+  async updateByEmail(email: string, data: Partial<User>): Promise<User> {
     const user = await this.findOneByEmail(email);
 
     const validData = Object.fromEntries(
@@ -99,7 +102,7 @@ export class UserService {
   async softDelete(id: string): Promise<{ message: string }> {
     const user = await this.findOne(id);
 
-    user.estado = EstadoUsuario.ELIMINADO;
+    user.status = UserStatus.DELETED;
     await this.userRepository.save(user);
     await this.userRepository.softDelete(id);
 
@@ -113,16 +116,16 @@ export class UserService {
       throw new NotFoundException('Usuario no encontrado o no eliminado');
     }
 
-    await this.userRepository.update(id, { estado: EstadoUsuario.ACTIVO });
+    await this.userRepository.update(id, { status: UserStatus.ACTIVE });
 
     return { message: 'Usuario restaurado correctamente' };
   }
 
   async hardDelete(
     id: string,
-    userRole: TipoUsuario,
+    userRole: UserRole,
   ): Promise<{ message: string }> {
-    if (userRole !== TipoUsuario.ADMINISTRADOR) {
+    if (userRole !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'No tienes permisos para eliminar usuarios permanentemente',
       );
@@ -142,20 +145,25 @@ export class UserService {
     return { message: 'Usuario eliminado definitivamente de la base de datos' };
   }
 
-  async findUserByEmailWithPassword(email: string): Promise<Usuario | null> {
+  async findUserByEmailWithPassword(email: string): Promise<User | null> {
     const user = await this.userRepository.findOne({
-      where: { email, eliminadoEn: IsNull() },
-      // ⚠️ ESTO ES CRUCIAL: Debes seleccionar explícitamente los campos
-      // incluyendo 'password' para anular 'select: false' en la Entity.
-      select: [
-        'id',
-        'email',
-        'password', // <--- ¡DEBE ESTAR AQUÍ!
-        'nombre',
-        'apellido',
-        // Agrega otros campos que necesites, pero 'password' es vital.
-      ],
+      where: { email, deletedAt: IsNull() },
+      select: ['id', 'email', 'password', 'name', 'lastName', 'role'],
     });
     return user;
+  }
+
+  async findOrAddUser(user: User): Promise<User> {
+    const userExist = await this.userRepository.findOne({
+      where: { email: user.email },
+    });
+    if (userExist) return userExist;
+    user.password = this.generatePassword();
+    user.role = UserRole.MEMBER;
+    return await this.create(user);
+  }
+
+  private generatePassword(): string {
+    return randomatic('Aa0!', 12);
   }
 }

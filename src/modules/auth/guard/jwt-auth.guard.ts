@@ -1,4 +1,4 @@
-/* import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 
@@ -10,4 +10,3 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 }
- */

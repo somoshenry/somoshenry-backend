@@ -1,4 +1,4 @@
-/* import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import {
   ExtractJwt,
@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const secret = configService.get<string>('JWT_SECRET');
 
     if (!secret) {
-      throw new Error('JWT_SECRET is not defined in environment variables');
+      throw new Error('La variable de entorno JWT_SECRET no está definida');
     }
 
     const strategyOptionsWithoutRequest: StrategyOptionsWithoutRequest = {
@@ -25,16 +25,21 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super(strategyOptionsWithoutRequest);
   }
 
-  validate(payload: { sub: string; email: string; name: string }) {
+  validate(payload: {
+    sub: string;
+    email: string;
+    name: string;
+    role: string;
+  }) {
     if (!payload.sub || !payload.email) {
-      throw new UnauthorizedException('Invalid token payload');
+      throw new UnauthorizedException('Payload de token inválido');
     }
 
     return {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
+      role: payload.role,
     };
   }
 }
- */

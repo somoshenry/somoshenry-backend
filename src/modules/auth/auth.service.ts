@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { CredentialDto } from './dto/credential.dto';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 import { PayloadJwt } from './dto/payload-jwt';
 import { LoginResponseOkDto } from './dto/login.response.ok.dto';
 
@@ -18,9 +18,9 @@ export class AuthService {
     private userService: UserService,
   ) {}
 
-  async registerUser(user: Partial<Usuario>): Promise<Usuario> {
+  async registerUser(user: Partial<User>): Promise<User> {
     const hashedPassword = await this.hashPassword(user.password as string);
-    const newUser = { ...user, password: hashedPassword };
+    const newUser = { ...user, password: hashedPassword } as User;
     return this.userService.create(newUser);
   }
 
@@ -28,7 +28,7 @@ export class AuthService {
     const user = await this.findUserByEmail(credential.username);
     await this.validatePassword(credential.password, user.password as string);
     const payload = this.mapToPayloadJwt(user);
-    const token = this.jwtService.sign(payload);
+    const token = this.generateJwt(payload);
     return this.buildLoginResponseOkDto(token);
   }
 
@@ -36,30 +36,30 @@ export class AuthService {
     email: string,
     password: string,
   ): Promise<{ message: string }> {
+    await this.findUserByEmail(email);
+    const hashedPassword = await this.hashPassword(password);
+    const updateUser = this.buildUser(hashedPassword);
+    await this.userService.updateByEmail(email, updateUser);
+    return { message: 'Password successfully updated' };
+  }
+
+  verifyToken(token: string): PayloadJwt {
     try {
-      await this.findUserByEmail(email);
-      const hashedPassword = await this.hashPassword(password);
-      const updateUser = new Usuario();
-      updateUser.password = hashedPassword;
-      await this.userService.updateByEmail(email, updateUser);
-      return { message: 'Update successful' };
-    } catch (err) {
-      console.error('Error to change password ', err);
-      throw new UnauthorizedException(err);
+      return this.jwtService.verify<PayloadJwt>(token);
+    } catch (error) {
+      throw new UnauthorizedException('Token inválido', error as Error);
     }
   }
 
-  verifyToken(token: string): any {
-    try {
-      return this.jwtService.verify(token);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid token', error as Error);
-    }
+  private buildUser(password: string) {
+    const user = new User();
+    user.password = password;
+    return user;
   }
 
   private async findUserByEmail(email: string) {
     const user = await this.userService.findUserByEmailWithPassword(email);
-    if (!user) throw new BadRequestException('Username or pass invalid');
+    if (!user) throw new BadRequestException('Usuario o contraseña inválidos');
     return user;
   }
 
@@ -70,13 +70,19 @@ export class AuthService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, 10);
+    try {
+      return await bcrypt.hash(password, 10);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
-  private mapToPayloadJwt(user: Usuario) {
+  private mapToPayloadJwt(user: User): PayloadJwt {
     const payload: PayloadJwt = {
       sub: user.id,
       email: user.email,
-      name: user.nombre as string,
+      name: user.name as string,
+      type: user.role,
     };
     return payload;
   }
@@ -86,7 +92,15 @@ export class AuthService {
   ): Promise<void> {
     const isPasswordValid = await bcrypt.compare(password, passwordDb);
     if (!isPasswordValid) {
-      throw new BadRequestException('Username or pass invalid');
+      throw new BadRequestException('Usuario o contraseña inválidos');
+    }
+  }
+  private generateJwt(payload: PayloadJwt): string {
+    try {
+      return this.jwtService.sign(payload);
+    } catch (error) {
+      console.log('Error al generar el jwt', error);
+      throw error;
     }
   }
 }

@@ -6,11 +6,14 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-    credentials: true,
-  });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: false,
+      transform: true,
+    }),
+  );
+
+  app.enableCors();
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -26,6 +29,23 @@ async function bootstrap() {
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Introduce tu token JWT aquí (formato: Bearer <token>)',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+
+    .addTag('App')
+    .addTag('Auth')
+    .addTag('User')
+    .addTag('Follows')
+    .addTag('Posts')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -47,4 +67,7 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('❌ Error during application bootstrap:', error);
+  process.exit(1);
+});

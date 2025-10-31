@@ -1,0 +1,22 @@
+[
+  { "content": "Excelente trabajo!", "userId": 2, "postId": 1 },
+  { "content": "Qué buen progreso 🔥", "userId": 3, "postId": 2 },
+  { "content": "Diseño hermoso 👏", "userId": 4, "postId": 3 },
+  { "content": "Autenticación impecable!", "userId": 5, "postId": 4 },
+  { "content": "Vamos equipo 🚀", "userId": 6, "postId": 5 },
+  { "content": "Organización top 💪", "userId": 7, "postId": 6 },
+  { "content": "NestJS es lo más", "userId": 8, "postId": 7 },
+  { "content": "Buen debugging!", "userId": 9, "postId": 8 },
+  { "content": "Me gusta el nuevo perfil", "userId": 10, "postId": 9 },
+  { "content": "Sockets listos, genial!", "userId": 11, "postId": 10 },
+  { "content": "Los tests pasaron todos 😎", "userId": 12, "postId": 11 },
+  { "content": "Las imágenes cargan rápido 🔥", "userId": 13, "postId": 12 },
+  { "content": "El sprint va increíble", "userId": 14, "postId": 13 },
+  { "content": "Render no falló 👏", "userId": 15, "postId": 14 },
+  { "content": "Conectado todo perfecto", "userId": 16, "postId": 15 },
+  { "content": "Chat rapidísimo ⚡", "userId": 17, "postId": 16 },
+  { "content": "Likes funcionando ❤️", "userId": 18, "postId": 17 },
+  { "content": "Dashboard impecable", "userId": 19, "postId": 18 },
+  { "content": "Integración sólida 🔗", "userId": 20, "postId": 19 },
+  { "content": "Vamos por la demo 💥", "userId": 1, "postId": 20 }
+]

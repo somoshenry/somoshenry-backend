@@ -8,7 +8,7 @@ import {
   Matches,
   IsNotEmpty,
 } from 'class-validator';
-import { EstadoUsuario, TipoUsuario } from '../entities/user.entity';
+import { UserStatus, UserRole } from '../entities/user.entity';
 import { SwaggerUserExamples } from '../docs/user.swagger';
 
 export class CreateUserDto {
@@ -38,7 +38,7 @@ export class CreateUserDto {
   password: string;
 
   @ApiProperty({
-    example: SwaggerUserExamples.createUserBody.nombre,
+    example: SwaggerUserExamples.createUserBody.name,
     description: 'Nombre del usuario. Solo letras.',
     required: true,
   })
@@ -48,10 +48,10 @@ export class CreateUserDto {
   @Matches(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/, {
     message: 'El nombre solo puede contener letras y espacios.',
   })
-  nombre: string;
+  name: string;
 
   @ApiProperty({
-    example: SwaggerUserExamples.createUserBody.apellido,
+    example: SwaggerUserExamples.createUserBody.lastName,
     description: 'Apellido del usuario. Solo letras.',
     required: true,
   })
@@ -61,25 +61,25 @@ export class CreateUserDto {
   @Matches(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/, {
     message: 'El apellido solo puede contener letras y espacios.',
   })
-  apellido: string;
+  lastName: string;
 
   @ApiProperty({
-    example: SwaggerUserExamples.createUserBody.tipo,
-    enum: TipoUsuario,
+    example: SwaggerUserExamples.createUserBody.role,
+    enum: UserRole,
     description: 'Tipo de usuario dentro de la plataforma.',
-    default: TipoUsuario.MIEMBRO,
+    default: UserRole.MEMBER,
   })
   @IsOptional()
-  @IsEnum(TipoUsuario, { message: 'Tipo de usuario inválido.' })
-  tipo?: TipoUsuario;
+  @IsEnum(UserRole, { message: 'Tipo de usuario inválido.' })
+  role?: UserRole;
 
   @ApiProperty({
-    example: SwaggerUserExamples.createUserBody.estado,
-    enum: EstadoUsuario,
+    example: SwaggerUserExamples.createUserBody.status,
+    enum: UserStatus,
     description: 'Estado actual del usuario (activo, inactivo, baneado, etc.).',
-    default: EstadoUsuario.ACTIVO,
+    default: UserStatus.ACTIVE,
   })
   @IsOptional()
-  @IsEnum(EstadoUsuario, { message: 'Estado de usuario inválido.' })
-  estado?: EstadoUsuario;
+  @IsEnum(UserStatus, { message: 'Estado de usuario inválido.' })
+  status?: UserStatus;
 }

@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, IsNull, FindOptionsWhere } from 'typeorm';
 import { User, UserStatus, UserRole } from './entities/user.entity';
+import randomatic from 'randomatic';
 
 @Injectable()
 export class UserService {
@@ -152,11 +153,17 @@ export class UserService {
     return user;
   }
 
-  findOrAddUser(user: User) {
-    user.id = 'cb308116-5ad7-4368-b1ce-fd0b8a1c4354';
-    user.name = 'Ejemplo';
-    user.email = 'email@example.com';
+  async findOrAddUser(user: User): Promise<User> {
+    const userExist = await await this.userRepository.findOne({
+      where: { email: user.email },
+    });
+    if (userExist) return userExist;
+    user.password = this.generatePassword();
     user.role = UserRole.MEMBER;
-    return user;
+    return await this.create(user);
+  }
+
+  private generatePassword(): string {
+    return randomatic('Aa0!', 12);
   }
 }

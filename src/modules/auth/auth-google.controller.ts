@@ -24,9 +24,9 @@ export class AuthGoogleController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   @applyDecorators(...SwaggerGoogleDocs.callback)
-  googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
+  async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     try {
-      const token = this.googleService.generateToken(
+      const token = await this.googleService.generateToken(
         req.user as GoogleProfileDto,
       );
       const urlWhitToken = `${process.env.FRONTEND_URL}/auth/callback?token=${token}`;

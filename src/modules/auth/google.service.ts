@@ -12,10 +12,10 @@ export class GoogleService {
     private userService: UserService,
   ) {}
 
-  generateToken(googleProfile: GoogleProfileDto): string {
+  async generateToken(googleProfile: GoogleProfileDto): Promise<string> {
     this.validateGoogleProfileDto(googleProfile);
     const user = this.mapToUsuario(googleProfile);
-    const userFindOrCreated = this.userService.findOrAddUser(user);
+    const userFindOrCreated = await this.userService.findOrAddUser(user);
     const payload = this.mapToPayloadJwt(userFindOrCreated);
     return this.generateJwt(payload);
   }
@@ -49,6 +49,7 @@ export class GoogleService {
       sub: user.id,
       email: user.email,
       name: user.nombre as string,
+      type: user.tipo,
     };
     return payload;
   }

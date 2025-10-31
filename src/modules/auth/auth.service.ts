@@ -72,11 +72,12 @@ export class AuthService {
   private async hashPassword(password: string): Promise<string> {
     return await bcrypt.hash(password, 10);
   }
-  private mapToPayloadJwt(user: User) {
+  private mapToPayloadJwt(user: User): PayloadJwt {
     const payload: PayloadJwt = {
       sub: user.id,
       email: user.email,
       name: user.nombre as string,
+      type: user.tipo,
     };
     return payload;
   }

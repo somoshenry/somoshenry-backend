@@ -7,20 +7,17 @@ import {
   Body,
   Query,
   Req,
-  UseGuards,
   applyDecorators,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { Request } from 'express';
 import { ApiTags, ApiQuery } from '@nestjs/swagger';
-import { Roles } from '../auth/decorator/roles.decorator';
-import { RolesGuard } from '../auth/guard/roles.guard';
 import { ForbiddenException } from '@nestjs/common';
 import { UserService } from './user.service';
 
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SwaggerUserDocs } from './docs/user.swagger';
 import { UserStatus, UserRole } from './entities/user.entity';
+import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 
 @ApiTags('User')
 @Controller('users')
@@ -28,23 +25,14 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @AuthProtected()
   @applyDecorators(...SwaggerUserDocs.me)
   async getProfile(@Req() req: Request & { user: { id: string } }) {
     const user = await this.userService.findOne(req.user.id);
     return { message: 'Perfil del usuario', user };
   }
-
-  // @Post()
-  // @applyDecorators(...SwaggerUserDocs.create)
-  // async create(@Body() dto: CreateUserDto) {
-  //   const user = await this.userService.create(dto);
-  //   return { message: 'Usuario creado exitosamente', user };
-  // }
-
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.TEACHER, UserRole.ADMIN)
+  @AuthProtected(UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findAll)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -72,7 +60,7 @@ export class UserController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @AuthProtected(UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findOne)
   async findOne(@Param('id') id: string) {
     const user = await this.userService.findOne(id);
@@ -80,14 +68,13 @@ export class UserController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.update)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
     @Req() req: Request & { user: { id: string; role: UserRole } },
   ) {
-    // Allow owner to update their profile or admins to update any
     if (req.user.id !== id && req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'No tienes permisos para actualizar este usuario',
@@ -99,13 +86,12 @@ export class UserController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.delete)
   async softDelete(
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string; role: UserRole } },
   ) {
-    // Allow owner or admin to soft-delete
     if (req.user.id !== id && req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'No tienes permisos para eliminar este usuario',
@@ -117,8 +103,7 @@ export class UserController {
   }
 
   @Patch('restore/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.restore)
   async restore(@Param('id') id: string) {
     const result = await this.userService.restore(id);
@@ -126,8 +111,7 @@ export class UserController {
   }
 
   @Delete('hard/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.hardDelete)
   async hardDelete(
     @Param('id') id: string,

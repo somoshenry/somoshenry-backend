@@ -21,7 +21,7 @@ export class UserService {
       where: { email: data.email, deletedAt: IsNull() },
     });
     if (user)
-      throw new BadRequestException('Ya existe un usuario con ese corro');
+      throw new BadRequestException('Ya existe un usuario con ese correo');
     const userCreated = this.userRepository.create(data);
     return await this.userRepository.save(userCreated);
   }

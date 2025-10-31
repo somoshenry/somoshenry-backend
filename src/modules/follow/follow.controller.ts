@@ -5,13 +5,13 @@ import {
   Get,
   Param,
   applyDecorators,
-  UseGuards,
   Req,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { FollowService } from './follow.service';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
+import { UserRole } from '../user/entities/user.entity';
 import { SwaggerFollowDocs } from './docs/follow.swagger';
 
 @ApiTags('Follows')
@@ -20,34 +20,32 @@ export class FollowController {
   constructor(private readonly followService: FollowService) {}
 
   @Post(':idSeguido')
-  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerFollowDocs.seguir)
+  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   seguir(
-    @Req() req: Request & { user: { id: string } },
+    @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguido') idSeguido: string,
   ) {
     const idSeguidor = req.user.id;
     return this.followService.seguirUsuario(idSeguidor, idSeguido);
   }
 
-  // Unfollow: the authenticated user stops following idSeguido
   @Delete('unfollow/:idSeguido')
-  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerFollowDocs.dejarDeSeguir)
+  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   dejarDeSeguir(
-    @Req() req: Request & { user: { id: string } },
+    @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguido') idSeguido: string,
   ) {
     const idSeguidor = req.user.id;
     return this.followService.dejarDeSeguirByFollower(idSeguidor, idSeguido);
   }
 
-  // Remove follower: the authenticated user removes someone who follows them
   @Delete('remove-follower/:idSeguidor')
-  @UseGuards(JwtAuthGuard)
   @applyDecorators(...SwaggerFollowDocs.removeFollower)
+  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   removeFollower(
-    @Req() req: Request & { user: { id: string } },
+    @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguidor') idSeguidor: string,
   ) {
     const idSeguido = req.user.id;

@@ -6,7 +6,13 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: false, transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: false,
+      transform: true,
+    }),
+  );
+
   app.enableCors();
 
   const config = new DocumentBuilder()
@@ -19,14 +25,17 @@ async function bootstrap() {
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'JWT',
-        description: 'Enter JWT token',
+        description: 'Introduce tu token JWT aquí (formato: Bearer <token>)',
         in: 'header',
       },
       'JWT-auth',
     )
+
     .addTag('App')
     .addTag('Auth')
     .addTag('User')
+    .addTag('Follows')
+    .addTag('Posts')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -45,6 +54,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((error) => {
-  console.error('Error during application bootstrap:', error);
+  console.error('❌ Error during application bootstrap:', error);
   process.exit(1);
 });

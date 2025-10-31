@@ -1,11 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
-import { AppModule } from '../../../../app.module'; // Usa tu config TypeORM ya definida en AppModule
+import { AppModule } from '../../../../app.module';
 import { SeederModule } from './seeder.module';
 import { SeederService } from './SeederService';
 import { Module } from '@nestjs/common';
 
-// Módulo raíz para el seed: reusa AppModule (conexión DB) + añade SeederModule (repos + servicio)
 @Module({
   imports: [AppModule, SeederModule],
 })

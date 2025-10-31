@@ -147,7 +147,7 @@ export class UserService {
   async findUserByEmailWithPassword(email: string): Promise<User | null> {
     const user = await this.userRepository.findOne({
       where: { email, deletedAt: IsNull() },
-      select: ['id', 'email', 'password', 'name', 'lastName'],
+      select: ['id', 'email', 'password', 'name', 'lastName', 'role'],
     });
     return user;
   }
@@ -156,6 +156,7 @@ export class UserService {
     user.id = 'cb308116-5ad7-4368-b1ce-fd0b8a1c4354';
     user.name = 'Ejemplo';
     user.email = 'email@example.com';
+    user.role = UserRole.MEMBER;
     return user;
   }
 }

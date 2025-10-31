@@ -16,20 +16,18 @@ export class PostService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(createPostDto: CreatePostDto): Promise<Post> {
+  async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {
     const user = await this.userRepository.findOne({
-      where: { id: createPostDto.userId },
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new Error(`Usuario con ID ${createPostDto.userId} no encontrado`);
+      throw new Error('Usuario no encontrado');
     }
 
     const post = this.postRepository.create({
-      userId: createPostDto.userId,
-      content: createPostDto.content,
-      type: createPostDto.type,
-      mediaURL: createPostDto.mediaURL,
+      userId,
+      ...createPostDto,
     });
 
     const savedPost = await this.postRepository.save(post);
@@ -89,20 +87,24 @@ export class PostService {
     return post;
   }
 
-  async update(id: string, updatePostDto: UpdatePostDto): Promise<Post> {
+  async update(
+    id: string,
+    updatePostDto: UpdatePostDto,
+    userId: string,
+  ): Promise<Post> {
     const post = await this.postRepository.findOne({
       where: { id },
     });
 
     if (!post) {
-      throw new Error(`Publicación con ID ${id} no encontrada`);
+      throw new Error('Publicación no encontrada');
     }
 
-    const updatedPost = this.postRepository.merge(post, {
-      content: updatePostDto.content,
-      type: updatePostDto.type,
-      mediaURL: updatePostDto.mediaURL,
-    });
+    if (post.userId !== userId) {
+      throw new Error('No tienes permiso para actualizar esta publicación');
+    }
+
+    const updatedPost = this.postRepository.merge(post, updatePostDto);
 
     await this.postRepository.save(updatedPost);
 
@@ -118,7 +120,10 @@ export class PostService {
     return result;
   }
 
-  async remove(id: string): Promise<{ message: string; deletedPost: Post }> {
+  async remove(
+    id: string,
+    userId: string,
+  ): Promise<{ message: string; deletedPost: Post }> {
     const post = await this.postRepository.findOne({
       where: { id },
       relations: ['user'],
@@ -128,6 +133,10 @@ export class PostService {
       throw new Error(`Publicación con ID ${id} no encontrada`);
     }
 
+    if (post.userId !== userId) {
+      throw new Error('No tienes permiso para eliminar esta publicación');
+    }
+
     await this.postRepository.remove(post);
 
     return {
@@ -135,13 +144,4 @@ export class PostService {
       deletedPost: post,
     };
   }
-  //   findOne(id: number) {
-  //     return `This action returns a #${id} post`;
-  //   }
-  //   update(id: number, updatePostDto: UpdatePostDto) {
-  //     return `This action updates a #${id} post`;
-  //   }
-  //   remove(id: number) {
-  //     return `This action removes a #${id} post`;
-  //   }
 }

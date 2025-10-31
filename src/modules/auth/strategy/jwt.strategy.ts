@@ -25,7 +25,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super(strategyOptionsWithoutRequest);
   }
 
-  validate(payload: { sub: string; email: string; name: string }) {
+  validate(payload: {
+    sub: string;
+    email: string;
+    name: string;
+    role: string;
+  }) {
     if (!payload.sub || !payload.email) {
       throw new UnauthorizedException('Payload de token inválido');
     }
@@ -34,6 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
+      role: payload.role,
     };
   }
 }

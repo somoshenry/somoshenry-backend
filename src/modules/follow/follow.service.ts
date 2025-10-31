@@ -66,7 +66,6 @@ export class FollowService {
   }
 
   async dejarDeSeguirByFollower(idSeguidor: string, idSeguido: string) {
-    // Unfollow action performed by follower (auth user)
     const follow = await this.followRepo.findOne({
       where: {
         follower: { id: idSeguidor },
@@ -81,7 +80,6 @@ export class FollowService {
   }
 
   async removeFollower(idSeguido: string, idSeguidor: string) {
-    // Remove a follower from the authenticated user's followers
     const follow = await this.followRepo.findOne({
       where: {
         follower: { id: idSeguidor },
@@ -91,7 +89,6 @@ export class FollowService {
 
     if (!follow) throw new NotFoundException('Este usuario no te sigue');
 
-    // At this point the controller should have validated that idSeguido is the authenticated user
     await this.followRepo.remove(follow);
     return { mensaje: 'Seguidor eliminado correctamente' };
   }

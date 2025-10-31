@@ -59,7 +59,7 @@ export class AuthModule {
       ],
       controllers,
       providers,
-      exports: [AuthService, JwtModule],
+      exports: [AuthService, JwtModule, JwtStrategy],
     };
   }
 }

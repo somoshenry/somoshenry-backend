@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, IsNull, FindOptionsWhere } from 'typeorm';
@@ -16,8 +17,13 @@ export class UserService {
   ) {}
 
   async create(data: Partial<User>): Promise<User> {
-    const user = this.userRepository.create(data);
-    return await this.userRepository.save(user);
+    const user = await this.userRepository.findOne({
+      where: { email: data.email, deletedAt: IsNull() },
+    });
+    if (user)
+      throw new BadRequestException('Ya existe un usuario con ese corro');
+    const userCreated = this.userRepository.create(data);
+    return await this.userRepository.save(userCreated);
   }
 
   async findAll(

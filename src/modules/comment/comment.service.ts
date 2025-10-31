@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,9 +22,15 @@ export class CommentService {
     private readonly postRepository: Repository<Post>,
   ) {}
 
-  async create(createCommentDto: CreateCommentDto, userId: string) {
+  async create(
+    createCommentDto: CreateCommentDto,
+    userId: string,
+  ): Promise<Comment> {
+    // 🔹 Extendemos el DTO con postId (que no está en la interfaz)
+    const dto = createCommentDto as CreateCommentDto & { postId: string };
+
     const post = await this.postRepository.findOne({
-      where: { id: createCommentDto.postId },
+      where: { id: dto.postId },
     });
 
     if (!post) {
@@ -33,9 +38,9 @@ export class CommentService {
     }
 
     let parentComment: Comment | null = null;
-    if (createCommentDto.parentId) {
+    if (dto.parentId) {
       parentComment = await this.commentRepository.findOne({
-        where: { id: createCommentDto.parentId },
+        where: { id: dto.parentId },
       });
       if (!parentComment) {
         throw new NotFoundException('Parent comment not found');
@@ -43,7 +48,7 @@ export class CommentService {
     }
 
     const comment = this.commentRepository.create({
-      ...createCommentDto,
+      ...dto,
       authorId: userId,
       parentId: parentComment?.id,
     });
@@ -61,7 +66,7 @@ export class CommentService {
     return comment;
   }
 
-  async findAll(postId?: string) {
+  async findAll(postId?: string): Promise<Comment[]> {
     const query = this.commentRepository
       .createQueryBuilder('comment')
       .leftJoinAndSelect('comment.author', 'author')
@@ -75,7 +80,7 @@ export class CommentService {
     return query.getMany();
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Comment> {
     const comment = await this.commentRepository.findOne({
       where: { id },
       relations: ['author', 'likes'],
@@ -88,7 +93,11 @@ export class CommentService {
     return comment;
   }
 
-  async update(id: string, updateCommentDto: UpdateCommentDto, userId: string) {
+  async update(
+    id: string,
+    updateCommentDto: UpdateCommentDto,
+    userId: string,
+  ): Promise<Comment> {
     const comment = await this.findOne(id);
 
     if (comment.authorId !== userId) {
@@ -99,7 +108,7 @@ export class CommentService {
     return this.commentRepository.save(comment);
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: string, userId: string): Promise<Comment> {
     const comment = await this.findOne(id);
 
     if (comment.authorId !== userId) {
@@ -110,8 +119,11 @@ export class CommentService {
     return this.commentRepository.save(comment);
   }
 
-  async likeComment(commentId: string, userId: string) {
-    const comment = await this.findOne(commentId);
+  async likeComment(
+    commentId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
+    const _comment = await this.findOne(commentId);
     const existingLike = await this.commentLikeRepository.findOne({
       where: { commentId, userId },
     });

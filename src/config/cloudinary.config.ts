@@ -1,7 +1,10 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { config as dotenvconfig } from 'dotenv';
+import { config as dotenvConfig } from 'dotenv';
 
-dotenvconfig({ path: '.development.env' });
+// Solo cargamos dotenv si no estamos en Render
+if (!process.env.RENDER) {
+  dotenvConfig(); // busca automáticamente .env o .env.development
+}
 
 // Custom provider
 export const CloudinaryConfig = {
@@ -12,5 +15,6 @@ export const CloudinaryConfig = {
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET,
     });
+    return cloudinary;
   },
 };

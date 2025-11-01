@@ -25,7 +25,7 @@ export class AuthService {
   }
 
   async login(credential: CredentialDto): Promise<LoginResponseOkDto> {
-    const user = await this.findUserByEmail(credential.email);
+    const user = await this.findUserByUsername(credential.username);
     await this.validatePassword(credential.password, user.password as string);
     const payload = this.mapToPayloadJwt(user);
     const token = this.generateJwt(payload);
@@ -33,13 +33,13 @@ export class AuthService {
   }
 
   async updatePassword(
-    email: string,
+    username: string,
     password: string,
   ): Promise<{ message: string }> {
-    await this.findUserByEmail(email);
+    await this.findUserByUsername(username);
     const hashedPassword = await this.hashPassword(password);
     const updateUser = this.buildUser(hashedPassword);
-    await this.userService.updateByEmail(email, updateUser);
+    await this.userService.updateByUsername(username, updateUser);
     return { message: 'Password successfully updated' };
   }
 
@@ -57,8 +57,9 @@ export class AuthService {
     return user;
   }
 
-  private async findUserByEmail(email: string) {
-    const user = await this.userService.findUserByEmailWithPassword(email);
+  private async findUserByUsername(username: string) {
+    const user =
+      await this.userService.findUserByUsernameWithPassword(username);
     if (!user) throw new BadRequestException('Usuario o contraseña inválidos');
     return user;
   }

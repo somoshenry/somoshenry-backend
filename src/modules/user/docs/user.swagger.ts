@@ -1,13 +1,9 @@
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiHeader,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 export const SwaggerUserExamples = {
   createUserBody: {
     email: 'valen@henry.com',
+    username: 'valen_henry',
     password: 'Password123',
     name: 'Valentín',
     lastName: 'Hernández',
@@ -17,6 +13,7 @@ export const SwaggerUserExamples = {
 
   updateUserBody: {
     email: 'nuevo_valen@henry.com',
+    username: 'valen_actualizado',
     password: 'NuevaPass123',
     name: 'Valentín D.',
     lastName: 'Hernández López',
@@ -29,6 +26,7 @@ export const SwaggerUserExamples = {
     user: {
       id: '2f1a4c3b-7f9d-43a2-9bb1-dcefe1b6b123',
       email: 'valen@henry.com',
+      username: 'valen_henry',
       name: 'Valentín',
       lastName: 'Hernández',
       role: 'TEACHER',
@@ -56,11 +54,12 @@ export const SwaggerUserDocs = {
       description: 'No autenticado - Token JWT faltante o inválido',
     }),
   ],
+
   create: [
     ApiOperation({
       summary: 'Crear un nuevo usuario',
       description:
-        'Crea un nuevo usuario en la base de datos con los campos provistos. Los campos requeridos son: email, password, nombre y apellido.',
+        'Crea un nuevo usuario en la base de datos con los campos provistos. Los campos requeridos son: email, username, password, nombre y apellido.',
     }),
     ApiResponse({
       status: 201,
@@ -132,6 +131,7 @@ export const SwaggerUserDocs = {
           user: {
             ...SwaggerUserExamples.userResponse.user,
             email: SwaggerUserExamples.updateUserBody.email,
+            username: SwaggerUserExamples.updateUserBody.username,
             name: SwaggerUserExamples.updateUserBody.name,
           },
         },

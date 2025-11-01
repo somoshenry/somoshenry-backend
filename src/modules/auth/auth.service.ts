@@ -25,7 +25,7 @@ export class AuthService {
   }
 
   async login(credential: CredentialDto): Promise<LoginResponseOkDto> {
-    const user = await this.findUserByEmail(credential.username);
+    const user = await this.findUserByEmail(credential.email);
     await this.validatePassword(credential.password, user.password as string);
     const payload = this.mapToPayloadJwt(user);
     const token = this.generateJwt(payload);

@@ -27,7 +27,7 @@ export class AuthController {
   @applyDecorators(...SwaggerAuthDocs.updatePassword)
   updatePassword(@Body() credenctial: CredentialDto) {
     return this.authService.updatePassword(
-      credenctial.username,
+      credenctial.email,
       credenctial.password,
     );
   }

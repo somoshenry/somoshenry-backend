@@ -27,12 +27,44 @@ export class UpdateProfileDto {
   username?: string;
 
   @ApiPropertyOptional({
+    example: 'Desarrollador backend apasionado por NestJS',
+    description: 'Biografía corta del usuario',
+  })
+  @IsOptional()
+  @IsString()
+  biography?: string; // 👈 ahora sí lo podés modificar
+
+  @ApiPropertyOptional({
+    example: 'https://miweb.com',
+    description: 'Sitio web personal del usuario',
+  })
+  @IsOptional()
+  @IsUrl()
+  website?: string;
+
+  @ApiPropertyOptional({
+    example: 'Buenos Aires, Argentina',
+    description: 'Ubicación del usuario',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional({
     example: 'https://cdn.com/avatar.jpg',
     description: 'Foto de perfil',
   })
   @IsOptional()
   @IsUrl()
-  profileImage?: string;
+  profilePicture?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.com/cover.jpg',
+    description: 'Foto de portada',
+  })
+  @IsOptional()
+  @IsUrl()
+  coverPicture?: string;
 
   @ApiPropertyOptional({
     example: 'NewPassword123',

@@ -8,6 +8,9 @@ async function bootstrap() {
 
   app.enableCors();
 
+  // 👇 Agregá esta línea
+  app.setGlobalPrefix('api');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -42,7 +45,6 @@ async function bootstrap() {
   const isRender = process.env.RENDER === 'true';
   const port = process.env.PORT || 3000;
 
-  // Siempre escuchar en 0.0.0.0 para que Render lo detecte
   await app.listen(port, '0.0.0.0');
 
   if (isRender) {

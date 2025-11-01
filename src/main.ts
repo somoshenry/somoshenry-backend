@@ -15,6 +15,16 @@ async function bootstrap() {
 
   app.enableCors();
 
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
@@ -44,12 +54,16 @@ async function bootstrap() {
 
   if (isRender) {
     SwaggerModule.setup('api/docs', app, document);
-    await app.listen(process.env.PORT || 3000, '0.0.0.0');
-    console.log('🚀 Swagger Render: /api/docs');
+    const port = process.env.PORT || 3000;
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Application is running on: http://localhost:${port}`);
+    console.log('📚 Swagger Render: /api/docs');
   } else {
     SwaggerModule.setup('docs', app, document);
-    await app.listen(process.env.PORT || 3000);
-    console.log('🚀 Swagger Local: /docs');
+    const port = process.env.PORT || 3000;
+    await app.listen(port);
+    console.log(`🚀 Application is running on: http://localhost:${port}`);
+    console.log('📚 Swagger Local: /docs');
   }
 }
 

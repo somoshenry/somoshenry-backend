@@ -3,7 +3,7 @@ import { FilesRepository } from './files.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from '../post/entities/post.entity';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 import {
   detectResourceTypeFromUrl,
   extractPublicIdFromUrl,
@@ -15,8 +15,8 @@ export class FilesService {
     private readonly filesRepository: FilesRepository,
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
-    @InjectRepository(Usuario)
-    private readonly userRepository: Repository<Usuario>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async uploadPostFile(file: Express.Multer.File, postId: string) {
@@ -67,13 +67,13 @@ export class FilesService {
       throw new NotFoundException('User not found');
     }
     // Intentar eliminar la imagen de perfil anterior si existe (en Cloudinary)
-    if (user.imagenPerfil) {
+    if (user.profilePicture) {
       // Extraigo el publicId y el tipo de la imagen desde la URL de Cloudinary
-      const publicId = extractPublicIdFromUrl(user.imagenPerfil);
+      const publicId = extractPublicIdFromUrl(user.profilePicture);
       if (!publicId) {
         throw new Error('Could not extract public_id from URL');
       }
-      const resourceType = detectResourceTypeFromUrl(user.imagenPerfil);
+      const resourceType = detectResourceTypeFromUrl(user.profilePicture);
 
       // Se elimina la imagen de Cloudinary
       const result = await this.filesRepository.deleteFile(
@@ -89,7 +89,7 @@ export class FilesService {
     const uploadResponse = await this.filesRepository.uploadFile(file);
 
     await this.userRepository.update(user.id, {
-      imagenPerfil: uploadResponse.secure_url,
+      profilePicture: uploadResponse.secure_url,
     });
 
     return await this.userRepository.findOneBy({
@@ -106,13 +106,13 @@ export class FilesService {
       throw new NotFoundException('User not found');
     }
     // Intentar eliminar la imagen de portada anterior si existe (en Cloudinary)
-    if (user.imagenPortada) {
+    if (user.coverPicture) {
       // Extraigo el publicId y el tipo de la imagen desde la URL de Cloudinary
-      const publicId = extractPublicIdFromUrl(user.imagenPortada);
+      const publicId = extractPublicIdFromUrl(user.coverPicture);
       if (!publicId) {
         throw new Error('Could not extract public_id from URL');
       }
-      const resourceType = detectResourceTypeFromUrl(user.imagenPortada);
+      const resourceType = detectResourceTypeFromUrl(user.coverPicture);
 
       // Se elimina la imagen de Cloudinary
       const result = await this.filesRepository.deleteFile(
@@ -128,7 +128,7 @@ export class FilesService {
     const uploadResponse = await this.filesRepository.uploadFile(file);
 
     await this.userRepository.update(user.id, {
-      imagenPortada: uploadResponse.secure_url,
+      coverPicture: uploadResponse.secure_url,
     });
 
     return await this.userRepository.findOneBy({
@@ -181,16 +181,16 @@ export class FilesService {
 
   async deleteUserProfilePicture(userId: string) {
     const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user || !user.imagenPerfil) {
+    if (!user || !user.profilePicture) {
       throw new NotFoundException('User or profile picture not found');
     }
 
     // Extraigo el publicId y el tipo de archivo desde la URL de Cloudinary
-    const publicId = extractPublicIdFromUrl(user.imagenPerfil);
+    const publicId = extractPublicIdFromUrl(user.profilePicture);
     if (!publicId) {
       throw new Error('Could not extract public_id from URL');
     }
-    const resourceType = detectResourceTypeFromUrl(user.imagenPerfil);
+    const resourceType = detectResourceTypeFromUrl(user.profilePicture);
 
     try {
       // Elimina de Cloudinary
@@ -202,7 +202,7 @@ export class FilesService {
       // Limpia el campo en la base de datos, usa directamente userId (el parámetro) en lugar de user.id
       const updateResult = await this.userRepository.update(
         { id: userId }, // Mejor usar objeto como criterio
-        { imagenPerfil: null },
+        { profilePicture: null },
       );
 
       // Verifica que realmente se actualizó, updateResult.affected debe ser igual a 1
@@ -224,16 +224,16 @@ export class FilesService {
 
   async deleteUserCoverPicture(userId: string) {
     const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user || !user.imagenPortada) {
+    if (!user || !user.coverPicture) {
       throw new NotFoundException('User or cover image not found');
     }
 
     // Extraigo el publicId y el tipo de archivo desde la URL de Cloudinary
-    const publicId = extractPublicIdFromUrl(user.imagenPortada);
+    const publicId = extractPublicIdFromUrl(user.coverPicture);
     if (!publicId) {
       throw new Error('Could not extract public_id from URL');
     }
-    const resourceType = detectResourceTypeFromUrl(user.imagenPortada);
+    const resourceType = detectResourceTypeFromUrl(user.coverPicture);
 
     try {
       // Elimina de Cloudinary
@@ -245,7 +245,7 @@ export class FilesService {
       // Limpia el campo en la base de datos, usa directamente userId (el parámetro) en lugar de user.id
       const updateResult = await this.userRepository.update(
         { id: userId }, // Mejor usar objeto como criterio
-        { imagenPortada: null },
+        { coverPicture: null },
       );
 
       // Verifica que realmente se actualizó, updateResult.affected debe ser igual a 1

@@ -5,10 +5,10 @@ import { Post } from '../post/entities/post.entity';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
 import { FilesRepository } from './files.repository';
-import { Usuario } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Post, Usuario])],
+  imports: [TypeOrmModule.forFeature([Post, User])],
   controllers: [FilesController],
   providers: [FilesService, CloudinaryConfig, FilesRepository],
 })

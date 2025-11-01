@@ -59,6 +59,8 @@ export class FollowController {
     const result = (await this.followService.dejarDeSeguirByFollower(
       idSeguidor,
       idSeguido,
+      req.user.id,
+      req.user.role,
     )) as { message?: string; mensaje?: string };
     return {
       message:
@@ -83,6 +85,8 @@ export class FollowController {
     const result = (await this.followService.removeFollower(
       idSeguido,
       idSeguidor,
+      req.user.id,
+      req.user.role,
     )) as { message?: string; mensaje?: string };
     return {
       message: result.message ?? result.mensaje ?? 'Seguidor eliminado',

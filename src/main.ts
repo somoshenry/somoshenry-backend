@@ -7,7 +7,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
-  app.setGlobalPrefix('api');
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -46,7 +45,7 @@ async function bootstrap() {
 
   // 🔹 Swagger debe montarse ANTES de app.listen
   if (isRender) {
-    SwaggerModule.setup('api/docs', app, document);
+    SwaggerModule.setup('docs', app, document);
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 Application is running on port ${port}`);
     console.log('📚 Swagger Render: /api/docs');

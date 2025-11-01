@@ -1,7 +1,7 @@
 import {
   Controller,
   Get,
-  Post,
+  Post as HttpPost,
   Body,
   Patch,
   Param,
@@ -12,7 +12,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '../user/entities/user.entity';
 import type { Request } from 'express';
 
@@ -34,10 +34,10 @@ import { PayloadJwt } from '../auth/dto/payload-jwt';
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
-  @Post()
-  @CreatePostDocs()
+  @HttpPost()
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
   @UseGuards(AuthGuard, RolesGuard)
+  @CreatePostDocs()
   create(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
     const user = req.user as PayloadJwt;
     return this.postService.create(createPostDto, user.sub);
@@ -65,19 +65,43 @@ export class PostController {
   update(
     @Param('id') id: string,
     @Body() updatePostDto: UpdatePostDto,
-    @Req() req: Request & { user: { id: string; role: UserRole } },
+    @Req() req: Request,
   ) {
-    return this.postService.update(id, updatePostDto, req.user.id);
+    const user = req.user as PayloadJwt;
+    const role = user.roles[0];
+    return this.postService.update(id, updatePostDto, user.sub, role);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
   @UseGuards(AuthGuard, RolesGuard)
   @DeletePostDocs()
-  remove(
-    @Param('id') id: string,
-    @Req() req: Request & { user: { id: string; role: UserRole } },
-  ) {
-    return this.postService.remove(id, req.user.id);
+  remove(@Param('id') id: string, @Req() req: Request) {
+    const user = req.user as PayloadJwt;
+    const role = user.roles[0];
+    return this.postService.remove(id, user.sub, role);
+  }
+
+  @HttpPost(':id/like')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
+  @UseGuards(AuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT-auth')
+  async likePost(@Param('id') postId: string, @Req() req: Request) {
+    const user = req.user as PayloadJwt;
+    return this.postService.likePost(postId, user.sub);
+  }
+
+  @Delete(':id/unlike')
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(AuthGuard, RolesGuard)
+  async unlikePost(@Param('id') postId: string, @Req() req: Request) {
+    const user = req.user as PayloadJwt;
+    return this.postService.unlikePost(postId, user.sub);
+  }
+
+  @Get(':id/likes')
+  async getLikesCount(@Param('id') postId: string) {
+    return this.postService.getLikesCount(postId);
   }
 }

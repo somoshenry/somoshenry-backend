@@ -1,5 +1,11 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UpdatePostDto } from '../dto/update-post.dto';
 
 export function UpdatePostDocs() {
@@ -67,5 +73,6 @@ export function UpdatePostDocs() {
       status: 404,
       description: 'Post no encontrado',
     }),
+    ApiBearerAuth('JWT-auth'),
   );
 }

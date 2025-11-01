@@ -1,5 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 export function DeletePostDocs() {
   return applyDecorators(
@@ -51,5 +56,6 @@ export function DeletePostDocs() {
       status: 404,
       description: 'Post no encontrado',
     }),
+    ApiBearerAuth('JWT-auth'),
   );
 }

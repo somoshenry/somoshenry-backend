@@ -23,6 +23,7 @@ export class AuthGuard implements CanActivate {
     const authorization = request.headers['authorization'] as string;
     const token = this.obtainTokenFromAuthorization(authorization);
     const payload: UserPayload = this.validateToken(token);
+    console.log('Payload obtenido del token:', payload);
     request.user = {
       ...payload,
     };

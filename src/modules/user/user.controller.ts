@@ -7,14 +7,14 @@ import {
   Body,
   Query,
   Req,
+  ForbiddenException,
   applyDecorators,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { ApiTags, ApiQuery } from '@nestjs/swagger';
-import { ForbiddenException } from '@nestjs/common';
 import { UserService } from './user.service';
-
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SwaggerUserDocs } from './docs/user.swagger';
 import { UserStatus, UserRole } from './entities/user.entity';
 
@@ -29,6 +29,18 @@ export class UserController {
     const user = await this.userService.findOne(req.user.id);
     return { message: 'Perfil del usuario', user };
   }
+
+  @Patch('me')
+  @applyDecorators(...SwaggerUserDocs.update)
+  async updateProfile(
+    @Req() req: Request & { user: { id: string } },
+    @Body() dto: UpdateProfileDto,
+  ) {
+    const userId = req.user.id;
+    const updated = await this.userService.updateProfile(userId, dto);
+    return { message: 'Perfil actualizado correctamente', user: updated };
+  }
+
   @Get()
   @applyDecorators(...SwaggerUserDocs.findAll)
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -75,7 +87,6 @@ export class UserController {
         'No tienes permisos para actualizar este usuario',
       );
     }
-
     const updated = await this.userService.update(id, dto);
     return { message: 'Usuario actualizado correctamente', user: updated };
   }
@@ -91,7 +102,6 @@ export class UserController {
         'No tienes permisos para eliminar este usuario',
       );
     }
-
     const result = await this.userService.softDelete(id);
     return result;
   }
@@ -110,7 +120,6 @@ export class UserController {
     @Req() req: Request & { user?: { role: UserRole } },
   ) {
     const userRole = req.user?.role || UserRole.ADMIN;
-
     const result = await this.userService.hardDelete(id, userRole);
     return result;
   }

@@ -34,6 +34,10 @@ export class User {
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 100, unique: true, nullable: true })
+  username?: string | null;
+
   @Exclude()
   @Column({ type: 'varchar', length: 255, nullable: true, select: false })
   password?: string | null;

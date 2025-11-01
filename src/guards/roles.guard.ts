@@ -19,6 +19,7 @@ export class RolesGuard implements CanActivate {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const requiredRoles = this.obtainDefinedRolesInDecorator(context);
+    console.log('Roles requeridos para la ruta:', requiredRoles);
     const user = this.getUserOfTheRequest(context);
     const hasRolePermitted = this.theUserHasRequiredRoles(requiredRoles, user);
     this.validateIfYouHavePermissionToAccessTheRoute(hasRolePermitted);

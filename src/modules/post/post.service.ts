@@ -1,11 +1,18 @@
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UserRole } from '../user/entities/user.entity';
+
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
 import { Post } from './entities/post.entity';
+import { PostLike } from './entities/post-like.entity';
 import { User } from '../user/entities/user.entity';
-import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class PostService {
@@ -14,6 +21,8 @@ export class PostService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(PostLike)
+    private readonly postLikeRepository: Repository<PostLike>,
   ) {}
 
   async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {
@@ -91,17 +100,20 @@ export class PostService {
     id: string,
     updatePostDto: UpdatePostDto,
     userId: string,
+    userRole: UserRole,
   ): Promise<Post> {
     const post = await this.postRepository.findOne({
       where: { id },
     });
 
     if (!post) {
-      throw new Error('Publicación no encontrada');
+      throw new NotFoundException('Publicación no encontrada');
     }
 
-    if (post.userId !== userId) {
-      throw new Error('No tienes permiso para actualizar esta publicación');
+    if (post.userId !== userId && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para actualizar esta publicación',
+      );
     }
 
     const updatedPost = this.postRepository.merge(post, updatePostDto);
@@ -123,6 +135,7 @@ export class PostService {
   async remove(
     id: string,
     userId: string,
+    userRole: UserRole,
   ): Promise<{ message: string; deletedPost: Post }> {
     const post = await this.postRepository.findOne({
       where: { id },
@@ -130,11 +143,13 @@ export class PostService {
     });
 
     if (!post) {
-      throw new Error(`Publicación con ID ${id} no encontrada`);
+      throw new NotFoundException(`Publicación con ID ${id} no encontrada`);
     }
 
-    if (post.userId !== userId) {
-      throw new Error('No tienes permiso para eliminar esta publicación');
+    if (post.userId !== userId && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para eliminar esta publicación',
+      );
     }
 
     await this.postRepository.remove(post);
@@ -143,5 +158,50 @@ export class PostService {
       message: 'Publicación eliminada correctamente',
       deletedPost: post,
     };
+  }
+
+  async likePost(postId: string, userId: string) {
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) {
+      throw new Error('Publicación no encontrada');
+    }
+
+    const existing = await this.postLikeRepository.findOne({
+      where: { postId, userId },
+    });
+
+    if (existing) {
+      throw new Error('Ya diste like a esta publicación');
+    }
+
+    const like = this.postLikeRepository.create({ postId, userId });
+    await this.postLikeRepository.save(like);
+
+    const likeCount = await this.postLikeRepository.count({
+      where: { postId },
+    });
+    return { message: 'Like agregado correctamente', likeCount };
+  }
+
+  async unlikePost(postId: string, userId: string) {
+    const existing = await this.postLikeRepository.findOne({
+      where: { postId, userId },
+    });
+
+    if (!existing) {
+      throw new Error('No diste like a esta publicación');
+    }
+
+    await this.postLikeRepository.remove(existing);
+
+    const likeCount = await this.postLikeRepository.count({
+      where: { postId },
+    });
+    return { message: 'Like eliminado correctamente', likeCount };
+  }
+
+  async getLikesCount(postId: string) {
+    const count = await this.postLikeRepository.count({ where: { postId } });
+    return { postId, likeCount: count };
   }
 }

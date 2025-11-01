@@ -6,15 +6,17 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors();
+
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: false,
+      whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
     }),
   );
 
-  app.enableCors();
-
+  // 📘 Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
@@ -30,7 +32,6 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
-
     .addTag('App')
     .addTag('Auth')
     .addTag('User')
@@ -39,17 +40,20 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-
   const isRender = process.env.RENDER === 'true';
+  const port = process.env.PORT || 3000;
 
+  // 🔹 Swagger debe montarse ANTES de app.listen
   if (isRender) {
-    SwaggerModule.setup('api/docs', app, document);
-    await app.listen(process.env.PORT || 3000, '0.0.0.0');
-    console.log('🚀 Swagger Render: /api/docs');
+    SwaggerModule.setup('docs', app, document);
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Application is running on port ${port}`);
+    console.log('📚 Swagger Render: /api/docs');
   } else {
     SwaggerModule.setup('docs', app, document);
-    await app.listen(process.env.PORT || 3000);
-    console.log('🚀 Swagger Local: /docs');
+    await app.listen(port);
+    console.log(`🚀 Application is running on http://localhost:${port}`);
+    console.log('📚 Swagger Local: /docs');
   }
 }
 

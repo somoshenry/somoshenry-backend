@@ -7,8 +7,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
-
-  // 👇 Agregá esta línea
   app.setGlobalPrefix('api');
 
   app.useGlobalPipes(
@@ -19,6 +17,7 @@ async function bootstrap() {
     }),
   );
 
+  // 📘 Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
@@ -45,15 +44,16 @@ async function bootstrap() {
   const isRender = process.env.RENDER === 'true';
   const port = process.env.PORT || 3000;
 
-  await app.listen(port, '0.0.0.0');
-
+  // 🔹 Swagger debe montarse ANTES de app.listen
   if (isRender) {
     SwaggerModule.setup('api/docs', app, document);
-    console.log(`🚀 Server running on port ${port}`);
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Application is running on port ${port}`);
     console.log('📚 Swagger Render: /api/docs');
   } else {
     SwaggerModule.setup('docs', app, document);
-    console.log(`🚀 Server running on http://localhost:${port}`);
+    await app.listen(port);
+    console.log(`🚀 Application is running on http://localhost:${port}`);
     console.log('📚 Swagger Local: /docs');
   }
 }

@@ -3,7 +3,7 @@ import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 export const SwaggerUserExamples = {
   createUserBody: {
     email: 'valen@henry.com',
-    username: 'valen_henry',
+    username: 'valen@henry.com',
     password: 'Password123',
     name: 'Valentín',
     lastName: 'Hernández',
@@ -13,7 +13,7 @@ export const SwaggerUserExamples = {
 
   updateUserBody: {
     email: 'nuevo_valen@henry.com',
-    username: 'valen_actualizado',
+    username: 'valen@henry.com',
     password: 'NuevaPass123',
     name: 'Valentín D.',
     lastName: 'Hernández López',
@@ -26,7 +26,7 @@ export const SwaggerUserExamples = {
     user: {
       id: '2f1a4c3b-7f9d-43a2-9bb1-dcefe1b6b123',
       email: 'valen@henry.com',
-      username: 'valen_henry',
+      username: 'valen@henry.com',
       name: 'Valentín',
       lastName: 'Hernández',
       role: 'TEACHER',

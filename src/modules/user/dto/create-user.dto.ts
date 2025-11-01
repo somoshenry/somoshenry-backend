@@ -22,19 +22,11 @@ export class CreateUserDto {
 
   @ApiProperty({
     example: SwaggerUserExamples.createUserBody.username,
-    description:
-      'Nombre de usuario único. Solo letras, números o guiones bajos. Mínimo 3 caracteres.',
+    description: 'Nombre de usuario es el email.',
     required: true,
   })
   @IsNotEmpty({ message: 'El nombre de usuario es obligatorio.' })
-  @IsString()
-  @Length(3, 30, {
-    message: 'El nombre de usuario debe tener entre 3 y 30 caracteres.',
-  })
-  @Matches(/^[a-zA-Z0-9_]+$/, {
-    message:
-      'El nombre de usuario solo puede contener letras, números y guiones bajos.',
-  })
+  @IsEmail()
   username: string;
 
   @ApiProperty({

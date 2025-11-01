@@ -75,6 +75,13 @@ export class UserService {
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return user;
   }
+  async findOneByUsername(username: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { username, deletedAt: IsNull() },
+    });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    return user;
+  }
 
   async update(id: string, data: Partial<User>): Promise<User> {
     const user = await this.findOne(id);
@@ -87,6 +94,15 @@ export class UserService {
 
   async updateByEmail(email: string, data: Partial<User>): Promise<User> {
     const user = await this.findOneByEmail(email);
+    const validData = Object.fromEntries(
+      Object.entries(data).filter(([_, v]) => v !== undefined),
+    );
+    Object.assign(user, validData);
+    return await this.userRepository.save(user);
+  }
+
+  async updateByUsername(username: string, data: Partial<User>): Promise<User> {
+    const user = await this.findOneByUsername(username);
     const validData = Object.fromEntries(
       Object.entries(data).filter(([_, v]) => v !== undefined),
     );
@@ -142,6 +158,14 @@ export class UserService {
   async findUserByEmailWithPassword(email: string): Promise<User | null> {
     const user = await this.userRepository.findOne({
       where: { email, deletedAt: IsNull() },
+      select: ['id', 'email', 'password', 'name', 'lastName', 'role'],
+    });
+    return user;
+  }
+
+  async findUserByUsernameWithPassword(username: string): Promise<User | null> {
+    const user = await this.userRepository.findOne({
+      where: { username, deletedAt: IsNull() },
       select: ['id', 'email', 'password', 'name', 'lastName', 'role'],
     });
     return user;

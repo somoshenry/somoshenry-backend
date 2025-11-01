@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigFactory, ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostModule } from './modules/post/post.module';
@@ -11,6 +9,7 @@ import typeOrmConfig from './config/typeorm.config';
 
 import { CommentModule } from './modules/comment/comment.module';
 import { GmailModule } from './modules/gmail/gmail.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -29,15 +28,23 @@ import { GmailModule } from './modules/gmail/gmail.module';
         };
       },
     }),
+    JwtModule.registerAsync({
+      global: true,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('JWT_SECRET'),
+        signOptions: { expiresIn: '7d' },
+      }),
+    }),
     UserModule,
-    AuthModule.register(new ConfigService()),
     PostModule,
     FollowModule,
     CommentModule,
     GmailModule,
+    AuthModule,
   ],
 
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

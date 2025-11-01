@@ -1,4 +1,12 @@
-import { Controller, Post, Delete, Get, Param, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Param,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,7 +15,6 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FollowService } from './follow.service';
-import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 import { UserRole, User } from '../user/entities/user.entity';
 
 @ApiTags('Follows')
@@ -27,7 +34,6 @@ export class FollowController {
     description: 'No se puede seguir a uno mismo o usuario inexistente',
   })
   @ApiBearerAuth('JWT-auth')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   async seguir(
     @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguido') idSeguido: string,
@@ -50,7 +56,6 @@ export class FollowController {
     },
   })
   @ApiBearerAuth('JWT-auth')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   async dejarDeSeguir(
     @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguido') idSeguido: string,
@@ -74,7 +79,6 @@ export class FollowController {
     schema: { example: { message: 'Seguidor eliminado correctamente' } },
   })
   @ApiBearerAuth('JWT-auth')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   async removeFollower(
     @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguidor') idSeguidor: string,

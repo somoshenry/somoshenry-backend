@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { CredentialDto } from './dto/credential.dto';
-import { User } from '../user/entities/user.entity';
+import { User, UserRole } from '../user/entities/user.entity';
 import { PayloadJwt } from './dto/payload-jwt';
 import { LoginResponseOkDto } from './dto/login.response.ok.dto';
 
@@ -82,7 +82,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       name: user.name as string,
-      role: user.role,
+      roles: [user.role] as UserRole[],
     };
     return payload;
   }

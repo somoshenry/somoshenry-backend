@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PayloadJwt } from './dto/payload-jwt';
 import { UserService } from '../user/user.service';
 import { GoogleProfileDto } from './dto/google-profile.dto';
-import { User } from '../user/entities/user.entity';
+import { User, UserRole } from '../user/entities/user.entity';
 
 @Injectable()
 export class GoogleService {
@@ -41,7 +41,7 @@ export class GoogleService {
       sub: user.id,
       email: user.email,
       name: user.name as string,
-      role: user.role,
+      roles: [user.role] as UserRole[],
     };
     return payload;
   }

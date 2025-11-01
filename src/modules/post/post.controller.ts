@@ -10,11 +10,11 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '../user/entities/user.entity';
-import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -24,6 +24,10 @@ import { GetPostByIdDocs } from './docs/get-post-by-id.swagger';
 import { CreatePostDocs } from './docs/create-post.swagger';
 import { UpdatePostDocs } from './docs/update-post.swagger';
 import { DeletePostDocs } from './docs/delete-post.swagger';
+import { Roles } from 'src/decorators/roles.decorator';
+import { AuthGuard } from 'src/guards/auth.guard';
+import { RolesGuard } from 'src/guards/roles.guard';
+import { PayloadJwt } from '../auth/dto/payload-jwt';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -31,13 +35,12 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @CreatePostDocs()
-  create(
-    @Body() createPostDto: CreatePostDto,
-    @Req() req: Request & { user: { id: string; role: UserRole } },
-  ) {
-    return this.postService.create(createPostDto, req.user.id);
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
+  @UseGuards(AuthGuard, RolesGuard)
+  create(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
+    const user = req.user as PayloadJwt;
+    return this.postService.create(createPostDto, user.sub);
   }
 
   @Get()
@@ -56,7 +59,8 @@ export class PostController {
   }
 
   @Patch(':id')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
+  @UseGuards(AuthGuard, RolesGuard)
   @UpdatePostDocs()
   update(
     @Param('id') id: string,
@@ -67,7 +71,8 @@ export class PostController {
   }
 
   @Delete(':id')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
+  @UseGuards(AuthGuard, RolesGuard)
   @DeletePostDocs()
   remove(
     @Param('id') id: string,

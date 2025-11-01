@@ -7,23 +7,33 @@ import {
   Param,
   Delete,
   Req,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 import { UserRole } from '../user/entities/user.entity';
 import { Request } from 'express';
 import { Comment } from './entities/comment.entity';
+import { Roles } from 'src/decorators/roles.decorator';
+import { AuthGuard } from 'src/guards/auth.guard';
+import { RolesGuard } from 'src/guards/roles.guard';
 
 @ApiTags('Comments')
 @Controller()
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
+  @ApiBearerAuth('JWT-auth')
   @Post('comment/post/:postId')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
+  @UseGuards(AuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Crea un nuevo comentario en una publicación' })
   @ApiResponse({
     status: 201,
@@ -62,7 +72,6 @@ export class CommentController {
   }
 
   @Patch('comment/:id')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Actualiza un comentario existente' })
   @ApiResponse({
     status: 200,
@@ -78,7 +87,6 @@ export class CommentController {
   }
 
   @Delete('comment/:id')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Elimina un comentario' })
   @ApiResponse({
     status: 200,
@@ -92,7 +100,6 @@ export class CommentController {
   }
 
   @Post('comment/:id/like')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Agrega o quita un like en un comentario' })
   @ApiResponse({
     status: 200,
@@ -106,7 +113,6 @@ export class CommentController {
   }
 
   @Post('comment/:commentId/reply')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Crea una respuesta a un comentario existente' })
   @ApiResponse({
     status: 201,

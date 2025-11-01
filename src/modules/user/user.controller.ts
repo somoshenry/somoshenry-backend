@@ -17,7 +17,6 @@ import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SwaggerUserDocs } from './docs/user.swagger';
 import { UserStatus, UserRole } from './entities/user.entity';
-import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 
 @ApiTags('User')
 @Controller('users')
@@ -25,14 +24,12 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('me')
-  @AuthProtected()
   @applyDecorators(...SwaggerUserDocs.me)
   async getProfile(@Req() req: Request & { user: { id: string } }) {
     const user = await this.userService.findOne(req.user.id);
     return { message: 'Perfil del usuario', user };
   }
   @Get()
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findAll)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -60,7 +57,6 @@ export class UserController {
   }
 
   @Get(':id')
-  @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.findOne)
   async findOne(@Param('id') id: string) {
     const user = await this.userService.findOne(id);
@@ -68,7 +64,6 @@ export class UserController {
   }
 
   @Patch(':id')
-  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.update)
   async update(
     @Param('id') id: string,
@@ -86,7 +81,6 @@ export class UserController {
   }
 
   @Delete(':id')
-  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.delete)
   async softDelete(
     @Param('id') id: string,
@@ -103,7 +97,6 @@ export class UserController {
   }
 
   @Patch('restore/:id')
-  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.restore)
   async restore(@Param('id') id: string) {
     const result = await this.userService.restore(id);
@@ -111,7 +104,6 @@ export class UserController {
   }
 
   @Delete('hard/:id')
-  @AuthProtected(UserRole.ADMIN)
   @applyDecorators(...SwaggerUserDocs.hardDelete)
   async hardDelete(
     @Param('id') id: string,

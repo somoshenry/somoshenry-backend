@@ -8,7 +8,11 @@ const google = {
   clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
   callbackUrl: process.env.GOOGLE_CALLBACK_URL as string,
 };
-const config = { frontend, google };
+
+const jwt = {
+  secret: process.env.JWT_SECRET as string,
+};
+const config = { frontend, google, jwt };
 
 export const envs = config;
 

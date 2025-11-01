@@ -1,65 +1,15 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserModule } from '../user/user.module';
-import { AuthGoogleController } from './auth-google.controller';
-import { GoogleStrategy } from './strategy/google.strategy';
-import { GoogleService } from './google.service';
-import { JwtStrategy } from './strategy/jwt.strategy';
 
+@Global()
 @Module({
-  imports: [
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: '7d',
-          algorithm: 'HS256',
-        },
-      }),
-    }),
-    UserModule,
-  ],
+  imports: [UserModule],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule],
+  providers: [AuthService],
+  exports: [],
 })
-export class AuthModule {
-  static register(config: ConfigService): DynamicModule {
-    const googleClientId = config.get('GOOGLE_CLIENT_ID') as string;
-    const googleClientSecret = config.get('GOOGLE_CLIENT_SECRET') as string;
-
-    const providers: any[] = [AuthService, JwtStrategy];
-    const controllers: any[] = [AuthController];
-
-    if (googleClientId && googleClientSecret) {
-      providers.push(GoogleStrategy, GoogleService);
-      controllers.push(AuthGoogleController);
-    }
-
-    return {
-      module: AuthModule,
-      imports: [
-        JwtModule.registerAsync({
-          imports: [ConfigModule],
-          inject: [ConfigService],
-          useFactory: (config: ConfigService) => ({
-            secret: config.get<string>('JWT_SECRET'),
-            signOptions: {
-              expiresIn: '7d',
-              algorithm: 'HS256',
-            },
-          }),
-        }),
-        UserModule,
-      ],
-      controllers,
-      providers,
-      exports: [AuthService, JwtModule, JwtStrategy],
-    };
-  }
-}
+export class AuthModule {}

@@ -12,6 +12,8 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { PostLike } from './post-like.entity';
+import { PostDislike } from './post-dislike.entity';
+import { PostView } from './post-view.entity';
 
 export enum PostType {
   TEXT = 'TEXT',
@@ -60,4 +62,26 @@ export class Post {
 
   @OneToMany(() => PostLike, (like) => like.post, { cascade: true })
   likes: PostLike[];
+
+  @OneToMany(() => PostDislike, (dislike) => dislike.post, { cascade: true })
+  dislikes: PostDislike[];
+
+  @Column({ type: 'int', default: 0 })
+  dislikeCount: number;
+
+  @Column({ type: 'int', default: 0 })
+  viewsCount: number;
+
+  @OneToMany(() => PostView, (view) => view.post, { cascade: true })
+  views: PostView[];
+
+  @Column({ type: 'uuid', nullable: true })
+  moderatedBy?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  moderatedAt?: Date | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'moderatedBy' })
+  moderator?: User;
 }

@@ -10,7 +10,6 @@ import { CommentLike } from '../../../../modules/comment/entities/comment-like.e
 
 @Module({
   imports: [
-    // Repos necesarios para inyectar en el seeder
     TypeOrmModule.forFeature([User, Post, Comment, PostLike, CommentLike]),
   ],
   providers: [SeederService],

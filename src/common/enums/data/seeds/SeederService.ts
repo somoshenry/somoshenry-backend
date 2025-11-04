@@ -8,7 +8,6 @@ import { Comment } from '../../../../modules/comment/entities/comment.entity';
 import { PostLike } from '../../../../modules/post/entities/post-like.entity';
 import { CommentLike } from '../../../../modules/comment/entities/comment-like.entity';
 
-// JSON data
 import usersData from '../users.json';
 import postsData from '../posts.json';
 import commentsData from '../comments.json';
@@ -20,23 +19,24 @@ export class SeederService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Post) private readonly postRepo: Repository<Post>,
-    @InjectRepository(Comment) private readonly commentRepo: Repository<Comment>,
-    @InjectRepository(PostLike) private readonly postLikeRepo: Repository<PostLike>,
-    @InjectRepository(CommentLike) private readonly commentLikeRepo: Repository<CommentLike>,
+    @InjectRepository(Comment)
+    private readonly commentRepo: Repository<Comment>,
+    @InjectRepository(PostLike)
+    private readonly postLikeRepo: Repository<PostLike>,
+    @InjectRepository(CommentLike)
+    private readonly commentLikeRepo: Repository<CommentLike>,
   ) {}
 
   async run(): Promise<void> {
     console.log('🌱 Iniciando mockeo…');
 
-    // 1️⃣ Guardar usuarios
     const savedUsers = await this.userRepo.save(
-      usersData.map((u) => this.userRepo.create(u))
+      usersData.map((u) => this.userRepo.create(u)),
     );
 
     const getUser = (index: number): User =>
       savedUsers[index - 1] ?? savedUsers[0];
 
-    // 2️⃣ Guardar posts
     const savedPosts = await this.postRepo.save(
       postsData.map((p) =>
         this.postRepo.create({
@@ -52,7 +52,6 @@ export class SeederService {
     const getPost = (index: number): Post =>
       savedPosts[index - 1] ?? savedPosts[0];
 
-    // 3️⃣ Guardar comentarios
     const savedComments = await this.commentRepo.save(
       commentsData.map((c) =>
         this.commentRepo.create({
@@ -66,7 +65,6 @@ export class SeederService {
     const getComment = (index: number): Comment =>
       savedComments[index - 1] ?? savedComments[0];
 
-    // 4️⃣ Likes de posts
     await this.postLikeRepo.save(
       postLikesData.map((l) =>
         this.postLikeRepo.create({
@@ -76,7 +74,6 @@ export class SeederService {
       ),
     );
 
-    // 5️⃣ Likes de comentarios
     await this.commentLikeRepo.save(
       commentLikesData.map((l) =>
         this.commentLikeRepo.create({
@@ -86,7 +83,6 @@ export class SeederService {
       ),
     );
 
-    // 6️⃣ Conteo final
     const [uc, pc, cc, plc, clc] = await Promise.all([
       this.userRepo.count(),
       this.postRepo.count(),
@@ -95,7 +91,9 @@ export class SeederService {
       this.commentLikeRepo.count(),
     ]);
 
-    console.log(`✅ Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`);
+    console.log(
+      `✅ Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`,
+    );
     console.log('✅ Mockeo completado.');
   }
 }

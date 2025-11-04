@@ -1,10 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UserRole } from '../user/entities/user.entity';
+
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
 import { Post } from './entities/post.entity';
+import { PostLike } from './entities/post-like.entity';
 import { User } from '../user/entities/user.entity';
 
 @Injectable()
@@ -14,22 +21,22 @@ export class PostService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(PostLike)
+    private readonly postLikeRepository: Repository<PostLike>,
   ) {}
 
-  async create(createPostDto: CreatePostDto): Promise<Post> {
+  async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {
     const user = await this.userRepository.findOne({
-      where: { id: createPostDto.userId },
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new Error(`User with ID ${createPostDto.userId} not found`);
+      throw new Error('Usuario no encontrado');
     }
 
     const post = this.postRepository.create({
-      userId: createPostDto.userId,
-      content: createPostDto.content,
-      type: createPostDto.type,
-      mediaURL: createPostDto.mediaURL,
+      userId,
+      ...createPostDto,
     });
 
     const savedPost = await this.postRepository.save(post);
@@ -40,7 +47,7 @@ export class PostService {
     });
 
     if (!createdPost) {
-      throw new Error('Failed to retrieve created post');
+      throw new Error('No se pudo obtener la publicación creada');
     }
 
     return createdPost;
@@ -83,26 +90,33 @@ export class PostService {
     });
 
     if (!post) {
-      throw new Error(`Post with ID ${id} not found`);
+      throw new Error(`Publicación con ID ${id} no encontrada`);
     }
 
     return post;
   }
 
-  async update(id: string, updatePostDto: UpdatePostDto): Promise<Post> {
+  async update(
+    id: string,
+    updatePostDto: UpdatePostDto,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<Post> {
     const post = await this.postRepository.findOne({
       where: { id },
     });
 
     if (!post) {
-      throw new Error(`Post with ID ${id} not found`);
+      throw new NotFoundException('Publicación no encontrada');
     }
 
-    const updatedPost = this.postRepository.merge(post, {
-      content: updatePostDto.content,
-      type: updatePostDto.type,
-      mediaURL: updatePostDto.mediaURL,
-    });
+    if (post.userId !== userId && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para actualizar esta publicación',
+      );
+    }
+
+    const updatedPost = this.postRepository.merge(post, updatePostDto);
 
     await this.postRepository.save(updatedPost);
 
@@ -112,36 +126,82 @@ export class PostService {
     });
 
     if (!result) {
-      throw new Error('Failed to retrieve updated post');
+      throw new Error('No se pudo obtener la publicación actualizada');
     }
 
     return result;
   }
 
-  async remove(id: string): Promise<{ message: string; deletedPost: Post }> {
+  async remove(
+    id: string,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<{ message: string; deletedPost: Post }> {
     const post = await this.postRepository.findOne({
       where: { id },
       relations: ['user'],
     });
 
     if (!post) {
-      throw new Error(`Post with ID ${id} not found`);
+      throw new NotFoundException(`Publicación con ID ${id} no encontrada`);
+    }
+
+    if (post.userId !== userId && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para eliminar esta publicación',
+      );
     }
 
     await this.postRepository.remove(post);
 
     return {
-      message: 'Post deleted successfully',
+      message: 'Publicación eliminada correctamente',
       deletedPost: post,
     };
   }
-  //   findOne(id: number) {
-  //     return `This action returns a #${id} post`;
-  //   }
-  //   update(id: number, updatePostDto: UpdatePostDto) {
-  //     return `This action updates a #${id} post`;
-  //   }
-  //   remove(id: number) {
-  //     return `This action removes a #${id} post`;
-  //   }
+
+  async likePost(postId: string, userId: string) {
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) {
+      throw new Error('Publicación no encontrada');
+    }
+
+    const existing = await this.postLikeRepository.findOne({
+      where: { postId, userId },
+    });
+
+    if (existing) {
+      throw new Error('Ya diste like a esta publicación');
+    }
+
+    const like = this.postLikeRepository.create({ postId, userId });
+    await this.postLikeRepository.save(like);
+
+    const likeCount = await this.postLikeRepository.count({
+      where: { postId },
+    });
+    return { message: 'Like agregado correctamente', likeCount };
+  }
+
+  async unlikePost(postId: string, userId: string) {
+    const existing = await this.postLikeRepository.findOne({
+      where: { postId, userId },
+    });
+
+    if (!existing) {
+      throw new Error('No diste like a esta publicación');
+    }
+
+    await this.postLikeRepository.remove(existing);
+
+    const likeCount = await this.postLikeRepository.count({
+      where: { postId },
+    });
+    return { message: 'Like eliminado correctamente', likeCount };
+  }
+
+  async getLikesCount(postId: string) {
+    const count = await this.postLikeRepository.count({ where: { postId } });
+    return { postId, likeCount: count };
+  }
 }

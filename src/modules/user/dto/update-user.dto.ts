@@ -9,7 +9,7 @@ import {
   IsEnum,
   IsEmail,
 } from 'class-validator';
-import { EstadoUsuario, TipoUsuario } from '../entities/user.entity';
+import { UserStatus, UserRole } from '../entities/user.entity';
 import { SwaggerUserExamples } from '../docs/user.swagger';
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
@@ -29,7 +29,9 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   })
   @IsOptional()
   @IsString()
-  @Length(8, 32, { message: 'La contraseña debe tener entre 8 y 32 caracteres.' })
+  @Length(8, 32, {
+    message: 'La contraseña debe tener entre 8 y 32 caracteres.',
+  })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
     message:
       'La contraseña debe incluir al menos una letra mayúscula, una minúscula y un número.',
@@ -37,7 +39,7 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   password?: string;
 
   @ApiPropertyOptional({
-    example: SwaggerUserExamples.updateUserBody.nombre,
+    example: SwaggerUserExamples.updateUserBody.name,
     description: 'Nuevo nombre del usuario.',
   })
   @IsOptional()
@@ -46,10 +48,10 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @Matches(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/, {
     message: 'El nombre solo puede contener letras y espacios.',
   })
-  nombre?: string;
+  name?: string;
 
   @ApiPropertyOptional({
-    example: SwaggerUserExamples.updateUserBody.apellido,
+    example: SwaggerUserExamples.updateUserBody.lastName,
     description: 'Nuevo apellido del usuario.',
   })
   @IsOptional()
@@ -58,23 +60,24 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @Matches(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/, {
     message: 'El apellido solo puede contener letras y espacios.',
   })
-  apellido?: string;
+  lastName?: string;
 
   @ApiPropertyOptional({
-    example: SwaggerUserExamples.updateUserBody.tipo,
-    enum: TipoUsuario,
-    description: 'Cambio de tipo de usuario (requiere permisos administrativos).',
+    example: SwaggerUserExamples.updateUserBody.role,
+    enum: UserRole,
+    description:
+      'Cambio de tipo de usuario (requiere permisos administrativos).',
   })
   @IsOptional()
-  @IsEnum(TipoUsuario, { message: 'Tipo de usuario inválido.' })
-  tipo?: TipoUsuario;
+  @IsEnum(UserRole, { message: 'Tipo de usuario inválido.' })
+  role?: UserRole;
 
   @ApiPropertyOptional({
-    example: SwaggerUserExamples.updateUserBody.estado,
-    enum: EstadoUsuario,
+    example: SwaggerUserExamples.updateUserBody.status,
+    enum: UserStatus,
     description: 'Actualiza el estado de la cuenta del usuario.',
   })
   @IsOptional()
-  @IsEnum(EstadoUsuario, { message: 'Estado de usuario inválido.' })
-  estado?: EstadoUsuario;
+  @IsEnum(UserStatus, { message: 'Estado de usuario inválido.' })
+  status?: UserStatus;
 }

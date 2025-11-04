@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Comment } from '../../comment/entities/comment.entity';
-import { PostLike } from './post-like.entity'; // 👈 IMPORTANTE
+import { PostLike } from './post-like.entity';
 
 export enum PostType {
   TEXT = 'TEXT',
@@ -60,5 +60,4 @@ export class Post {
 
   @OneToMany(() => PostLike, (like) => like.post, { cascade: true })
   likes: PostLike[];
-  
 }

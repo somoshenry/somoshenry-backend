@@ -39,7 +39,9 @@ export class Comment {
   @Index()
   parentId?: string | null;
 
-  @ManyToOne(() => Comment, (comment) => comment.children, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Comment, (comment) => comment.children, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'parentId' })
   parent?: Comment | null;
 
@@ -67,7 +69,6 @@ export class Comment {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // relación inversa con CommentLike
   @OneToMany(() => CommentLike, (like) => like.comment)
   likes: CommentLike[];
 }

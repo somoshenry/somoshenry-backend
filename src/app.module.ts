@@ -14,6 +14,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { CommentModule } from './modules/comment/comment.module';
 import { GmailModule } from './modules/gmail/gmail.module';
 import { FilesModule } from './modules/files/files.module';
+import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { FilesModule } from './modules/files/files.module';
     CommentModule,
     GmailModule,
     FilesModule,
+    MercadoPagoModule,
   ],
 
   controllers: [AppController],

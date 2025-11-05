@@ -15,6 +15,8 @@ import { CommentModule } from './modules/comment/comment.module';
 import { GmailModule } from './modules/gmail/gmail.module';
 import { FilesModule } from './modules/files/files.module';
 import { ReportModule } from './modules/report/report.module';
+import { AdminDashboardModule } from './modules/dashboard/admin/admin-dashboard.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { ReportModule } from './modules/report/report.module';
     GmailModule,
     FilesModule,
     ReportModule,
+    AdminDashboardModule,
+    DashboardModule,
   ],
 
   controllers: [AppController],

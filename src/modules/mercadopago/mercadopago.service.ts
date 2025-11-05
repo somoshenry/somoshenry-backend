@@ -3,8 +3,8 @@ import { MercadopagoMapper } from './mercadopago.mapper';
 import { RequestPreferenceDto } from './request.preference.dto';
 import { ResponsePreferenceDto } from './responce.preference.dto';
 import { MercadopagoConnector } from './mercadopago.connector';
-import { MerchantOrderResponse } from 'mercadopago/dist/clients/merchantOrder/commonTypes';
 import { PaymentResponse } from 'mercadopago/dist/clients/payment/commonTypes';
+import { MercadoPagoWebhookBody } from './mercadopago.interface';
 
 @Injectable()
 export class MercadoPagoService {
@@ -36,41 +36,63 @@ export class MercadoPagoService {
       throw error;
     }
   }
-  async getPaymentDetails(paymentId: string): Promise<PaymentResponse> {
-    return await this.percadopagoConnector.getPaymentDetails(paymentId);
+
+  async webhook(body: MercadoPagoWebhookBody) {
+    const topic = body.topic || body.type;
+    let resourceId = body.data?.id || body.id;
+    if (!resourceId && body.resource) {
+      const parts = body.resource.split('/');
+      resourceId = parts[parts.length - 1].toString();
+      console.log(`✅ ID extraído de 'resource': ${resourceId}`);
+    }
+
+    if (!resourceId) {
+      console.warn(
+        '⚠️ No se pudo obtener el ID del recurso. Terminando procesamiento',
+      );
+      return { success: true, received: true };
+    }
+    console.log(
+      `🔔 Webhook recibido. Tema: ${topic}, Recurso ID: ${resourceId}`,
+    );
+    if (topic === 'payment') {
+      await this.processPaymentNotification(resourceId);
+    }
+    if (topic === 'merchant_order') {
+      console.log('📦 Procesando ORDEN DE COMERCIO (Merchant Order)');
+      const orderDetails =
+        await this.percadopagoConnector.getMerchantOrderDetails(resourceId);
+
+      if (orderDetails.payments && orderDetails.payments.length > 0) {
+        const paymentId = orderDetails.payments[0].id as number;
+        const paymentIdString = paymentId.toString();
+        console.log(`✅ Pago asociado encontrado: ${paymentId}`);
+        const paymentDetails =
+          await this.percadopagoConnector.getPaymentDetails(paymentIdString);
+        console.log('💰 Detalles del pago obtenidos:', paymentDetails);
+      }
+    }
+
+    return { success: true, received: true };
+  }
+  catch(error) {
+    console.error('❌ Error fatal en Webhook:', error);
+    return { success: false, error: 'Internal error', received: true };
   }
 
-  async getMerchantOrderDetails(
-    resourceId: string,
-  ): Promise<MerchantOrderResponse> {
-    return await this.percadopagoConnector.getMerchantOrderDetails(resourceId);
-  }
-
-  async processPaymentNotification(paymentId: string) {
+  private async processPaymentNotification(paymentId: string) {
     const paymentDetails =
       await this.percadopagoConnector.getPaymentDetails(paymentId);
-
-    const { status, status_detail, transaction_amount } = paymentDetails;
-
-    console.log(`\n--- Detalles del Pago ${paymentId} ---`);
-    console.log('💰 Estado:', status);
-    console.log('📋 Status detail:', status_detail);
-    console.log('💵 Monto:', transaction_amount);
-    console.log('------------------------------------\n');
-
+    console.log('💰 Detalles del pago obtenidos:', paymentDetails);
+    const { status } = paymentDetails;
     if (status === 'approved') {
-      // Lógica de negocio para una aprobación
       this.handleApprovedPayment(paymentDetails);
     } else if (status === 'rejected') {
-      // Lógica de negocio para un rechazo
       this.handleRejectedPayment(paymentDetails);
     } else if (status === 'pending') {
-      // Lógica para pagos que esperan confirmación (ej. transferencias)
       this.handlePendingPayment(paymentDetails);
     }
   }
-
-  // --- Manejadores de Estado ---
 
   private handleApprovedPayment(paymentDetails: PaymentResponse) {
     const { id, status_detail } = paymentDetails;

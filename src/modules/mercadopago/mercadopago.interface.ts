@@ -1,5 +1,7 @@
 // src/mercado-pago/interfaces/mercado-pago.interface.ts
-
+export interface MercadoPagoWebhookData {
+  id?: string; // ID del recurso (e.g., payment_id)
+}
 /**
  * 🎯 Tipo Base para cualquier notificación de Webhook de Mercado Pago
  * La estructura varía ligeramente entre los webhooks legacy y los actuales.
@@ -8,9 +10,7 @@ export interface MercadoPagoWebhookBody {
   // Para webhooks de 'payment' (usado en la mayoría de las notificaciones)
   id?: string;
   type?: string;
-  data?: {
-    id?: string; // ID del recurso (e.g., payment_id)
-  };
+  data?: MercadoPagoWebhookData;
 
   // Para webhooks de 'merchant_order' (usado en notificaciones más antiguas/recursos)
   resource?: string; // URL del recurso: /v1/payments/35308503916 o /v1/merchant_orders/98765
@@ -31,9 +31,7 @@ export interface MercadoPagoWebhookBody {
 export interface PaymentWebhookBody extends MercadoPagoWebhookBody {
   topic: 'payment';
   type: 'payment';
-  data: {
-    id: string; // El ID del pago
-  };
+  data: MercadoPagoWebhookData;
 }
 
 /**

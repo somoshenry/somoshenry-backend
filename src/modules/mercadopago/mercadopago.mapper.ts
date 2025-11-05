@@ -26,9 +26,9 @@ function buidItem(product: RequestProductDto) {
 function buildBackUrls(frontUrl: string) {
   const backUrls: BackUrls = {
     // Cambia el nombre del archivo en el servidor y usa solo la barra (/).
-    success: `${frontUrl}/index.html?status=success`,
-    pending: `${frontUrl}/index.html?status==pending`,
-    failure: `${frontUrl}/index.html?status=failure`,
+    success: `${frontUrl}/redirect?status=success`,
+    pending: `${frontUrl}/redirect?status==pending`,
+    failure: `${frontUrl}/redirect?status=failure`,
   };
   return backUrls;
 }

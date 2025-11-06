@@ -9,7 +9,6 @@ import {
 import { ReportReason } from '../entities/report.entity';
 
 export class CreateReportDto {
-  // Tipamos explícitamente 'o' para evitar el error de ESLint
   @ValidateIf((o: CreateReportDto) => !o.commentId)
   @IsUUID()
   postId?: string;

@@ -17,6 +17,7 @@ import { FilesModule } from './modules/files/files.module';
 import { ReportModule } from './modules/report/report.module';
 import { AdminDashboardModule } from './modules/dashboard/admin/admin-dashboard.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     ReportModule,
     AdminDashboardModule,
     DashboardModule,
+    MercadoPagoModule,
   ],
 
   controllers: [AppController],

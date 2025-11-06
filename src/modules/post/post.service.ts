@@ -13,6 +13,9 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { Post } from './entities/post.entity';
 import { PostLike } from './entities/post-like.entity';
 import { User } from '../user/entities/user.entity';
+import { PostDislike } from './entities/post-dislike.entity';
+import { PostView } from './entities/post-view.entity';
+import { Report } from '../report/entities/report.entity';
 
 @Injectable()
 export class PostService {
@@ -21,6 +24,12 @@ export class PostService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(PostView)
+    private readonly postViewRepository: Repository<PostView>,
+    @InjectRepository(Report)
+    private readonly reportRepository: Repository<Report>,
+    @InjectRepository(PostDislike)
+    private readonly postDislikeRepository: Repository<PostDislike>,
     @InjectRepository(PostLike)
     private readonly postLikeRepository: Repository<PostLike>,
   ) {}
@@ -53,19 +62,17 @@ export class PostService {
     return createdPost;
   }
 
-  async findAll(page: number = 1, limit: number = 10) {
+  async findAll(page: number = 1, limit: number = 10, userRole?: UserRole) {
     const skip = (page - 1) * limit;
+
+    const where = userRole === UserRole.ADMIN ? {} : { isInappropriate: false };
 
     const [posts, total] = await this.postRepository.findAndCount({
       relations: ['user'],
-      order: {
-        createdAt: 'DESC',
-      },
+      order: { createdAt: 'DESC' },
       skip,
       take: limit,
-      where: {
-        isInappropriate: false,
-      },
+      where,
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -92,6 +99,9 @@ export class PostService {
     if (!post) {
       throw new Error(`Publicación con ID ${id} no encontrada`);
     }
+
+    post.viewsCount += 1;
+    await this.postRepository.update(post.id, { viewsCount: post.viewsCount });
 
     return post;
   }
@@ -203,5 +213,199 @@ export class PostService {
   async getLikesCount(postId: string) {
     const count = await this.postLikeRepository.count({ where: { postId } });
     return { postId, likeCount: count };
+  }
+
+  async dislikePost(postId: string, userId: string) {
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) throw new Error('Publicación no encontrada');
+
+    const existing = await this.postDislikeRepository.findOne({
+      where: { postId, userId },
+    });
+    if (existing) throw new Error('Ya diste dislike a esta publicación');
+
+    const liked = await this.postLikeRepository.findOne({
+      where: { postId, userId },
+    });
+    if (liked) await this.postLikeRepository.remove(liked);
+
+    const dislike = this.postDislikeRepository.create({ postId, userId });
+    await this.postDislikeRepository.save(dislike);
+
+    const dislikeCount = await this.postDislikeRepository.count({
+      where: { postId },
+    });
+    await this.postRepository.update(postId, { dislikeCount });
+
+    return { message: 'Dislike agregado correctamente', dislikeCount };
+  }
+
+  async removeDislike(postId: string, userId: string) {
+    const existing = await this.postDislikeRepository.findOne({
+      where: { postId, userId },
+    });
+
+    if (!existing) throw new Error('No diste dislike a esta publicación');
+
+    await this.postDislikeRepository.remove(existing);
+
+    const dislikeCount = await this.postDislikeRepository.count({
+      where: { postId },
+    });
+    await this.postRepository.update(postId, { dislikeCount });
+
+    return { message: 'Dislike eliminado correctamente', dislikeCount };
+  }
+
+  async getDislikesCount(postId: string) {
+    const count = await this.postDislikeRepository.count({ where: { postId } });
+    return { postId, dislikeCount: count };
+  }
+
+  async registerView(postId: string, userId: string) {
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) throw new Error('Publicación no encontrada');
+
+    const existing = await this.postViewRepository.findOne({
+      where: { postId, userId },
+    });
+    if (existing)
+      return { message: 'Vista ya registrada', viewsCount: post.viewsCount };
+
+    const view = this.postViewRepository.create({ postId, userId });
+    await this.postViewRepository.save(view);
+
+    post.viewsCount += 1;
+    await this.postRepository.update(post.id, { viewsCount: post.viewsCount });
+
+    return {
+      message: 'Vista registrada correctamente',
+      viewsCount: post.viewsCount,
+    };
+  }
+
+  async evaluateAutoFlag(postId: string): Promise<void> {
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) return;
+
+    const [reports, dislikes, views] = await Promise.all([
+      this.reportRepository.count({ where: { postId } }),
+      this.postDislikeRepository.count({ where: { postId } }),
+      this.postViewRepository.count({ where: { postId } }),
+    ]);
+
+    const totalRejection = reports + dislikes;
+    const ratio = views > 0 ? totalRejection / views : 0;
+
+    if (ratio >= 0.1 && !post.isInappropriate) {
+      post.isInappropriate = true;
+      await this.postRepository.save(post);
+      console.log(
+        `⚠️ Auto-flag aplicado al post ${postId} (ratio ${(ratio * 100).toFixed(2)}%)`,
+      );
+    }
+  }
+
+  async moderatePost(
+    postId: string,
+    isInappropriate: boolean,
+    adminId: string,
+  ) {
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Publicación no encontrada.');
+
+    post.isInappropriate = isInappropriate;
+    post.moderatedBy = adminId;
+    post.moderatedAt = new Date();
+
+    await this.postRepository.save(post);
+
+    return {
+      message: `Publicación ${isInappropriate ? 'marcada como inapropiada' : 'restaurada'}`,
+      post,
+    };
+  }
+
+  async findModerated(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await this.postRepository.findAndCount({
+      where: { isInappropriate: true },
+      relations: ['user'],
+      order: { moderatedAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: posts,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  async findReported(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const query = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.user', 'user')
+      .leftJoin('report', 'r', 'r.postId = post.id')
+      .where('r.status = :status', { status: 'PENDING' })
+      .andWhere('post.isInappropriate = false')
+      .select([
+        'post.id',
+        'post.content',
+        'post.createdAt',
+        'user.id',
+        'user.name',
+        'COUNT(r.id) AS reportsCount',
+        'MAX(r.createdAt) AS lastReportAt',
+      ])
+      .groupBy('post.id')
+      .addGroupBy('user.id')
+      .orderBy('reportsCount', 'DESC')
+      .offset(skip)
+      .limit(limit);
+
+    const { entities, raw } = await query.getRawAndEntities();
+
+    const total = entities.length;
+    const totalPages = Math.ceil(total / limit);
+
+    type RawReportRow = {
+      reportsCount?: string | number;
+      lastReportAt?: string | Date | null;
+    };
+
+    const data = entities.map((post, index) => {
+      const rawRow = raw[index] as RawReportRow;
+
+      return {
+        ...post,
+        reportsCount: Number(rawRow?.reportsCount ?? 0),
+        lastReportAt: rawRow?.lastReportAt ?? null,
+      };
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

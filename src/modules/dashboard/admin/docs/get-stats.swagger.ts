@@ -1,27 +1,33 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiOkResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
 
-export function GetStatsDocs() {
+export function GetAdminStatsDocs() {
   return applyDecorators(
+    ApiBearerAuth(),
     ApiOperation({
-      summary: 'Estadísticas generales del panel de administración',
+      summary: 'Obtener estadísticas generales del panel de administración',
       description:
-        'Devuelve métricas agregadas del sistema: usuarios, publicaciones, reportes y tendencias.',
+        'Devuelve métricas globales sobre usuarios, publicaciones, comentarios, reportes e interacciones para el panel de control del administrador.',
     }),
     ApiOkResponse({
-      description: 'Datos agregados para las cards principales del dashboard',
+      description: 'Estadísticas obtenidas correctamente.',
       schema: {
         example: {
-          usersTotal: 1234,
-          usersActive30d: 892,
-          postsTotal: 3456,
-          commentsTotal: 8912,
-          postsReportedPending: 23,
+          usersTotal: 152,
+          usersActive30d: 85,
+          usersNew30d: 12,
+          bannedUsers: 3,
+          postsTotal: 340,
+          postsNew30d: 27,
+          commentsTotal: 982,
+          postsReportedPending: 6,
           commentsReportedPending: 2,
+          pendingReportsTotal: 8,
+          reportsResolved: 18,
           postsFlagged: 5,
-          likesTotal: 12000,
-          dislikesTotal: 350,
-          viewsTotal: 54000,
+          likesTotal: 1450,
+          dislikesTotal: 80,
+          viewsTotal: 22400,
           trend: { users: -1, posts: -1, comments: -1 },
         },
       },

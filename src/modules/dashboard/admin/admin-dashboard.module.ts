@@ -9,6 +9,7 @@ import { Report } from '../../report/entities/report.entity';
 import { PostView } from '../../post/entities/post-view.entity';
 import { PostLike } from '../../post/entities/post-like.entity';
 import { PostDislike } from '../../post/entities/post-dislike.entity';
+import { AdminAuditModule } from './audit/admin-audit.module.ts';
 
 @Module({
   imports: [
@@ -21,9 +22,9 @@ import { PostDislike } from '../../post/entities/post-dislike.entity';
       PostLike,
       PostDislike,
     ]),
+    AdminAuditModule,
   ],
   controllers: [AdminDashboardController],
   providers: [AdminDashboardService],
-  exports: [AdminDashboardService],
 })
 export class AdminDashboardModule {}

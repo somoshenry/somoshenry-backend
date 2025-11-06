@@ -12,7 +12,7 @@ import { AdminDashboardService } from './admin-dashboard.service';
 import type { AdminStatsDTO } from './dto/get-stats.dto';
 import { GetReportedPostsDocs } from './docs/get-reported-posts.swagger';
 import { GetReportedCommentsDocs } from './docs/get-reported-comments.swagger';
-import { GetStatsDocs } from './docs/get-stats.swagger';
+import { GetAdminStatsDocs } from './docs/get-stats.swagger';
 
 @ApiTags('Dashboard (Admin)')
 @Controller('dashboard/admin')
@@ -21,7 +21,7 @@ export class AdminDashboardController {
 
   @Get('stats')
   @AuthProtected(UserRole.ADMIN)
-  @GetStatsDocs()
+  @GetAdminStatsDocs()
   async getStats(): Promise<AdminStatsDTO> {
     return this.adminDashboardService.getStats();
   }

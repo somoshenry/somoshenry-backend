@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../../user/entities/user.entity';
+import { Repository, MoreThan } from 'typeorm';
+import { User, UserStatus } from '../../user/entities/user.entity';
 import { Post } from '../../post/entities/post.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Report, ReportStatus } from '../../report/entities/report.entity';
 import { PostView } from '../../post/entities/post-view.entity';
 import { PostLike } from '../../post/entities/post-like.entity';
 import { PostDislike } from '../../post/entities/post-dislike.entity';
-import type { AdminStatsDTO } from './dto/get-stats.dto';
+import { AdminStatsDTO } from './dto/get-stats.dto';
 
 interface RawReportedPost {
   id: string;
@@ -49,9 +49,41 @@ export class AdminDashboardService {
     const d30 = new Date(now);
     d30.setDate(now.getDate() - 30);
 
+    const viewsTotalPromise = this.postRepo
+      .createQueryBuilder('p')
+      .select('COALESCE(SUM(p.viewsCount), 0)', 'sum')
+      .getRawOne<{ sum: string }>()
+      .then((res) => res ?? { sum: '0' });
+
+    const reportedPostPendingsPromise = this.reportRepo
+      .createQueryBuilder('r')
+      .select('COUNT(*)', 'count')
+      .where('r.status = :status', { status: ReportStatus.PENDING })
+      .andWhere('r.postId IS NOT NULL')
+      .getRawOne<{ count: string }>()
+      .then((res) => res ?? { count: '0' });
+
+    const reportedCommentPendingsPromise = this.reportRepo
+      .createQueryBuilder('r')
+      .select('COUNT(*)', 'count')
+      .where('r.status = :status', { status: ReportStatus.PENDING })
+      .andWhere('r.commentId IS NOT NULL')
+      .getRawOne<{ count: string }>()
+      .then((res) => res ?? { count: '0' });
+
+    const activeUsersDistinctPromise = this.viewRepo
+      .createQueryBuilder('v')
+      .select('COUNT(DISTINCT v.userId)', 'count')
+      .where('v.viewedAt BETWEEN :d30 AND :now', { d30, now })
+      .getRawOne<{ count: string }>()
+      .then((res) => res ?? { count: '0' });
+
     const [
       usersTotal,
+      usersNew30d,
+      bannedUsers,
       postsTotal,
+      postsNew30d,
       commentsTotal,
       postsFlagged,
       likesTotal,
@@ -59,35 +91,23 @@ export class AdminDashboardService {
       viewsTotalRow,
       reportedPostPendings,
       reportedCommentPendings,
+      reportedResolved,
       activeUsersDistinct,
     ] = await Promise.all([
       this.userRepo.count(),
+      this.userRepo.count({ where: { createdAt: MoreThan(d30) } }),
+      this.userRepo.count({ where: { status: UserStatus.BANNED } }),
       this.postRepo.count(),
+      this.postRepo.count({ where: { createdAt: MoreThan(d30) } }),
       this.commentRepo.count(),
       this.postRepo.count({ where: { isInappropriate: true } }),
       this.likeRepo.count(),
       this.dislikeRepo.count(),
-      this.postRepo
-        .createQueryBuilder('p')
-        .select('COALESCE(SUM(p.viewsCount), 0)', 'sum')
-        .getRawOne<{ sum: string }>(),
-      this.reportRepo
-        .createQueryBuilder('r')
-        .select('COUNT(*)', 'count')
-        .where('r.status = :status', { status: ReportStatus.PENDING })
-        .andWhere('r.postId IS NOT NULL')
-        .getRawOne<{ count: string }>(),
-      this.reportRepo
-        .createQueryBuilder('r')
-        .select('COUNT(*)', 'count')
-        .where('r.status = :status', { status: ReportStatus.PENDING })
-        .andWhere('r.commentId IS NOT NULL')
-        .getRawOne<{ count: string }>(),
-      this.viewRepo
-        .createQueryBuilder('v')
-        .select('COUNT(DISTINCT v.userId)', 'count')
-        .where('v.viewedAt BETWEEN :d30 AND :now', { d30, now })
-        .getRawOne<{ count: string }>(),
+      viewsTotalPromise,
+      reportedPostPendingsPromise,
+      reportedCommentPendingsPromise,
+      this.reportRepo.count({ where: { status: ReportStatus.RESOLVED } }),
+      activeUsersDistinctPromise,
     ]);
 
     const usersActive30d = Number(activeUsersDistinct?.count ?? 0);
@@ -98,10 +118,15 @@ export class AdminDashboardService {
     return {
       usersTotal,
       usersActive30d,
+      usersNew30d,
+      bannedUsers,
       postsTotal,
+      postsNew30d,
       commentsTotal,
       postsReportedPending,
       commentsReportedPending,
+      pendingReportsTotal: postsReportedPending + commentsReportedPending,
+      reportsResolved: reportedResolved,
       postsFlagged,
       likesTotal,
       dislikesTotal,

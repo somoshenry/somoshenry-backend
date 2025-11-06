@@ -358,7 +358,7 @@ export class PostService {
     const query = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.user', 'user')
-      .leftJoin('report', 'r', 'r.postId = post.id')
+      .leftJoin('reports', 'r', 'r.postId = post.id')
       .where('r.status = :status', { status: 'PENDING' })
       .andWhere('post.isInappropriate = false')
       .select([

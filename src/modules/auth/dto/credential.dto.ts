@@ -3,14 +3,14 @@ import { IsString } from 'class-validator';
 
 export class CredentialDto {
   @ApiProperty({
-    example: 'valen_hernandez_11',
+    example: 'Admin123@gmail.com',
     description: 'Username del usuario para iniciar sesión',
   })
   @IsString()
   username: string;
 
   @ApiProperty({
-    example: 'Password123',
+    example: 'Admin123',
     description: 'Contraseña del usuario',
   })
   @IsString()

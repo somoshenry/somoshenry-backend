@@ -23,6 +23,8 @@ import { SendMessageDocs } from './docs/send-message.swagger';
 import { MarkAsReadDocs } from './docs/mark-read.swagger';
 import { UploadMediaDocs } from './docs/upload-media.swagger';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { Delete } from '@nestjs/common';
+import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
 
 @Controller('chat')
 export class ChatController {
@@ -83,5 +85,14 @@ export class ChatController {
   @UseInterceptors(FileInterceptor('file'))
   uploadFile(@UploadedFile() file: Express.Multer.File) {
     return this.chatService.uploadMedia(file);
+  }
+
+  @Delete('conversations/:conversationId')
+  @AuthProtected()
+  async deleteConversation(
+    @Req() req: Request & { user: { id: string } },
+    @Param('conversationId') conversationId: string,
+  ): Promise<DeleteConversationResponseDto> {
+    return this.chatService.deleteConversation(conversationId, req.user.id);
   }
 }

@@ -56,6 +56,7 @@ export class ChatService {
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.participants', 'p')
       .leftJoinAndSelect('c.messages', 'm')
+      .leftJoinAndSelect('m.sender', 's')
       .where('p.id = :id', { id: userId })
       .orderBy('c.updated_at', 'DESC')
       .getMany();

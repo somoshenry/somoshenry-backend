@@ -20,10 +20,10 @@ export class FilesService {
   ) {}
 
   async uploadPostFile(file: Express.Multer.File, postId: string) {
-    console.log('========================================');
-    console.log('🚀 INICIO uploadPostFile');
-    console.log('📁 Archivo:', file.originalname, '|', file.mimetype);
-    console.log('🆔 PostId:', postId);
+    // console.log('========================================');
+    // console.log('🚀 INICIO uploadPostFile');
+    // console.log('📁 Archivo:', file.originalname, '|', file.mimetype);
+    // console.log('🆔 PostId:', postId);
 
     const post = await this.postRepository.findOneBy({
       id: postId,
@@ -33,7 +33,7 @@ export class FilesService {
       throw new NotFoundException('Post not found');
     }
 
-    console.log('📝 Post encontrado - Type ANTES:', post.type);
+    // console.log('📝 Post encontrado - Type ANTES:', post.type);
 
     // Intentar eliminar el archivo anterior si existe (en Cloudinary)
     if (post.mediaURL) {
@@ -55,10 +55,10 @@ export class FilesService {
       }
     }
 
-    console.log('⬆️ Subiendo el nuevo archivo a Cloudinary...');
+    // console.log('⬆️ Subiendo el nuevo archivo a Cloudinary...');
     const uploadResponse = await this.filesRepository.uploadFile(file);
-    console.log('✅ Cloudinary resource_type:', uploadResponse.resource_type);
-    console.log('✅ Cloudinary URL:', uploadResponse.secure_url);
+    // console.log('✅ Cloudinary resource_type:', uploadResponse.resource_type);
+    // console.log('✅ Cloudinary URL:', uploadResponse.secure_url);
 
     // Determinar tipo (Cloudinary devuelve `resource_type`: 'image' | 'video' | 'raw')
     let newType: PostType = PostType.TEXT;
@@ -68,32 +68,32 @@ export class FilesService {
       newType = PostType.VIDEO;
     }
 
-    console.log('🎯 Tipo determinado:', newType);
-    console.log(
-      '🎯 ¿Es enum válido?',
-      Object.values(PostType).includes(newType),
-    );
+    // console.log('🎯 Tipo determinado:', newType);
+    // console.log(
+    //   '🎯 ¿Es enum válido?',
+    //   Object.values(PostType).includes(newType),
+    // );
 
     // Asignar valores
-    console.log('📝 ANTES de asignar - post.type:', post.type);
+    // console.log('📝 ANTES de asignar - post.type:', post.type);
     post.type = newType;
     post.mediaURL = uploadResponse.secure_url;
-    console.log('📝 DESPUÉS de asignar - post.type:', post.type);
+    // console.log('📝 DESPUÉS de asignar - post.type:', post.type);
 
     // Guardar
-    console.log('💾 Ejecutando save()...');
+    // console.log('💾 Ejecutando save()...');
     const savedPost = await this.postRepository.save(post);
-    console.log('💾 Resultado del save() - type:', savedPost.type);
+    // console.log('💾 Resultado del save() - type:', savedPost.type);
 
     // Leer directamente de la DB con query nativa
-    console.log('🔍 Verificando con query nativa...');
+    // console.log('🔍 Verificando con query nativa...');
     const rawResult = await this.postRepository.query(
       'SELECT id, type, media_url FROM posts WHERE id = $1',
       [postId],
     );
-    console.log('🔍 Query nativa resultado:', rawResult);
+    // console.log('🔍 Query nativa resultado:', rawResult);
 
-    console.log('========================================');
+    // console.log('========================================');
     return savedPost;
   }
 

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,7 +17,8 @@ async function bootstrap() {
     }),
   );
 
-  // 📘 Configuración de Swagger
+  app.useGlobalInterceptors(app.get(AuditInterceptor));
+
   const config = new DocumentBuilder()
     .setTitle('API - Red Social SomosHenry')
     .setDescription('Documentación de endpoints del backend (NestJS + TypeORM)')
@@ -43,7 +45,6 @@ async function bootstrap() {
   const isRender = process.env.RENDER === 'true';
   const port = process.env.PORT || 3000;
 
-  // 🔹 Swagger debe montarse ANTES de app.listen
   if (isRender) {
     SwaggerModule.setup('docs', app, document);
     await app.listen(port, '0.0.0.0');

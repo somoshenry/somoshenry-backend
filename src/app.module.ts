@@ -10,10 +10,15 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostModule } from './modules/post/post.module';
 import { FollowModule } from './modules/follow/follow.module';
-import { JwtModule } from '@nestjs/jwt';
 import { CommentModule } from './modules/comment/comment.module';
 import { GmailModule } from './modules/gmail/gmail.module';
 import { FilesModule } from './modules/files/files.module';
+import { ReportModule } from './modules/report/report.module';
+import { AdminDashboardModule } from './modules/dashboard/admin/admin-dashboard.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -44,9 +49,14 @@ import { FilesModule } from './modules/files/files.module';
     CommentModule,
     GmailModule,
     FilesModule,
+    ReportModule,
+    AdminDashboardModule,
+    DashboardModule,
+    MercadoPagoModule,
+    ChatModule,
   ],
 
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AuditInterceptor],
 })
 export class AppModule {}

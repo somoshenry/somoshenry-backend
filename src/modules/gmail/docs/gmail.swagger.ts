@@ -2,10 +2,7 @@ import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { GmailDataDto } from '../dto/gmail.data.dto';
 import { GmailResponseDto } from '../dto/gmail.response.dto';
 
-
-
 export const SwaggerGmailExamples = {
-
   sendEmailBody: {
     to: 'destinatario@ejemplo.com',
     subject: 'Confirmación de Pedido #12345',
@@ -17,7 +14,6 @@ export const SwaggerGmailExamples = {
     status: 'success',
   },
 };
-
 
 export const SwaggerGmailDocs = {
   sendMessage: [

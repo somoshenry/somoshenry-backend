@@ -10,6 +10,6 @@ import { GmailMapper as GmailMapper } from './gmail.mapper';
   imports: [ConfigModule],
   controllers: [GmailController],
   providers: [GmailService, GmailConnector, GmailMapper],
-  exports: [],
+  exports: [GmailService, GmailConnector, GmailMapper],
 })
 export class GmailModule {}

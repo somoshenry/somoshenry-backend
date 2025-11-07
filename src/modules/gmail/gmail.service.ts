@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 import { GmailConnector } from './gmail.connector';
 import { GmailMapper } from './gmail.mapper';
 import { GmailDataDto } from './dto/gmail.data.dto';

@@ -9,6 +9,7 @@ import { Repository, ILike, IsNull, FindOptionsWhere } from 'typeorm';
 import { User, UserStatus, UserRole } from './entities/user.entity';
 import randomatic from 'randomatic';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { FilterUsersDto } from './dto/filter-users.dto';
 
 @Injectable()
 export class UserService {
@@ -59,6 +60,89 @@ export class UserService {
 
     return { data, total };
   }
+
+  // async findAllWithFilters(filterDto: FilterUsersDto) {
+  //   const {
+  //     page = 1,
+  //     limit = 20,
+  //     search,
+  //     userType,
+  //     status,
+  //     location,
+  //     sortBy,
+  //     order,
+  //   } = filterDto;
+
+  //   const skip = (page - 1) * limit;
+
+  //   const queryBuilder = this.userRepository
+  //     .createQueryBuilder('user')
+  //     .select([
+  //       'user.id',
+  //       'user.email',
+  //       'user.username',
+  //       'user.name',
+  //       'user.lastName',
+  //       'user.profilePicture',
+  //       'user.coverPicture',
+  //       'user.biography',
+  //       'user.location',
+  //       'user.website',
+  //       'user.joinDate',
+  //       'user.role',
+  //       'user.status',
+  //       'user.createdAt',
+  //     ]);
+
+  //   // FILTRO 1: Búsqueda por nombre, apellido, username o email
+  //   if (search) {
+  //     queryBuilder.andWhere(
+  //       '(user.name ILIKE :search OR user.lastName ILIKE :search OR user.username ILIKE :search OR user.email ILIKE :search)',
+  //       { search: `%${search}%` },
+  //     );
+  //   }
+
+  //   // FILTRO 2: Por tipo de usuario
+  //   if (userType) {
+  //     queryBuilder.andWhere('user.role = :userType', { userType }); // Cambiar el filter-users-dto para usar role en vez de userType, como en la entidad (Recomendado)
+  //   }
+
+  //   // FILTRO 3: Por estado
+  //   if (status) {
+  //     queryBuilder.andWhere('user.status = :status', { status });
+  //   }
+
+  //   // FILTRO 4: Por ubicación
+  //   if (location) {
+  //     queryBuilder.andWhere('user.location ILIKE :location', {
+  //       location: `%${location}%`,
+  //     });
+  //   }
+
+  //   // ORDENAMIENTO
+  //   queryBuilder.orderBy(`user.${sortBy}`, order);
+
+  //   // PAGINACIÓN
+  //   queryBuilder.skip(skip).take(limit);
+
+  //   const [users, total] = await queryBuilder.getManyAndCount();
+
+  //   return {
+  //     data: users,
+  //     meta: {
+  //       page,
+  //       limit,
+  //       total,
+  //       totalPages: Math.ceil(total / limit),
+  //       filters: {
+  //         search: search || null,
+  //         userType: userType || null,
+  //         status: status || null,
+  //         location: location || null,
+  //       },
+  //     },
+  //   };
+  // }
 
   async findOne(id: string): Promise<User> {
     const user = await this.userRepository.findOne({

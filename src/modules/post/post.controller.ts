@@ -12,10 +12,9 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { UserRole } from '../user/entities/user.entity';
+import { User, UserRole } from '../user/entities/user.entity';
 import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 import { Request } from 'express';
-
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -26,6 +25,8 @@ import { UpdatePostDocs } from './docs/update-post.swagger';
 import { DeletePostDocs } from './docs/delete-post.swagger';
 import { ModeratePostDocs } from './docs/moderate-post.swagger';
 import { GetReportedPostsDocs } from './docs/get-reported-posts.swagger';
+import { FilterPostsDto } from './dto/filter-posts.dto';
+import { CurrentUser } from '../auth/decorator/current-user.decorator';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -42,15 +43,20 @@ export class PostController {
     return this.postService.create(createPostDto, req.user.id);
   }
 
+  // @Get()
+  // @GetPostsFeedDocs()
+  // findAll(
+  //   @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+  //   @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  // ) {
+  //   return this.postService.findAll(page, limit);
+  // }
+
   @Get()
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   @GetPostsFeedDocs()
-  findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-    @Req() req: Request & { user: { role: UserRole } },
-  ) {
-    return this.postService.findAll(page, limit, req.user.role);
+  findAll(@Query() filterDto: FilterPostsDto, @CurrentUser() user?: User) {
+    return this.postService.findAllWithFilters(filterDto, user);
   }
 
   @Get('moderated')

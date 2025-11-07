@@ -42,6 +42,7 @@ export class Post {
     enum: PostType,
     nullable: false,
     default: PostType.TEXT,
+    name: 'type',
   })
   type: PostType;
 

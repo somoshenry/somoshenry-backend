@@ -13,6 +13,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { Post } from './entities/post.entity';
 import { PostLike } from './entities/post-like.entity';
 import { User } from '../user/entities/user.entity';
+import { FilterPostsDto } from './dto/filter-posts.dto';
 
 @Injectable()
 export class PostService {
@@ -53,32 +54,107 @@ export class PostService {
     return createdPost;
   }
 
-  async findAll(page: number = 1, limit: number = 10) {
+  // async findAll(page: number = 1, limit: number = 10) {
+  //   const skip = (page - 1) * limit;
+
+  //   const [posts, total] = await this.postRepository.findAndCount({
+  //     relations: ['user'],
+  //     order: {
+  //       createdAt: 'DESC',
+  //     },
+  //     skip,
+  //     take: limit,
+  //     where: {
+  //       isInappropriate: false,
+  //     },
+  //   });
+
+  //   const totalPages = Math.ceil(total / limit);
+
+  //   return {
+  //     data: posts,
+  //     meta: {
+  //       total,
+  //       page,
+  //       limit,
+  //       totalPages,
+  //       hasNextPage: page < totalPages,
+  //       hasPreviousPage: page > 1,
+  //     },
+  //   };
+  // }
+
+  async findAllWithFilters(filterDto: FilterPostsDto) {
+    const {
+      page = 1,
+      limit = 20,
+      type,
+      search,
+      userId,
+      dateFrom,
+      dateTo,
+      sortBy,
+      order,
+    } = filterDto;
+
     const skip = (page - 1) * limit;
 
-    const [posts, total] = await this.postRepository.findAndCount({
-      relations: ['user'],
-      order: {
-        createdAt: 'DESC',
-      },
-      skip,
-      take: limit,
-      where: {
+    // Crear query builder
+    const queryBuilder = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.user', 'user')
+      .where('post.isInappropriate = :isInappropriate', {
         isInappropriate: false,
-      },
-    });
+      });
 
-    const totalPages = Math.ceil(total / limit);
+    // FILTRO 1: Por tipo de post
+    if (type) {
+      queryBuilder.andWhere('post.type = :type', { type });
+    }
+
+    // FILTRO 2: Búsqueda en contenido (texto)
+    if (search) {
+      queryBuilder.andWhere('post.content ILIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    // FILTRO 3: Por usuario específico
+    if (userId) {
+      queryBuilder.andWhere('post.userId = :userId', { userId });
+    }
+
+    // FILTRO 4: Por rango de fechas
+    if (dateFrom) {
+      queryBuilder.andWhere('post.createdAt >= :dateFrom', { dateFrom });
+    }
+    if (dateTo) {
+      queryBuilder.andWhere('post.createdAt <= :dateTo', { dateTo });
+    }
+
+    // ORDENAMIENTO
+    queryBuilder.orderBy(`post.${sortBy}`, order);
+
+    // PAGINACIÓN
+    queryBuilder.skip(skip).take(limit);
+
+    // Ejecutar query
+    const [posts, total] = await queryBuilder.getManyAndCount();
 
     return {
       data: posts,
       meta: {
-        total,
         page,
         limit,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
+        total,
+        totalPages: Math.ceil(total / limit),
+        filters: {
+          type: type || null,
+          search: search || null,
+          userId: userId || null,
+          dateFrom: dateFrom || null,
+          dateTo: dateTo || null,
+        },
       },
     };
   }

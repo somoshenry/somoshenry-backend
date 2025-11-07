@@ -63,6 +63,7 @@ export class FilesController {
     file: Express.Multer.File,
     @Param('postId', ParseUUIDPipe) postId: string,
   ) {
+    // console.log(file);
     return this.fileService.uploadPostFile(file, postId);
   }
 

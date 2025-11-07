@@ -24,6 +24,7 @@ import { GetPostByIdDocs } from './docs/get-post-by-id.swagger';
 import { CreatePostDocs } from './docs/create-post.swagger';
 import { UpdatePostDocs } from './docs/update-post.swagger';
 import { DeletePostDocs } from './docs/delete-post.swagger';
+import { FilterPostsDto } from './dto/filter-posts.dto';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -40,13 +41,19 @@ export class PostController {
     return this.postService.create(createPostDto, req.user.id);
   }
 
+  // @Get()
+  // @GetPostsFeedDocs()
+  // findAll(
+  //   @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+  //   @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  // ) {
+  //   return this.postService.findAll(page, limit);
+  // }
+
   @Get()
   @GetPostsFeedDocs()
-  findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ) {
-    return this.postService.findAll(page, limit);
+  findAll(@Query() filterDto: FilterPostsDto) {
+    return this.postService.findAllWithFilters(filterDto);
   }
 
   @Get(':id')

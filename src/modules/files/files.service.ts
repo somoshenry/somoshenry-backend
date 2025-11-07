@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { FilesRepository } from './files.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Post } from '../post/entities/post.entity';
+import { Post, PostType } from '../post/entities/post.entity';
 import { User } from '../user/entities/user.entity';
 import {
   detectResourceTypeFromUrl,
@@ -20,6 +20,11 @@ export class FilesService {
   ) {}
 
   async uploadPostFile(file: Express.Multer.File, postId: string) {
+    console.log('========================================');
+    console.log('🚀 INICIO uploadPostFile');
+    console.log('📁 Archivo:', file.originalname, '|', file.mimetype);
+    console.log('🆔 PostId:', postId);
+
     const post = await this.postRepository.findOneBy({
       id: postId,
     });
@@ -27,6 +32,9 @@ export class FilesService {
     if (!post) {
       throw new NotFoundException('Post not found');
     }
+
+    console.log('📝 Post encontrado - Type ANTES:', post.type);
+
     // Intentar eliminar el archivo anterior si existe (en Cloudinary)
     if (post.mediaURL) {
       // Extraigo el publicId y el tipo de archivo desde la URL de Cloudinary
@@ -47,15 +55,46 @@ export class FilesService {
       }
     }
 
+    console.log('⬆️ Subiendo el nuevo archivo a Cloudinary...');
     const uploadResponse = await this.filesRepository.uploadFile(file);
+    console.log('✅ Cloudinary resource_type:', uploadResponse.resource_type);
+    console.log('✅ Cloudinary URL:', uploadResponse.secure_url);
 
-    await this.postRepository.update(post.id, {
-      mediaURL: uploadResponse.secure_url,
-    });
+    // Determinar tipo (Cloudinary devuelve `resource_type`: 'image' | 'video' | 'raw')
+    let newType: PostType = PostType.TEXT;
+    if (uploadResponse.resource_type === 'image') {
+      newType = PostType.IMAGE;
+    } else if (uploadResponse.resource_type === 'video') {
+      newType = PostType.VIDEO;
+    }
 
-    return await this.postRepository.findOneBy({
-      id: postId,
-    });
+    console.log('🎯 Tipo determinado:', newType);
+    console.log(
+      '🎯 ¿Es enum válido?',
+      Object.values(PostType).includes(newType),
+    );
+
+    // Asignar valores
+    console.log('📝 ANTES de asignar - post.type:', post.type);
+    post.type = newType;
+    post.mediaURL = uploadResponse.secure_url;
+    console.log('📝 DESPUÉS de asignar - post.type:', post.type);
+
+    // Guardar
+    console.log('💾 Ejecutando save()...');
+    const savedPost = await this.postRepository.save(post);
+    console.log('💾 Resultado del save() - type:', savedPost.type);
+
+    // Leer directamente de la DB con query nativa
+    console.log('🔍 Verificando con query nativa...');
+    const rawResult = await this.postRepository.query(
+      'SELECT id, type, media_url FROM posts WHERE id = $1',
+      [postId],
+    );
+    console.log('🔍 Query nativa resultado:', rawResult);
+
+    console.log('========================================');
+    return savedPost;
   }
 
   async uploadProfilePicture(file: Express.Multer.File, userId: string) {
@@ -159,7 +198,7 @@ export class FilesService {
       // Limpia el campo en la base de datos, usa directamente postId (el parámetro) en lugar de post.id
       const updateResult = await this.postRepository.update(
         { id: postId }, // Mejor usar objeto como criterio
-        { mediaURL: null },
+        { mediaURL: null, type: PostType.TEXT }, // Si existe el POST, al eliminar el archivo se vuelve TEXT
       );
 
       // Verifica que realmente se actualizó, updateResult.affected debe ser igual a 1

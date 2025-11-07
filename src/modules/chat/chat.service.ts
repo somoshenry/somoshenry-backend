@@ -10,6 +10,7 @@ import { Message, MessageType } from './entities/message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { User } from '../user/entities/user.entity';
 import { v2 as cloudinary } from 'cloudinary';
+import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
 
 @Injectable()
 export class ChatService {
@@ -132,5 +133,38 @@ export class ChatService {
     } catch {
       throw new BadRequestException('Error al subir a Cloudinary');
     }
+  }
+
+  async deleteConversation(
+    conversationId: string,
+    userId: string,
+  ): Promise<DeleteConversationResponseDto> {
+    const conversation: Conversation | null =
+      await this.conversationRepo.findOne({
+        where: { id: conversationId },
+        relations: ['participants', 'messages'],
+      });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversación no encontrada');
+    }
+
+    const isParticipant: boolean = conversation.participants.some(
+      (p: User) => p.id === userId,
+    );
+
+    if (!isParticipant) {
+      throw new BadRequestException(
+        'No tienes permiso para eliminar esta conversación',
+      );
+    }
+
+    await this.conversationRepo.remove(conversation);
+
+    return {
+      message: 'Conversación eliminada permanentemente',
+      conversationId,
+      deletedAt: new Date(),
+    };
   }
 }

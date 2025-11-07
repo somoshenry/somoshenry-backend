@@ -18,6 +18,7 @@ import { AdminDashboardModule } from './modules/dashboard/admin/admin-dashboard.
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
     AdminDashboardModule,
     DashboardModule,
     MercadoPagoModule,
+    ChatModule,
   ],
 
   controllers: [AppController],

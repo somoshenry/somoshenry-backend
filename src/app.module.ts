@@ -26,6 +26,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
 import { EventDispatcherService } from './common/events/event-dispatcher.service';
+import { NotificationModule } from './modules/notifications/motifications.module';
 
 @Module({
   imports: [

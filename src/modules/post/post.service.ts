@@ -15,6 +15,8 @@ import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
 import { Report } from '../report/entities/report.entity';
 import { FilterPostsDto } from './dto/filter-posts.dto';
+import { NotificationService } from '../notification/socket/notification.service';
+import { NotificationType } from '../notification/socket/entities/notification.entity';
 
 @Injectable()
 export class PostService {
@@ -31,6 +33,7 @@ export class PostService {
     private readonly postDislikeRepository: Repository<PostDislike>,
     @InjectRepository(PostLike)
     private readonly postLikeRepository: Repository<PostLike>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {

@@ -25,6 +25,7 @@ import { UploadMediaDocs } from './docs/upload-media.swagger';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { Delete } from '@nestjs/common';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
+import { EmitEvent } from 'src/common/events/decorators/emit-event.decorator';
 
 @Controller('chat')
 export class ChatController {
@@ -64,6 +65,7 @@ export class ChatController {
 
   @Post('messages')
   @AuthProtected()
+  @EmitEvent('message.created')
   @SendMessageDocs()
   sendMessage(
     @Req() req: Request & { user: { id: string } },

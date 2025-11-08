@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Follow } from './entities/follow.entity';
 import { User, UserRole } from '../user/entities/user.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class FollowService {
@@ -16,6 +17,7 @@ export class FollowService {
     private followRepo: Repository<Follow>,
     @InjectRepository(User)
     private usuarioRepo: Repository<User>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async seguirUsuario(idSeguidor: string, idSeguido: string) {
@@ -49,7 +51,16 @@ export class FollowService {
       follower: seguidor,
       following: seguido,
     });
-    return this.followRepo.save(follow);
+
+    const savedFollow = await this.followRepo.save(follow);
+
+    // 🔔 Emitimos el evento del nuevo seguidor
+    this.eventEmitter.emit('user.followed', {
+      sender: seguidor,
+      receiver: seguido,
+    });
+
+    return savedFollow;
   }
 
   async dejarDeSeguir(idSeguidor: string, idSeguido: string) {

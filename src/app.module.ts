@@ -19,17 +19,24 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { NotificationModule } from './modules/notification/socket/notification.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
+// 🧩 Event system
+import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
+import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
+import { EventDispatcherService } from './common/events/event-dispatcher.service';
 
 @Module({
   imports: [
-    // Config
+    // 🔧 Config
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env.development',
       load: [typeOrmConfig],
     }),
-
-    // Database
+    EventEmitterModule.forRoot(),
+    // 🗄️ Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -41,7 +48,10 @@ import { ChatModule } from './modules/chat/chat.module';
       },
     }),
 
-    // Feature modules
+    // ⚡ Event Emitter (para todo el sistema)
+    EventEmitterModule.forRoot(),
+
+    // 🧱 Feature Modules
     UserModule,
     AuthModule.register(new ConfigService()),
     PostModule,
@@ -54,9 +64,21 @@ import { ChatModule } from './modules/chat/chat.module';
     DashboardModule,
     MercadoPagoModule,
     ChatModule,
+    NotificationModule,
   ],
 
   controllers: [AppController],
-  providers: [AppService, AuditInterceptor],
+  providers: [
+    AppService,
+    AuditInterceptor,
+
+    // 🧠 Event infrastructure (nuevo)
+    EventDispatcherService,
+    Reflector,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DomainEventsInterceptor,
+    },
+  ],
 })
 export class AppModule {}

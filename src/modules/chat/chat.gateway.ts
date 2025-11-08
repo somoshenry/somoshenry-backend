@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { Message } from './entities/message.entity';
+import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
 
 interface TypingPayload {
   conversationId: string;
@@ -28,18 +29,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
+    // Constructor — mantené el nombre "eventDispatcher" para usarlo igual que en el resto del código
+    private readonly eventDispatcher: EventDispatcherService,
   ) {}
 
   // === CONEXIÓN DE CLIENTE ===
   async handleConnection(client: Socket): Promise<void> {
-    console.log('🟢 Intentando nueva conexión de socket...');
-    console.log('Handshake:', client.handshake);
-    console.log('Auth recibido:', client.handshake.auth);
-
     try {
       const token = client.handshake.auth?.token;
       if (!token) {
-        console.warn('⚠️ No se recibió token, desconectando cliente.');
         client.disconnect();
         return;
       }
@@ -55,7 +53,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const userId = payload?.sub || payload?.id;
       if (!userId) {
-        console.warn('⚠️ Token sin ID de usuario.');
         client.disconnect();
         return;
       }
@@ -63,7 +60,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = userId;
       this.onlineUsers.set(userId, client.id);
 
-      console.log(`✅ Usuario conectado: ${userId} (socket ${client.id})`);
       this.broadcastOnlineUsers();
     } catch (err) {
       console.error('❌ Error general en handleConnection:', err);
@@ -89,7 +85,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // === EMISIÓN DE USUARIOS EN LÍNEA ===
   private broadcastOnlineUsers(): void {
     const users = Array.from(this.onlineUsers.keys());
-    console.log('📡 Usuarios online:', users);
     this.server.emit('onlineUsers', users);
   }
 
@@ -99,11 +94,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody('conversationId') conversationId: string,
   ): Promise<void> {
-    console.log(`📥 Usuario ${client.data.userId} se une a ${conversationId}`);
     client.join(conversationId);
     client.emit('joinedConversation', { conversationId });
   }
 
+  // === ENVIAR MENSAJE ===
   // === ENVIAR MENSAJE ===
   @SubscribeMessage('sendMessage')
   async sendMessage(
@@ -112,20 +107,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): Promise<void> {
     try {
       const userId: string = client.data.userId;
-      console.log('📩 Mensaje recibido del cliente:', dto);
 
-      // Crear mensaje real en base de datos
+      // 🟢 Guardar mensaje real en base de datos
       const message: Message = await this.chatService.sendMessage(userId, dto);
 
-      // Emitir mensaje a todos los de la conversación (incluye emisor)
+      // 🟢 Buscar receptor desde la conversación
+      const conversation = await this.chatService.getConversationById(
+        dto.conversationId,
+      );
+      const receiver = conversation?.participants?.find((p) => p.id !== userId);
+      const receiverId = receiver?.id;
+
+      // 🟢 Emitir el mensaje al room
       this.server.to(dto.conversationId).emit('messageReceived', message);
 
-      // Confirmar al cliente que lo envió (para reemplazar el temporal)
+      // 🟢 Confirmar al cliente que lo envió
       client.emit('messageDelivered', message);
 
-      console.log(
-        `✅ Mensaje guardado y emitido en conversación ${dto.conversationId}`,
-      );
+      // 🔔 Despachar evento para notificación
+      // 🔔 Despachar evento para notificación
+      if (receiverId) {
+        this.eventDispatcher.dispatch({
+          name: 'message.created',
+          payload: {
+            userId,
+            result: {
+              id: message.id,
+              conversationId: dto.conversationId,
+              content: message.content,
+              receiverId,
+            },
+          },
+        });
+      }
     } catch (error) {
       console.error('❌ Error al enviar mensaje:', error);
       client.emit('messageError', { error: 'Error al enviar mensaje' });
@@ -135,7 +149,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // === MARCAR COMO LEÍDO ===
   @SubscribeMessage('markAsRead')
   async markAsRead(@MessageBody('messageId') messageId: string): Promise<void> {
-    console.log('👁️ Marcando mensaje leído:', messageId);
     try {
       const updated = await this.chatService.markMessageAsRead(messageId);
       this.server.emit('messageRead', updated);
@@ -151,7 +164,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: TypingPayload,
   ): void {
     const userId = client.data.userId;
-    console.log(`⌨️ ${userId} está escribiendo en ${data.conversationId}`);
     this.server.to(data.conversationId).emit('userTyping', {
       userId,
       isTyping: data.isTyping,

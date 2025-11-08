@@ -19,14 +19,13 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { ChatModule } from './modules/chat/chat.module';
-import { NotificationModule } from './modules/notification/socket/notification.module';
+import { NotificationModule } from './modules/notifications/socket/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 // 🧩 Event system
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
 import { EventDispatcherService } from './common/events/event-dispatcher.service';
-import { NotificationModule } from './modules/notifications/motifications.module';
 
 @Module({
   imports: [

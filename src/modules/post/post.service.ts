@@ -15,8 +15,8 @@ import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
 import { Report } from '../report/entities/report.entity';
 import { FilterPostsDto } from './dto/filter-posts.dto';
-import { NotificationService } from '../notification/socket/notification.service';
-import { NotificationType } from '../notification/socket/entities/notification.entity';
+import { NotificationService } from '../notifications/socket/notification.service';
+import { NotificationType } from '../notifications/socket/entities/notification.entity';
 
 @Injectable()
 export class PostService {

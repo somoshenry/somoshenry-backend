@@ -9,6 +9,7 @@ import { Request } from 'express';
 import { FollowService } from './follow.service';
 import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 import { UserRole, User } from '../user/entities/user.entity';
+import { EmitEvent } from 'src/common/events/decorators/emit-event.decorator';
 
 @ApiTags('Follows')
 @Controller('follows')
@@ -27,6 +28,7 @@ export class FollowController {
     description: 'No se puede seguir a uno mismo o usuario inexistente',
   })
   @ApiBearerAuth('JWT-auth')
+  @EmitEvent('user.followed')
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   async seguir(
     @Req() req: Request & { user: { id: string; role: UserRole } },

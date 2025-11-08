@@ -9,6 +9,7 @@ import { User } from '../user/entities/user.entity';
 import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
 import { Report } from '../report/entities/report.entity';
+import { NotificationModule } from '../notification/socket/notification.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Report } from '../report/entities/report.entity';
       PostView,
       Report,
     ]),
+    NotificationModule,
   ],
   controllers: [PostController],
   providers: [PostService],

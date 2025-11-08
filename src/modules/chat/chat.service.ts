@@ -11,6 +11,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { User } from '../user/entities/user.entity';
 import { v2 as cloudinary } from 'cloudinary';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ChatService {
@@ -21,6 +22,7 @@ export class ChatService {
     private readonly messageRepo: Repository<Message>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async openConversation(
@@ -92,6 +94,7 @@ export class ChatService {
       where: { id: dto.conversationId },
       relations: ['participants'],
     });
+
     if (!conversation)
       throw new NotFoundException('Conversación no encontrada');
 
@@ -106,10 +109,25 @@ export class ChatService {
       mediaUrl: dto.mediaUrl || null,
     });
 
-    const saved: Message = await this.messageRepo.save(message);
+    const saved = await this.messageRepo.save(message);
     conversation.updatedAt = new Date();
     await this.conversationRepo.save(conversation);
-    return saved;
+
+    // ✅ Nuevo: emitir evento para crear notificación sin romper el front
+    const receiver = conversation.participants.find((p) => p.id !== senderId);
+    if (receiver) {
+      this.eventEmitter.emit('message.created', {
+        senderId,
+        receiverId: receiver.id,
+        message: {
+          id: saved.id,
+          content: saved.content,
+          conversationId: conversation.id,
+        },
+      });
+    }
+
+    return saved; // mantiene la respuesta igual para el frontend
   }
 
   async markMessageAsRead(messageId: string): Promise<Message> {
@@ -166,5 +184,12 @@ export class ChatService {
       conversationId,
       deletedAt: new Date(),
     };
+  }
+
+  async getConversationById(id: string) {
+    return this.conversationRepo.findOne({
+      where: { id },
+      relations: ['participants'],
+    });
   }
 }

@@ -408,45 +408,6 @@ export class ChatService {
     return saved;
   }
 
-  async updateGroupInfo(
-    groupId: string,
-    requesterId: string,
-    dto: UpdateGroupDto,
-  ): Promise<Conversation> {
-    const requester = await this.participantRepo.findOne({
-      where: { conversation: { id: groupId }, user: { id: requesterId } },
-    });
-    if (!requester) throw new ForbiddenException('No perteneces a este grupo');
-    if (requester.role !== ConversationRole.ADMIN)
-      throw new ForbiddenException('No tienes permisos para editar el grupo');
-
-    const convo = await this.conversationRepo.findOne({
-      where: { id: groupId },
-    });
-    if (!convo) throw new NotFoundException('Grupo no encontrado');
-
-    convo.name = dto.name ?? convo.name;
-    convo.description = dto.description ?? convo.description;
-    convo.imageUrl = dto.imageUrl ?? convo.imageUrl;
-
-    await this.conversationRepo.save(convo);
-
-    // 🔔 Evento interno → el Gateway emite “groupUpdated”
-    this.eventDispatcher.dispatch({
-      name: 'group.updated',
-      payload: {
-        groupId,
-        changes: {
-          ...(dto.name && { name: dto.name }),
-          ...(dto.description && { description: dto.description }),
-          ...(dto.imageUrl && { imageUrl: dto.imageUrl }),
-        },
-      },
-    });
-
-    return convo;
-  }
-
   async getUserGroups(userId: string) {
     // Buscar todos los registros donde el usuario participa
     const participations = await this.participantRepo.find({

@@ -7,7 +7,7 @@ import {
   Param,
   Query,
   Req,
-  UploadedFile,
+  // UploadedFile,
   UseInterceptors,
   UploadedFiles,
   Delete,
@@ -15,7 +15,7 @@ import {
 import { ChatService } from './chat.service';
 import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 import { Request } from 'express';
-import { FileInterceptor } from '@nestjs/platform-express';
+// import { FileInterceptor } from '@nestjs/platform-express';
 
 // Swagger docs
 import { OpenConversationDocs } from './docs/open-conversation.swagger';
@@ -23,7 +23,7 @@ import { GetConversationsDocs } from './docs/get-conversations.swagger';
 import { GetMessagesDocs } from './docs/get-messages.swagger';
 import { SendMessageDocs } from './docs/send-message.swagger';
 import { MarkAsReadDocs } from './docs/mark-read.swagger';
-import { UploadMediaDocs } from './docs/upload-media.swagger';
+// import { UploadMediaDocs } from './docs/upload-media.swagger';
 
 import { CreateMessageDto } from './dto/create-message.dto';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
@@ -45,6 +45,8 @@ import { UseGuards } from '@nestjs/common';
 import { GroupAdminGuard } from './guards/group-admin.guard';
 import { GroupMemberGuard } from './guards/group-member.guard';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { CreateGroupDocs } from './docs/create-group.swagger';
+import { GetUserGroupsDocs } from './docs/get-user-groups.swagger';
 
 @Controller('chat')
 export class ChatController {
@@ -137,6 +139,7 @@ export class ChatController {
 
   @Post('groups')
   @AuthProtected()
+  @CreateGroupDocs()
   async createGroup(
     @Req() req: Request & { user: { id: string } },
     @Body() dto: CreateGroupDto,
@@ -166,6 +169,7 @@ export class ChatController {
 
   @Get('groups')
   @AuthProtected()
+  @GetUserGroupsDocs()
   async getUserGroups(@Req() req: Request & { user: { id: string } }) {
     return this.chatService.getUserGroups(req.user.id);
   }
@@ -202,6 +206,7 @@ export class ChatController {
   @LeaveGroupDocs()
   @Post('groups/:groupId/leave')
   @AuthProtected()
+  @LeaveGroupDocs()
   @UseGuards(GroupMemberGuard)
   leave(
     @Req() req: Request & { user: { id: string } },

@@ -13,6 +13,7 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -251,7 +252,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       handler: (payload: T) => void,
     ): void => {
       try {
-        this.eventDispatcher.on(event, handler as any);
+        (this.eventDispatcher as any)?.emitter?.on?.(event, handler as any);
       } catch (error) {
         this.logger.error(`Error registrando listener para ${event}`, error);
       }
@@ -313,6 +314,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(groupId).emit('memberLeft', { groupId, userId });
       },
     );
+    // --- Grupo eliminado ---
+    safeOn<{ groupId: string }>('group.deleted', ({ groupId }) => {
+      this.server.to(groupId).emit('groupDeleted', { groupId });
+    });
   }
 
   /**

@@ -23,7 +23,7 @@ import { GroupAdminGuard } from './guards/group-admin.guard';
       User,
       ConversationParticipant,
     ]),
-    forwardRef(() => AuthModule), // Si Auth usa Chat o viceversa, previene ciclos
+    forwardRef(() => AuthModule),
   ],
   controllers: [ChatController],
   providers: [
@@ -34,9 +34,6 @@ import { GroupAdminGuard } from './guards/group-admin.guard';
     GroupMemberGuard,
     GroupAdminGuard,
   ],
-  exports: [
-    ChatService,
-    ChatGateway, // 👈 Necesario si se usa fuera del módulo
-  ],
+  exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}

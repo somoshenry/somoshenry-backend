@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,7 +10,7 @@ import { Conversation } from './entities/conversation.entity';
 import { Message, MessageType } from './entities/message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { User } from '../user/entities/user.entity';
-import { v2 as cloudinary } from 'cloudinary';
+// import { v2 as cloudinary } from 'cloudinary';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FilesRepository } from '../files/files.repository';
@@ -17,6 +18,13 @@ import { MessageAttachment } from './entities/message-attachment.entity';
 import { SendMessageWithFilesDto } from './dto/send-message-with-files.dto';
 import { ChatGateway } from './chat.gateway';
 import { forwardRef, Inject } from '@nestjs/common';
+import { CreateGroupDto } from './dto/create-group.dto';
+import { ConversationType } from './entities/conversation.entity';
+import {
+  ConversationParticipant,
+  ConversationRole,
+} from './entities/conversation-participant.entity';
+import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
 
 @Injectable()
 export class ChatService {
@@ -33,6 +41,9 @@ export class ChatService {
     private readonly filesRepository: FilesRepository,
     @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
+    @InjectRepository(ConversationParticipant)
+    private readonly participantRepo: Repository<ConversationParticipant>,
+    private readonly eventDispatcher: EventDispatcherService,
   ) {}
 
   async openConversation(
@@ -286,5 +297,177 @@ export class ChatService {
     this.chatGateway.emitNewMessage(saved);
 
     return saved;
+  }
+
+  async createGroup(creatorId: string, dto: CreateGroupDto) {
+    const creator = await this.userRepo.findOne({ where: { id: creatorId } });
+    if (!creator) throw new NotFoundException('Creador no encontrado');
+
+    // Crear la conversación del grupo
+    const conversation = this.conversationRepo.create({
+      type: ConversationType.GROUP,
+      name: dto.name,
+      description: dto.description ?? null,
+      imageUrl: dto.imageUrl ?? null,
+    });
+    await this.conversationRepo.save(conversation);
+
+    // Crear el registro del creador como ADMIN
+    const participants: ConversationParticipant[] = [];
+    participants.push(
+      this.participantRepo.create({
+        conversation,
+        user: creator,
+        role: ConversationRole.ADMIN,
+      }),
+    );
+
+    // Si hay miembros adicionales, los agregamos como MEMBER
+    if (dto.memberIds?.length) {
+      const members = await this.userRepo.findByIds(dto.memberIds);
+      members.forEach((member) => {
+        participants.push(
+          this.participantRepo.create({
+            conversation,
+            user: member,
+            role: ConversationRole.MEMBER,
+          }),
+        );
+      });
+    }
+
+    await this.participantRepo.save(participants);
+
+    return {
+      ...conversation,
+      participants,
+    };
+  }
+
+  async sendGroupMessage(
+    senderId: string,
+    groupId: string,
+    content: string,
+    type: MessageType = MessageType.TEXT,
+  ): Promise<Message> {
+    const [conversation, sender] = await Promise.all([
+      this.conversationRepo.findOne({
+        where: { id: groupId },
+        relations: ['messages'],
+      }),
+      this.userRepo.findOne({ where: { id: senderId } }),
+    ]);
+
+    if (!conversation) throw new NotFoundException('Grupo no encontrado');
+    if (!sender) throw new NotFoundException('Usuario no encontrado');
+
+    // Validamos que el usuario pertenezca al grupo
+    const isMember = await this.participantRepo.exists({
+      where: { conversation: { id: groupId }, user: { id: senderId } },
+    });
+    if (!isMember) throw new BadRequestException('No perteneces a este grupo');
+
+    const message = this.messageRepo.create({
+      sender,
+      conversation,
+      content,
+      type,
+    });
+
+    await this.messageRepo.save(message);
+    return message;
+  }
+
+  async getUserGroups(userId: string) {
+    // Buscar todos los registros donde el usuario participa
+    const participations = await this.participantRepo.find({
+      where: { user: { id: userId } },
+      relations: ['conversation'],
+    });
+
+    // Filtrar solo los grupos (no privados ni cohortes)
+    const groups = participations
+      .map((p) => p.conversation)
+      .filter((c) => c.type === ConversationType.GROUP);
+
+    return groups;
+  }
+  async promoteMemberToAdmin(
+    groupId: string,
+    requesterId: string,
+    targetUserId: string,
+  ): Promise<ConversationParticipant> {
+    const requester = await this.participantRepo.findOne({
+      where: { conversation: { id: groupId }, user: { id: requesterId } },
+    });
+    if (!requester) throw new ForbiddenException('No perteneces a este grupo');
+    if (requester.role !== ConversationRole.ADMIN)
+      throw new ForbiddenException('No tienes permisos para promover miembros');
+
+    const target = await this.participantRepo.findOne({
+      where: { conversation: { id: groupId }, user: { id: targetUserId } },
+      relations: ['user'],
+    });
+    if (!target) throw new NotFoundException('Miembro no encontrado');
+
+    target.role = ConversationRole.ADMIN;
+    await this.participantRepo.save(target);
+
+    // Emitir evento interno
+    this.eventDispatcher.dispatch({
+      name: 'group.member.promoted',
+      payload: { groupId, targetUserId },
+    });
+
+    return target;
+  }
+
+  /**
+   * Elimina a un miembro de un grupo (solo admin).
+   */
+  async removeMemberFromGroup(
+    groupId: string,
+    requesterId: string,
+    targetUserId: string,
+  ): Promise<void> {
+    const requester = await this.participantRepo.findOne({
+      where: { conversation: { id: groupId }, user: { id: requesterId } },
+    });
+    if (!requester) throw new ForbiddenException('No perteneces a este grupo');
+    if (requester.role !== ConversationRole.ADMIN)
+      throw new ForbiddenException('No tienes permisos para eliminar miembros');
+
+    const target = await this.participantRepo.findOne({
+      where: { conversation: { id: groupId }, user: { id: targetUserId } },
+      relations: ['user'],
+    });
+    if (!target) throw new NotFoundException('Miembro no encontrado');
+
+    await this.participantRepo.remove(target);
+
+    // Emitir evento interno
+    this.eventDispatcher.dispatch({
+      name: 'group.member.removed',
+      payload: { groupId, targetUserId },
+    });
+  }
+
+  /**
+   * Permite que un usuario abandone voluntariamente un grupo.
+   */
+  async leaveGroup(groupId: string, userId: string): Promise<void> {
+    const participant = await this.participantRepo.findOne({
+      where: { conversation: { id: groupId }, user: { id: userId } },
+      relations: ['user'],
+    });
+    if (!participant) throw new NotFoundException('No perteneces a este grupo');
+
+    await this.participantRepo.remove(participant);
+
+    // Emitir evento interno
+    this.eventDispatcher.dispatch({
+      name: 'group.member.left',
+      payload: { groupId, userId },
+    });
   }
 }

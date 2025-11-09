@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseInterceptors,
   UploadedFiles,
+  Delete,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
@@ -23,12 +24,21 @@ import { GetMessagesDocs } from './docs/get-messages.swagger';
 import { SendMessageDocs } from './docs/send-message.swagger';
 import { MarkAsReadDocs } from './docs/mark-read.swagger';
 import { UploadMediaDocs } from './docs/upload-media.swagger';
+
 import { CreateMessageDto } from './dto/create-message.dto';
-import { Delete } from '@nestjs/common';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
 import { EmitEvent } from 'src/common/events/decorators/emit-event.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { SendMessageWithFilesDto } from './dto/send-message-with-files.dto';
+
+import { CreateGroupDto } from './dto/create-group.dto';
+import { SendGroupMessageDocs } from './docs/send-group-message.swagger';
+import { SendGroupMessageDto } from './dto/send-group-message.dto';
+import {
+  PromoteMemberDocs,
+  RemoveMemberDocs,
+  LeaveGroupDocs,
+} from './docs/group-management.swagger';
 
 @Controller('chat')
 export class ChatController {
@@ -102,5 +112,74 @@ export class ChatController {
     @Param('conversationId') conversationId: string,
   ): Promise<DeleteConversationResponseDto> {
     return this.chatService.deleteConversation(conversationId, req.user.id);
+  }
+
+  @Post('groups')
+  @AuthProtected()
+  async createGroup(
+    @Req() req: Request & { user: { id: string } },
+    @Body() dto: CreateGroupDto,
+  ) {
+    return this.chatService.createGroup(req.user.id, dto);
+  }
+
+  @Post('groups/:groupId/messages')
+  @AuthProtected()
+  @SendGroupMessageDocs()
+  async sendGroupMessage(
+    @Req() req: Request & { user: { id: string } },
+    @Param('groupId') groupId: string,
+    @Body() dto: SendGroupMessageDto,
+  ) {
+    return this.chatService.sendGroupMessage(
+      req.user.id,
+      groupId,
+      dto.content,
+      dto.type,
+    );
+  }
+
+  @Get('groups')
+  @AuthProtected()
+  async getUserGroups(@Req() req: Request & { user: { id: string } }) {
+    return this.chatService.getUserGroups(req.user.id);
+  }
+
+  @Patch('groups/:groupId/members/:userId/promote')
+  @AuthProtected()
+  @PromoteMemberDocs()
+  async promoteMemberToAdmin(
+    @Req() req: Request & { user: { id: string } },
+    @Param('groupId') groupId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.chatService.promoteMemberToAdmin(groupId, req.user.id, userId);
+  }
+
+  /**
+   * Elimina un miembro del grupo. Solo los administradores pueden ejecutar esta acción.
+   */
+  @Delete('groups/:groupId/members/:userId')
+  @AuthProtected()
+  @RemoveMemberDocs()
+  async removeMemberFromGroup(
+    @Req() req: Request & { user: { id: string } },
+    @Param('groupId') groupId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.chatService.removeMemberFromGroup(groupId, req.user.id, userId);
+  }
+
+  /**
+   * Permite que el usuario autenticado abandone el grupo.
+   */
+  @Delete('groups/:groupId/leave')
+  @AuthProtected()
+  @LeaveGroupDocs()
+  async leaveGroup(
+    @Req() req: Request & { user: { id: string } },
+    @Param('groupId') groupId: string,
+  ) {
+    return this.chatService.leaveGroup(groupId, req.user.id);
   }
 }

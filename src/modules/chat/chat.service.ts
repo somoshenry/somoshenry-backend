@@ -12,6 +12,11 @@ import { User } from '../user/entities/user.entity';
 import { v2 as cloudinary } from 'cloudinary';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { FilesRepository } from '../files/files.repository';
+import { MessageAttachment } from './entities/message-attachment.entity';
+import { SendMessageWithFilesDto } from './dto/send-message-with-files.dto';
+import { ChatGateway } from './chat.gateway';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
 export class ChatService {
@@ -23,6 +28,11 @@ export class ChatService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly eventEmitter: EventEmitter2,
+    @InjectRepository(MessageAttachment)
+    private readonly attachmentRepo: Repository<MessageAttachment>,
+    private readonly filesRepository: FilesRepository,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   async openConversation(
@@ -140,19 +150,6 @@ export class ChatService {
     return await this.messageRepo.save(message);
   }
 
-  async uploadMedia(file: Express.Multer.File): Promise<{ url: string }> {
-    if (!file) throw new BadRequestException('No se recibió archivo');
-    try {
-      const result = await cloudinary.uploader.upload(file.path, {
-        folder: 'chat_media',
-        resource_type: 'auto',
-      });
-      return { url: result.secure_url };
-    } catch {
-      throw new BadRequestException('Error al subir a Cloudinary');
-    }
-  }
-
   async deleteConversation(
     conversationId: string,
     userId: string,
@@ -191,5 +188,103 @@ export class ChatService {
       where: { id },
       relations: ['participants'],
     });
+  }
+
+  async sendMessageWithFiles(
+    senderId: string,
+    dto: SendMessageWithFilesDto,
+    files: Express.Multer.File[],
+  ): Promise<Message> {
+    const { peerUserId, text, linkUrl } = dto;
+
+    if (senderId === peerUserId)
+      throw new BadRequestException('No puedes chatear contigo mismo');
+
+    const [sender, peer] = await Promise.all([
+      this.userRepo.findOneBy({ id: senderId }),
+      this.userRepo.findOneBy({ id: peerUserId }),
+    ]);
+    if (!sender || !peer) throw new NotFoundException('Usuario no encontrado');
+
+    // ✅ Buscar conversación existente por participantes
+    let conversation = await this.conversationRepo
+      .createQueryBuilder('c')
+      .leftJoin('c.participants', 'p')
+      .where('p.id IN (:...ids)', { ids: [senderId, peerUserId] })
+      .groupBy('c.id')
+      .having('COUNT(p.id) = 2')
+      .getOne();
+
+    if (!conversation) {
+      conversation = this.conversationRepo.create({
+        participants: [sender, peer],
+      });
+      conversation = await this.conversationRepo.save(conversation);
+    }
+
+    // ✅ Validar y limitar cantidad de archivos
+    const safeFiles = Array.isArray(files) ? files : [];
+    if (safeFiles.length > 10) {
+      throw new BadRequestException('Máximo 10 archivos por mensaje');
+    }
+
+    // ✅ Subir archivos a Cloudinary
+    const attachments: MessageAttachment[] = [];
+    for (const file of safeFiles) {
+      const uploaded = await this.filesRepository.uploadFile(file);
+      const attachment = this.attachmentRepo.create({
+        url: uploaded.secure_url,
+        publicId: uploaded.public_id,
+        format: uploaded.format,
+        resourceType: uploaded.resource_type, // 'image' | 'video' | 'raw' | 'audio'
+      });
+      attachments.push(attachment);
+    }
+
+    // ✅ Determinar tipo de mensaje
+    let type = MessageType.TEXT;
+    if (attachments.length > 0) {
+      const rt = attachments[0].resourceType;
+      if (rt === 'image') type = MessageType.IMAGE;
+      else if (rt === 'video') type = MessageType.VIDEO;
+      else if (rt === 'audio') type = MessageType.AUDIO;
+      else type = MessageType.FILE;
+    } else if (linkUrl) {
+      type = MessageType.LINK;
+    }
+
+    // ✅ Crear y guardar mensaje
+    const message = this.messageRepo.create({
+      conversation,
+      sender,
+      type,
+      content: text ?? linkUrl ?? null,
+      attachments,
+    });
+
+    const saved = await this.messageRepo.save(message);
+
+    // ✅ Actualizar timestamp de la conversación
+    conversation.updatedAt = new Date();
+    await this.conversationRepo.save(conversation);
+
+    // ✅ Emitir notificación (back → front)
+    const receiver = conversation.participants.find((p) => p.id !== senderId);
+    if (receiver) {
+      this.eventEmitter.emit('message.created', {
+        senderId,
+        receiverId: receiver.id,
+        message: {
+          id: saved.id,
+          content: saved.content,
+          conversationId: conversation.id,
+        },
+      });
+    }
+
+    // ✅ EMITIR EN TIEMPO REAL 🚀
+    this.chatGateway.emitNewMessage(saved);
+
+    return saved;
   }
 }

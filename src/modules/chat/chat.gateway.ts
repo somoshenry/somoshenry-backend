@@ -7,12 +7,14 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { Inject, forwardRef, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { Message } from './entities/message.entity';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
+import { Conversation } from './entities/conversation.entity';
 
 interface TypingPayload {
   conversationId: string;
@@ -24,16 +26,17 @@ interface TypingPayload {
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
-  private onlineUsers = new Map<string, string>();
+  private readonly logger = new Logger(ChatGateway.name);
+  private readonly onlineUsers = new Map<string, string>();
 
   constructor(
+    @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
-    // Constructor — mantené el nombre "eventDispatcher" para usarlo igual que en el resto del código
     private readonly eventDispatcher: EventDispatcherService,
   ) {}
 
-  // === CONEXIÓN DE CLIENTE ===
+  // === CLIENT CONNECTION ===
   async handleConnection(client: Socket): Promise<void> {
     try {
       const token = client.handshake.auth?.token;
@@ -45,8 +48,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       let payload: any;
       try {
         payload = this.jwtService.verify(token);
-      } catch (err) {
-        console.error('❌ Token inválido:', err.message);
+      } catch {
+        this.logger.warn('❌ Token inválido al conectar');
         client.disconnect();
         return;
       }
@@ -59,15 +62,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.data.userId = userId;
       this.onlineUsers.set(userId, client.id);
-
       this.broadcastOnlineUsers();
+      this.logger.debug(`🟢 Usuario conectado: ${userId}`);
     } catch (err) {
-      console.error('❌ Error general en handleConnection:', err);
+      this.logger.error('❌ Error en handleConnection', err);
       client.disconnect();
     }
   }
 
-  // === DESCONEXIÓN ===
+  // === CLIENT DISCONNECTION ===
   handleDisconnect(client: Socket): void {
     const userId = [...this.onlineUsers.entries()].find(
       ([, id]) => id === client.id,
@@ -76,30 +79,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (userId) {
       this.onlineUsers.delete(userId);
       this.broadcastOnlineUsers();
-      console.log(`❎ Usuario desconectado: ${userId}`);
-    } else {
-      console.log(`⚠️ Cliente desconectado sin usuario (id: ${client.id})`);
+      this.logger.debug(`❎ Usuario desconectado: ${userId}`);
     }
   }
 
-  // === EMISIÓN DE USUARIOS EN LÍNEA ===
+  // === ONLINE USERS ===
   private broadcastOnlineUsers(): void {
     const users = Array.from(this.onlineUsers.keys());
     this.server.emit('onlineUsers', users);
   }
 
-  // === UNIRSE A UNA CONVERSACIÓN ===
+  // === JOIN CONVERSATION ===
   @SubscribeMessage('joinConversation')
   async joinConversation(
     @ConnectedSocket() client: Socket,
     @MessageBody('conversationId') conversationId: string,
   ): Promise<void> {
+    if (!conversationId) return;
     client.join(conversationId);
     client.emit('joinedConversation', { conversationId });
   }
 
-  // === ENVIAR MENSAJE ===
-  // === ENVIAR MENSAJE ===
+  // === SEND MESSAGE ===
   @SubscribeMessage('sendMessage')
   async sendMessage(
     @ConnectedSocket() client: Socket,
@@ -107,25 +108,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): Promise<void> {
     try {
       const userId: string = client.data.userId;
+      if (!userId) throw new Error('Usuario no autenticado');
 
-      // 🟢 Guardar mensaje real en base de datos
       const message: Message = await this.chatService.sendMessage(userId, dto);
+      const conversation: Conversation | null =
+        await this.chatService.getConversationById(dto.conversationId);
 
-      // 🟢 Buscar receptor desde la conversación
-      const conversation = await this.chatService.getConversationById(
-        dto.conversationId,
-      );
-      const receiver = conversation?.participants?.find((p) => p.id !== userId);
+      if (!conversation) throw new Error('Conversación no encontrada');
+
+      const receiver = conversation.participants.find((p) => p.id !== userId);
       const receiverId = receiver?.id;
 
-      // 🟢 Emitir el mensaje al room
+      // Emitir mensaje al room
       this.server.to(dto.conversationId).emit('messageReceived', message);
 
-      // 🟢 Confirmar al cliente que lo envió
+      // Confirmar al emisor
       client.emit('messageDelivered', message);
 
-      // 🔔 Despachar evento para notificación
-      // 🔔 Despachar evento para notificación
+      // Notificación interna
       if (receiverId) {
         this.eventDispatcher.dispatch({
           name: 'message.created',
@@ -141,32 +141,42 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       }
     } catch (error) {
-      console.error('❌ Error al enviar mensaje:', error);
+      this.logger.error('❌ Error al enviar mensaje', error);
       client.emit('messageError', { error: 'Error al enviar mensaje' });
     }
   }
 
-  // === MARCAR COMO LEÍDO ===
+  // === MARK AS READ ===
   @SubscribeMessage('markAsRead')
   async markAsRead(@MessageBody('messageId') messageId: string): Promise<void> {
     try {
       const updated = await this.chatService.markMessageAsRead(messageId);
       this.server.emit('messageRead', updated);
     } catch (err) {
-      console.error('❌ Error marcando mensaje leído:', err);
+      this.logger.error('❌ Error marcando mensaje leído', err);
     }
   }
 
-  // === EVENTO DE ESCRITURA ===
+  // === TYPING EVENT ===
   @SubscribeMessage('typing')
   handleTyping(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: TypingPayload,
   ): void {
     const userId = client.data.userId;
+    if (!data?.conversationId) return;
+
     this.server.to(data.conversationId).emit('userTyping', {
       userId,
       isTyping: data.isTyping,
     });
+  }
+
+  // === EMIT FROM SERVICE (attachments / media) ===
+  emitNewMessage(message: Message): void {
+    const conversationId = message.conversation?.id;
+    if (!conversationId) return;
+
+    this.server.to(conversationId).emit('newMessage', message);
   }
 }

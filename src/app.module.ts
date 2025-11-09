@@ -3,21 +3,40 @@ import { ConfigFactory, ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import typeOrmConfig from './config/typeorm.config';
+
+// Modules
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostModule } from './modules/post/post.module';
 import { FollowModule } from './modules/follow/follow.module';
-import typeOrmConfig from './config/typeorm.config';
-
 import { CommentModule } from './modules/comment/comment.module';
+import { GmailModule } from './modules/gmail/gmail.module';
+import { FilesModule } from './modules/files/files.module';
+import { ReportModule } from './modules/report/report.module';
+import { AdminDashboardModule } from './modules/dashboard/admin/admin-dashboard.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { NotificationModule } from './modules/notifications/socket/notification.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
+// 🧩 Event system
+import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
+import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
+import { EventDispatcherService } from './common/events/event-dispatcher.service';
 
 @Module({
   imports: [
+    // 🔧 Config
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env.development',
       load: [typeOrmConfig],
     }),
+    EventEmitterModule.forRoot(),
+    // 🗄️ Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -28,14 +47,38 @@ import { CommentModule } from './modules/comment/comment.module';
         };
       },
     }),
+
+    // ⚡ Event Emitter (para todo el sistema)
+    EventEmitterModule.forRoot(),
+
+    // 🧱 Feature Modules
     UserModule,
-    AuthModule,
+    AuthModule.register(new ConfigService()),
     PostModule,
     FollowModule,
     CommentModule,
+    GmailModule,
+    FilesModule,
+    ReportModule,
+    AdminDashboardModule,
+    DashboardModule,
+    MercadoPagoModule,
+    ChatModule,
+    NotificationModule,
   ],
 
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    AuditInterceptor,
+
+    // 🧠 Event infrastructure (nuevo)
+    EventDispatcherService,
+    Reflector,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DomainEventsInterceptor,
+    },
+  ],
 })
 export class AppModule {}

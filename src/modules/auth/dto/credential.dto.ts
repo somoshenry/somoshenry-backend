@@ -1,15 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 
 export class CredentialDto {
   @ApiProperty({
-    example: 'jhonny@example.com',
-    description: 'Nombre de usuario o email para iniciar sesión',
+    example: 'Admin123@gmail.com',
+    description: 'Username del usuario para iniciar sesión',
   })
+  @IsString()
   username: string;
 
   @ApiProperty({
-    example: 'M1c0ntr@señaSegura',
+    example: 'Admin123',
     description: 'Contraseña del usuario',
   })
+  @IsString()
   password: string;
 }

@@ -2,11 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Follow } from './entities/follow.entity';
-import { User } from '../user/entities/user.entity';
+import { User, UserRole } from '../user/entities/user.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class FollowService {
@@ -15,6 +17,7 @@ export class FollowService {
     private followRepo: Repository<Follow>,
     @InjectRepository(User)
     private usuarioRepo: Repository<User>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async seguirUsuario(idSeguidor: string, idSeguido: string) {
@@ -48,7 +51,16 @@ export class FollowService {
       follower: seguidor,
       following: seguido,
     });
-    return this.followRepo.save(follow);
+
+    const savedFollow = await this.followRepo.save(follow);
+
+    // 🔔 Emitimos el evento del nuevo seguidor
+    this.eventEmitter.emit('user.followed', {
+      sender: seguidor,
+      receiver: seguido,
+    });
+
+    return savedFollow;
   }
 
   async dejarDeSeguir(idSeguidor: string, idSeguido: string) {
@@ -63,6 +75,60 @@ export class FollowService {
 
     await this.followRepo.remove(follow);
     return { mensaje: 'Has dejado de seguir a este usuario' };
+  }
+
+  async dejarDeSeguirByFollower(
+    idSeguidor: string,
+    idSeguido: string,
+    requestUserId: string,
+    userRole: UserRole,
+  ) {
+    const follow = await this.followRepo.findOne({
+      where: {
+        follower: { id: idSeguidor },
+        following: { id: idSeguido },
+      },
+    });
+
+    if (!follow) {
+      throw new NotFoundException('No sigues a este usuario');
+    }
+
+    if (requestUserId !== idSeguidor && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para dejar de seguir por otro usuario',
+      );
+    }
+
+    await this.followRepo.remove(follow);
+    return { mensaje: 'Has dejado de seguir a este usuario' };
+  }
+
+  async removeFollower(
+    idSeguido: string,
+    idSeguidor: string,
+    requestUserId: string,
+    userRole: UserRole,
+  ) {
+    const follow = await this.followRepo.findOne({
+      where: {
+        follower: { id: idSeguidor },
+        following: { id: idSeguido },
+      },
+    });
+
+    if (!follow) {
+      throw new NotFoundException('Este usuario no te sigue');
+    }
+
+    if (requestUserId !== idSeguido && userRole !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para eliminar este seguidor',
+      );
+    }
+
+    await this.followRepo.remove(follow);
+    return { mensaje: 'Seguidor eliminado correctamente' };
   }
 
   async obtenerSeguidores(idUsuario: string) {

@@ -20,46 +20,47 @@ export class AuthService {
 
   async registerUser(user: Partial<User>): Promise<User> {
     const hashedPassword = await this.hashPassword(user.password as string);
-    const newUser = { ...user, password: hashedPassword };
+    const newUser = { ...user, password: hashedPassword } as User;
     return this.userService.create(newUser);
   }
 
   async login(credential: CredentialDto): Promise<LoginResponseOkDto> {
-    const user = await this.findUserByEmail(credential.username);
+    const user = await this.findUserByUsername(credential.username);
     await this.validatePassword(credential.password, user.password as string);
     const payload = this.mapToPayloadJwt(user);
-    const token = this.jwtService.sign(payload);
+    const token = this.generateJwt(payload);
     return this.buildLoginResponseOkDto(token);
   }
 
   async updatePassword(
-    email: string,
+    username: string,
     password: string,
   ): Promise<{ message: string }> {
-    try {
-      await this.findUserByEmail(email);
-      const hashedPassword = await this.hashPassword(password);
-      const updateUser = new User();
-      updateUser.password = hashedPassword;
-      await this.userService.updateByEmail(email, updateUser);
-      return { message: 'Update successful' };
-    } catch (err) {
-      console.error('Error to change password ', err);
-      throw new UnauthorizedException(err);
-    }
+    await this.findUserByUsername(username);
+    const hashedPassword = await this.hashPassword(password);
+    const updateUser = this.buildUser(hashedPassword);
+    await this.userService.updateByUsername(username, updateUser);
+    return { message: 'Password successfully updated' };
   }
 
   verifyToken(token: string): PayloadJwt {
     try {
       return this.jwtService.verify<PayloadJwt>(token);
     } catch (error) {
-      throw new UnauthorizedException('Invalid token', error as Error);
+      throw new UnauthorizedException('Token inválido', error as Error);
     }
   }
 
-  private async findUserByEmail(email: string) {
-    const user = await this.userService.findUserByEmailWithPassword(email);
-    if (!user) throw new BadRequestException('Username or pass invalid');
+  private buildUser(password: string) {
+    const user = new User();
+    user.password = password;
+    return user;
+  }
+
+  private async findUserByUsername(username: string) {
+    const user =
+      await this.userService.findUserByUsernameWithPassword(username);
+    if (!user) throw new BadRequestException('Usuario o contraseña inválidos');
     return user;
   }
 
@@ -70,23 +71,38 @@ export class AuthService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, 10);
+    try {
+      return await bcrypt.hash(password, 10);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
-  private mapToPayloadJwt(user: User) {
+  private mapToPayloadJwt(user: User): PayloadJwt {
     const payload: PayloadJwt = {
       sub: user.id,
       email: user.email,
-      name: user.nombre as string,
+      name: user.name as string,
+      role: user.role,
     };
     return payload;
   }
+
   private async validatePassword(
     password: string,
     passwordDb: string,
   ): Promise<void> {
     const isPasswordValid = await bcrypt.compare(password, passwordDb);
     if (!isPasswordValid) {
-      throw new BadRequestException('Username or pass invalid');
+      throw new BadRequestException('Email o contraseña incorrectos');
+    }
+  }
+  private generateJwt(payload: PayloadJwt): string {
+    try {
+      return this.jwtService.sign(payload);
+    } catch (error) {
+      console.log('Error al generar el jwt', error);
+      throw error;
     }
   }
 }

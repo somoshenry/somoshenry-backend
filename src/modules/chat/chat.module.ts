@@ -10,11 +10,20 @@ import { User } from '../user/entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
 import { FilesRepository } from '../files/files.repository';
+import { ConversationParticipant } from './entities/conversation-participant.entity';
+import { GroupMemberGuard } from './guards/group-member.guard';
+import { GroupAdminGuard } from './guards/group-admin.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Conversation, Message, MessageAttachment, User]),
-    forwardRef(() => AuthModule), // Si Auth usa Chat o viceversa, previene ciclos
+    TypeOrmModule.forFeature([
+      Conversation,
+      Message,
+      MessageAttachment,
+      User,
+      ConversationParticipant,
+    ]),
+    forwardRef(() => AuthModule),
   ],
   controllers: [ChatController],
   providers: [
@@ -22,10 +31,9 @@ import { FilesRepository } from '../files/files.repository';
     ChatGateway,
     EventDispatcherService,
     FilesRepository,
+    GroupMemberGuard,
+    GroupAdminGuard,
   ],
-  exports: [
-    ChatService,
-    ChatGateway, // 👈 Necesario si se usa fuera del módulo
-  ],
+  exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}

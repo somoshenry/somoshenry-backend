@@ -11,6 +11,8 @@ import { AuthModule } from '../auth/auth.module';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
 import { FilesRepository } from '../files/files.repository';
 import { ConversationParticipant } from './entities/conversation-participant.entity';
+import { GroupMemberGuard } from './guards/group-member.guard';
+import { GroupAdminGuard } from './guards/group-admin.guard';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { ConversationParticipant } from './entities/conversation-participant.ent
     ChatGateway,
     EventDispatcherService,
     FilesRepository,
+    GroupMemberGuard,
+    GroupAdminGuard,
   ],
   exports: [
     ChatService,

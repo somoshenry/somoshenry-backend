@@ -25,6 +25,7 @@ import {
   ConversationRole,
 } from './entities/conversation-participant.entity';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
+import { UpdateGroupDto } from './dto/update-group.dto';
 
 @Injectable()
 export class ChatService {
@@ -303,7 +304,6 @@ export class ChatService {
     const creator = await this.userRepo.findOne({ where: { id: creatorId } });
     if (!creator) throw new NotFoundException('Creador no encontrado');
 
-    // Crear la conversación del grupo
     const conversation = this.conversationRepo.create({
       type: ConversationType.GROUP,
       name: dto.name,
@@ -312,36 +312,43 @@ export class ChatService {
     });
     await this.conversationRepo.save(conversation);
 
-    // Crear el registro del creador como ADMIN
-    const participants: ConversationParticipant[] = [];
-    participants.push(
+    // Normalizar miembros (sin duplicar ni repetir al creador)
+    const inputIds = Array.from(
+      new Set([...(dto.memberIds ?? []).filter((id) => id !== creatorId)]),
+    );
+    const members = inputIds.length
+      ? await this.userRepo.findByIds(inputIds)
+      : [];
+
+    const participants: ConversationParticipant[] = [
       this.participantRepo.create({
         conversation,
         user: creator,
         role: ConversationRole.ADMIN,
       }),
-    );
-
-    // Si hay miembros adicionales, los agregamos como MEMBER
-    if (dto.memberIds?.length) {
-      const members = await this.userRepo.findByIds(dto.memberIds);
-      members.forEach((member) => {
-        participants.push(
-          this.participantRepo.create({
-            conversation,
-            user: member,
-            role: ConversationRole.MEMBER,
-          }),
-        );
-      });
-    }
+      ...members.map((m) =>
+        this.participantRepo.create({
+          conversation,
+          user: m,
+          role: ConversationRole.MEMBER,
+        }),
+      ),
+    ];
 
     await this.participantRepo.save(participants);
 
-    return {
-      ...conversation,
-      participants,
-    };
+    // 🔔 Evento interno → el Gateway puede emitir “groupCreated”
+    this.eventDispatcher.dispatch({
+      name: 'group.created',
+      payload: {
+        groupId: conversation.id,
+        name: conversation.name,
+        imageUrl: conversation.imageUrl,
+        members: [creatorId, ...members.map((m) => m.id)],
+      },
+    });
+
+    return { ...conversation, participants };
   }
 
   async sendGroupMessage(
@@ -361,7 +368,7 @@ export class ChatService {
     if (!conversation) throw new NotFoundException('Grupo no encontrado');
     if (!sender) throw new NotFoundException('Usuario no encontrado');
 
-    // Validamos que el usuario pertenezca al grupo
+    // Validar pertenencia
     const isMember = await this.participantRepo.exists({
       where: { conversation: { id: groupId }, user: { id: senderId } },
     });
@@ -374,8 +381,70 @@ export class ChatService {
       type,
     });
 
-    await this.messageRepo.save(message);
-    return message;
+    const saved = await this.messageRepo.save(message);
+
+    // Mantener conversación “caliente” en listas
+    conversation.updatedAt = new Date();
+    await this.conversationRepo.save(conversation);
+
+    // 🔔 Evento interno → el Gateway lo emite por Socket.IO
+    this.eventDispatcher.dispatch({
+      name: 'group.message.created',
+      payload: {
+        groupId,
+        message: {
+          id: saved.id,
+          content: saved.content,
+          type: saved.type,
+          createdAt: saved.createdAt,
+          sender: {
+            id: sender.id,
+            username: (sender as any).username ?? undefined,
+          },
+        },
+      },
+    });
+
+    return saved;
+  }
+
+  async updateGroupInfo(
+    groupId: string,
+    requesterId: string,
+    dto: UpdateGroupDto,
+  ): Promise<Conversation> {
+    const requester = await this.participantRepo.findOne({
+      where: { conversation: { id: groupId }, user: { id: requesterId } },
+    });
+    if (!requester) throw new ForbiddenException('No perteneces a este grupo');
+    if (requester.role !== ConversationRole.ADMIN)
+      throw new ForbiddenException('No tienes permisos para editar el grupo');
+
+    const convo = await this.conversationRepo.findOne({
+      where: { id: groupId },
+    });
+    if (!convo) throw new NotFoundException('Grupo no encontrado');
+
+    convo.name = dto.name ?? convo.name;
+    convo.description = dto.description ?? convo.description;
+    convo.imageUrl = dto.imageUrl ?? convo.imageUrl;
+
+    await this.conversationRepo.save(convo);
+
+    // 🔔 Evento interno → el Gateway emite “groupUpdated”
+    this.eventDispatcher.dispatch({
+      name: 'group.updated',
+      payload: {
+        groupId,
+        changes: {
+          ...(dto.name && { name: dto.name }),
+          ...(dto.description && { description: dto.description }),
+          ...(dto.imageUrl && { imageUrl: dto.imageUrl }),
+        },
+      },
+    });
+
+    return convo;
   }
 
   async getUserGroups(userId: string) {
@@ -420,6 +489,57 @@ export class ChatService {
     });
 
     return target;
+  }
+
+  async addMembersToGroup(
+    groupId: string,
+    requesterId: string,
+    userIds: string[],
+  ): Promise<{ added: string[] }> {
+    if (!userIds?.length) return { added: [] };
+
+    const requester = await this.participantRepo.findOne({
+      where: { conversation: { id: groupId }, user: { id: requesterId } },
+    });
+    if (!requester) throw new ForbiddenException('No perteneces a este grupo');
+    if (requester.role !== ConversationRole.ADMIN)
+      throw new ForbiddenException('No tienes permisos para agregar miembros');
+
+    const convo = await this.conversationRepo.findOne({
+      where: { id: groupId },
+    });
+    if (!convo) throw new NotFoundException('Grupo no encontrado');
+
+    // Filtrar existentes
+    const existing = await this.participantRepo.find({
+      where: { conversation: { id: groupId } },
+      relations: ['user'],
+    });
+    const existingIds = new Set(existing.map((p) => p.user.id));
+
+    const uniqueToAdd = Array.from(new Set(userIds)).filter(
+      (id) => !existingIds.has(id),
+    );
+    if (!uniqueToAdd.length) return { added: [] };
+
+    const users = await this.userRepo.findByIds(uniqueToAdd);
+    const rows = users.map((u) =>
+      this.participantRepo.create({
+        conversation: convo,
+        user: u,
+        role: ConversationRole.MEMBER,
+      }),
+    );
+
+    await this.participantRepo.save(rows);
+
+    // 🔔 Evento interno
+    this.eventDispatcher.dispatch({
+      name: 'group.member.added',
+      payload: { groupId, userIds: users.map((u) => u.id) },
+    });
+
+    return { added: users.map((u) => u.id) };
   }
 
   /**
@@ -469,5 +589,83 @@ export class ChatService {
       name: 'group.member.left',
       payload: { groupId, userId },
     });
+  }
+
+  async isGroupMember(groupId: string, userId: string): Promise<boolean> {
+    return this.participantRepo.exists({
+      where: { conversation: { id: groupId }, user: { id: userId } },
+    });
+  }
+
+  async isGroupAdmin(groupId: string, userId: string): Promise<boolean> {
+    return this.participantRepo.exists({
+      where: {
+        conversation: { id: groupId },
+        user: { id: userId },
+        role: ConversationRole.ADMIN,
+      },
+    });
+  }
+
+  async updateGroupInfo(
+    groupId: string,
+    requesterId: string,
+    payload: {
+      name?: string;
+      imageUrl?: string | null;
+      description?: string | null;
+    },
+  ) {
+    const isAdmin = await this.isGroupAdmin(groupId, requesterId);
+    if (!isAdmin)
+      throw new ForbiddenException('No tienes permisos para editar este grupo');
+
+    const convo = await this.conversationRepo.findOne({
+      where: { id: groupId },
+    });
+    if (!convo || convo.type !== ConversationType.GROUP)
+      throw new NotFoundException('Grupo no encontrado');
+
+    if (typeof payload.name === 'string') convo.name = payload.name.trim();
+    if (payload.hasOwnProperty('imageUrl'))
+      convo.imageUrl = payload.imageUrl ?? null;
+    if (payload.hasOwnProperty('description'))
+      convo.description = payload.description ?? null;
+
+    await this.conversationRepo.save(convo);
+
+    this.eventDispatcher.dispatch({
+      name: 'group.updated',
+      payload: { groupId, changes: { ...payload } },
+    });
+
+    return convo;
+  }
+
+  /** Eliminar grupo (solo admin) */
+  async deleteGroup(
+    groupId: string,
+    requesterId: string,
+  ): Promise<{ deleted: true; groupId: string }> {
+    const isAdmin = await this.isGroupAdmin(groupId, requesterId);
+    if (!isAdmin)
+      throw new ForbiddenException(
+        'No tienes permisos para eliminar este grupo',
+      );
+
+    const convo = await this.conversationRepo.findOne({
+      where: { id: groupId },
+    });
+    if (!convo || convo.type !== ConversationType.GROUP)
+      throw new NotFoundException('Grupo no encontrado');
+
+    await this.conversationRepo.remove(convo);
+
+    this.eventDispatcher.dispatch({
+      name: 'group.deleted',
+      payload: { groupId },
+    });
+
+    return { deleted: true, groupId };
   }
 }

@@ -9,6 +9,7 @@ import {
   Req,
   UploadedFile,
   UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
@@ -26,6 +27,8 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { Delete } from '@nestjs/common';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
 import { EmitEvent } from 'src/common/events/decorators/emit-event.decorator';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { SendMessageWithFilesDto } from './dto/send-message-with-files.dto';
 
 @Controller('chat')
 export class ChatController {
@@ -81,12 +84,15 @@ export class ChatController {
     return this.chatService.markMessageAsRead(id);
   }
 
-  @Post('upload')
+  @Post('messages/files')
   @AuthProtected()
-  @UploadMediaDocs()
-  @UseInterceptors(FileInterceptor('file'))
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
-    return this.chatService.uploadMedia(file);
+  @UseInterceptors(FilesInterceptor('files'))
+  async sendMessageWithFiles(
+    @Req() req: Request & { user: { id: string } },
+    @Body() dto: SendMessageWithFilesDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.chatService.sendMessageWithFiles(req.user.id, dto, files);
   }
 
   @Delete('conversations/:conversationId')

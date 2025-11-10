@@ -15,7 +15,7 @@ import { Public } from '../../common/decorators/public.decorator';
 // ENDPOINTS PARA WEBHOOKS DE PAGOS
 // ============================================
 
-@ApiTags('payments')
+@ApiTags('Webhook de Mercado Pago')
 @Controller('payments')
 export class PaymentsWebhookController {
   constructor(private readonly subscriptionService: SubscriptionService) {}

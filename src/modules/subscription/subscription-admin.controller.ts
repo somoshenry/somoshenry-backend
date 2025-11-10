@@ -9,7 +9,7 @@ import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 // ENDPOINTS PARA ADMIN - DASHBOARD
 // ============================================
 
-@ApiTags('admin/dashboard')
+@ApiTags('Gestión de pagos y suscripciones (Admin)')
 @Controller('admin/dashboard')
 @AuthProtected(UserRole.ADMIN)
 export class SubscriptionAdminController {

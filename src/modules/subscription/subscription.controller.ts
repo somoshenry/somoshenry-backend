@@ -11,7 +11,7 @@ import { SubscriptionPlan } from './entities/subscription.entity';
 // ENDPOINTS PARA USUARIOS
 // ============================================
 
-@ApiTags('subscription')
+@ApiTags('Gestión de pagos y suscripciones (Member)')
 @Controller('subscription')
 @AuthProtected(UserRole.MEMBER)
 export class SubscriptionController {

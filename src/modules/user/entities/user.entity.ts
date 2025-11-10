@@ -12,6 +12,7 @@ import { Exclude } from 'class-transformer';
 import { Follow } from '../../follow/entities/follow.entity';
 import { Post } from '../../post/entities/post.entity';
 import { Comment } from '../../comment/entities/comment.entity';
+import { Notification } from '../../notifications/socket/entities/notification.entity';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -93,4 +94,10 @@ export class User {
 
   @OneToMany(() => Comment, 'author')
   comments!: Comment[];
+
+  @OneToMany(() => Notification, (notification) => notification.receiver)
+  receivedNotifications: Notification[];
+
+  @OneToMany(() => Notification, (notification) => notification.sender)
+  sentNotifications: Notification[];
 }

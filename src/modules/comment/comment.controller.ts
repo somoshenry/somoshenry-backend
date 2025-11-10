@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Req,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CommentService } from './comment.service';
@@ -16,6 +17,7 @@ import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 import { UserRole } from '../user/entities/user.entity';
 import { Request } from 'express';
 import { Comment } from './entities/comment.entity';
+import { EmitEvent } from 'src/common/events/decorators/emit-event.decorator';
 
 @ApiTags('Comments')
 @Controller()
@@ -30,6 +32,7 @@ export class CommentController {
     description: 'El comentario ha sido creado exitosamente.',
     type: Comment,
   })
+  @EmitEvent('comment.created')
   async create(
     @Param('postId') postId: string,
     @Body() createCommentDto: CreateCommentDto,
@@ -103,6 +106,7 @@ export class CommentController {
     status: 200,
     description: 'El like ha sido actualizado exitosamente.',
   })
+  @EmitEvent('comment.liked')
   likeComment(
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string; role: UserRole } },
@@ -118,6 +122,7 @@ export class CommentController {
     description: 'La respuesta ha sido creada exitosamente.',
     type: Comment,
   })
+  @EmitEvent('comment.replied')
   async reply(
     @Param('commentId') commentId: string,
     @Body() createCommentDto: CreateCommentDto,
@@ -130,5 +135,35 @@ export class CommentController {
       parentId: commentId,
     };
     return this.commentService.create(dtoWithRelations, req.user.id);
+  }
+
+  @Get('comment/:id/thread')
+  @ApiOperation({
+    summary:
+      'Obtiene un comentario con sus respuestas (profundidad y paginación opcionales)',
+  })
+  async getCommentThread(
+    @Param('id') id: string,
+    @Query('depth') depth?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<Comment> {
+    const d = depth ? Math.max(1, Number(depth)) : 3;
+    const p = page ? Math.max(1, Number(page)) : 1;
+    const l = limit ? Math.max(1, Math.min(50, Number(limit))) : 10;
+
+    return this.commentService.getCommentThread(id, d, p, l);
+  }
+
+  @Get('comment/:id/thread/summary')
+  @ApiOperation({
+    summary: 'Obtiene un resumen rápido del hilo (no recursivo)',
+  })
+  async getCommentSummary(
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ): Promise<any> {
+    const l = limit ? Math.min(10, Math.max(1, Number(limit))) : 3;
+    return this.commentService.getCommentSummary(id, l);
   }
 }

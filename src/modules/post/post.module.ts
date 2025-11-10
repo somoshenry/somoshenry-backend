@@ -10,6 +10,7 @@ import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
 import { Report } from '../report/entities/report.entity';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { NotificationModule } from '../notifications/socket/notification.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { SubscriptionModule } from '../subscription/subscription.module';
       PostView,
       Report,
     ]),
-    forwardRef(() => SubscriptionModule), // Para usar el guard
+    forwardRef(() => SubscriptionModule), // Para usar el guard de límite de posts
+    NotificationModule,
   ],
   controllers: [PostController],
   providers: [PostService],

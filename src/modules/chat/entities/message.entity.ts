@@ -9,6 +9,8 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Conversation } from './conversation.entity';
+import { OneToMany } from 'typeorm';
+import { MessageAttachment } from './message-attachment.entity';
 
 export enum MessageType {
   TEXT = 'TEXT',
@@ -16,6 +18,7 @@ export enum MessageType {
   VIDEO = 'VIDEO',
   AUDIO = 'AUDIO',
   FILE = 'FILE',
+  LINK = 'LINK',
 }
 
 @Entity('messages')
@@ -52,4 +55,7 @@ export class Message {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @OneToMany(() => MessageAttachment, (a) => a.message, { cascade: true })
+  attachments: MessageAttachment[];
 }

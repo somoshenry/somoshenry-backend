@@ -629,4 +629,29 @@ export class ChatService {
 
     return { deleted: true, groupId };
   }
+
+  async getGroupById(groupId: string) {
+    const group = await this.conversationRepo.findOne({
+      where: { id: groupId, type: ConversationType.GROUP },
+      relations: ['participantsWithRoles', 'participantsWithRoles.user'],
+    });
+
+    if (!group) throw new NotFoundException('Grupo no encontrado');
+
+    return {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      imageUrl: group.imageUrl,
+      createdAt: group.createdAt,
+      participants: group.participantsWithRoles.map((p) => ({
+        id: p.user.id,
+        name: p.user.name,
+        email: p.user.email,
+        profilePicture: p.user.profilePicture,
+        role: p.role,
+        joinedAt: p.joinedAt,
+      })),
+    };
+  }
 }

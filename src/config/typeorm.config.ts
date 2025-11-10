@@ -13,6 +13,7 @@ export default registerAs('typeorm', () => {
       ssl: { rejectUnauthorized: false },
       autoLoadEntities: true,
       synchronize: true,
+      timezone: 'UTC', // Base de datos en UTC
     };
   }
 
@@ -26,6 +27,7 @@ export default registerAs('typeorm', () => {
     database: process.env.DB_NAME || 'somoshenry',
     autoLoadEntities: true,
     synchronize: true,
-    ssl: { rejectUnauthorized: false },
+    // ssl: { rejectUnauthorized: false },
+    timezone: 'UTC', // Base de datos en UTC
   };
 });

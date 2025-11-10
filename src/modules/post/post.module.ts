@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostService } from './post.service';
 import { PostController } from './post.controller';
@@ -9,6 +9,7 @@ import { User } from '../user/entities/user.entity';
 import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
 import { Report } from '../report/entities/report.entity';
+import { SubscriptionModule } from '../subscription/subscription.module';
 import { NotificationModule } from '../notifications/socket/notification.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { NotificationModule } from '../notifications/socket/notification.module'
       PostView,
       Report,
     ]),
+    forwardRef(() => SubscriptionModule), // Para usar el guard de límite de posts
     NotificationModule,
   ],
   controllers: [PostController],

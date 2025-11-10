@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { UserRole } from '../user/entities/user.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -490,5 +490,20 @@ export class PostService {
         hasPreviousPage: page > 1,
       },
     };
+  }
+
+  // Método para contar posts en un período
+  async countPostsInPeriod(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<number> {
+    const count = await this.postRepository.count({
+      where: {
+        userId,
+        createdAt: Between(startDate, endDate),
+      },
+    });
+    return count;
   }
 }

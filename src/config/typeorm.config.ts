@@ -13,6 +13,7 @@ export default registerAs('typeorm', () => {
       ssl: { rejectUnauthorized: false },
       autoLoadEntities: true,
       synchronize: true,
+      timezone: 'UTC', // Base de datos en UTC
     };
   }
 
@@ -27,5 +28,6 @@ export default registerAs('typeorm', () => {
     autoLoadEntities: true,
     synchronize: true,
     // ssl: { rejectUnauthorized: false },
+    timezone: 'UTC', // Base de datos en UTC
   };
 });

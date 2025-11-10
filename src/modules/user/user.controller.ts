@@ -19,7 +19,7 @@ import { SwaggerUserDocs } from './docs/user.swagger';
 import { UserStatus, UserRole, User } from './entities/user.entity';
 import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 import { FilterUsersDto } from './dto/filter-users.dto';
-import { CurrentUser } from '../auth/decorator/current-user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('User')
 @Controller('users')

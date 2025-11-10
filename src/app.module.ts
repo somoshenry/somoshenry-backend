@@ -19,6 +19,10 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { PaymentsModule } from './payments/payments.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
 
 @Module({
   imports: [
@@ -54,6 +58,9 @@ import { ChatModule } from './modules/chat/chat.module';
     DashboardModule,
     MercadoPagoModule,
     ChatModule,
+    PaymentsModule,
+    SubscriptionsModule,
+    SubscriptionModule,
   ],
 
   controllers: [AppController],

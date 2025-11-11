@@ -409,19 +409,23 @@ export class ChatService {
   }
 
   async getUserGroups(userId: string) {
-    // Buscar todos los registros donde el usuario participa
-    const participations = await this.participantRepo.find({
-      where: { user: { id: userId } },
-      relations: ['conversation'],
-    });
-
-    // Filtrar solo los grupos (no privados ni cohortes)
-    const groups = participations
-      .map((p) => p.conversation)
-      .filter((c) => c.type === ConversationType.GROUP);
+    const groups = await this.conversationRepo
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.participantsWithRoles', 'participantWithRole')
+      .innerJoin('participantWithRole.user', 'user')
+      .leftJoinAndSelect(
+        'conversation.participantsWithRoles',
+        'participantsWithRoles',
+      )
+      .leftJoinAndSelect('participantsWithRoles.user', 'participantUser')
+      .where('conversation.type = :type', { type: ConversationType.GROUP })
+      .andWhere('user.id = :userId', { userId })
+      .orderBy('conversation.updatedAt', 'DESC')
+      .getMany();
 
     return groups;
   }
+
   async promoteMemberToAdmin(
     groupId: string,
     requesterId: string,

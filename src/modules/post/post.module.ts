@@ -12,6 +12,7 @@ import { Report } from '../report/entities/report.entity';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { NotificationModule } from '../notifications/socket/notification.module';
 import { AuthModule } from '../auth/auth.module';
+import { OpenAIModule } from '../open-ai/openai.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuthModule } from '../auth/auth.module';
     forwardRef(() => SubscriptionModule),
     forwardRef(() => AuthModule), // 👈 agregado
     NotificationModule,
+    OpenAIModule,
   ],
   controllers: [PostController],
   providers: [PostService],

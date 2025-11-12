@@ -24,6 +24,9 @@ import { Message, MessageType } from './entities/message.entity';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
 import { Conversation } from './entities/conversation.entity';
 
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient, Redis } from 'ioredis';
+
 interface JwtPayload {
   sub?: string;
   id?: string;
@@ -46,6 +49,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ChatGateway.name);
   private readonly onlineUsers = new Map<string, string>();
 
+  private redis: Redis;
+  private readonly ONLINE_SET = 'chat:onlineUsers';
+  private readonly TYPING_SET = 'chat:typingUsers';
+
   constructor(
     @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService,
@@ -53,6 +60,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly eventDispatcher: EventDispatcherService,
   ) {
     this.registerEventListeners();
+  }
+
+  async afterInit(server: Server) {
+    try {
+      const redisUrl = process.env.REDIS_URL;
+      if (!redisUrl) {
+        this.logger.warn(
+          '⚠️ REDIS_URL no configurado, usando modo local de Socket.IO',
+        );
+        return;
+      }
+
+      // 🔌 Conectar Redis para Socket.IO (Pub/Sub)
+      const pubClient = createClient({ url: redisUrl });
+      const subClient = pubClient.duplicate();
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+      server.adapter(createAdapter(pubClient, subClient));
+
+      // ✅ Conectar Redis para manejo de estados (online/escribiendo)
+      this.redis = pubClient;
+      this.logger.log(
+        '🚀 ChatGateway conectado a Redis Pub/Sub y store de estados',
+      );
+    } catch (err) {
+      this.logger.error('❌ Error al conectar Redis Pub/Sub:', err);
+    }
   }
 
   // --------------------------
@@ -72,26 +105,36 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!userId) throw new UnauthorizedException('Token inválido');
 
       client.data.userId = userId;
-      this.onlineUsers.set(userId, client.id);
-      this.broadcastOnlineUsers();
 
-      this.logger.log(`Usuario conectado: ${userId}`);
+      // ✅ Guardar en memoria local y Redis
+      this.onlineUsers.set(userId, client.id);
+      await this.redis.sadd(this.ONLINE_SET, userId);
+
+      // ✅ Emitir lista actualizada a todos
+      await this.broadcastOnlineUsers();
+
+      this.logger.log(`✅ Usuario conectado: ${userId}`);
     } catch (err) {
-      this.logger.error('Error al autenticar socket', err);
+      this.logger.error('❌ Error al autenticar socket', err);
       client.disconnect();
     }
   }
 
-  handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: Socket): Promise<void> {
     const userId = [...this.onlineUsers.entries()].find(
       ([, socketId]) => socketId === client.id,
     )?.[0];
 
-    if (userId) {
-      this.onlineUsers.delete(userId);
-      this.broadcastOnlineUsers();
-      this.logger.log(`Usuario desconectado: ${userId}`);
-    }
+    if (!userId) return;
+
+    // 🧹 Eliminar de memoria local y Redis
+    this.onlineUsers.delete(userId);
+    await this.redis.srem(this.ONLINE_SET, userId);
+
+    // 🚀 Emitir lista sincronizada
+    await this.broadcastOnlineUsers();
+
+    this.logger.log(`🔴 Usuario desconectado: ${userId}`);
   }
 
   private broadcastOnlineUsers(): void {
@@ -239,7 +282,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       content,
       type ?? MessageType.TEXT,
     );
-    this.server.to(groupId).emit('newGroupMessage', message);
+    this.server.to(groupId).emit('messageReceived', message);
   }
 
   // --------------------------
@@ -261,7 +304,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     safeOn<{ groupId: string; message: Message }>(
       'group.message.created',
       ({ groupId, message }) => {
-        this.server.to(groupId).emit('newGroupMessage', message);
+        this.server.to(groupId).emit('messageReceived', message); // unificado
       },
     );
 
@@ -271,7 +314,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       imageUrl?: string;
       members: string[];
     }>('group.created', ({ groupId, name, imageUrl, members }) => {
-      this.server.emit('groupCreated', { groupId, name, imageUrl, members });
+      for (const userId of members) {
+        const socketId = this.onlineUsers.get(userId);
+        if (socketId) {
+          this.server
+            .to(socketId)
+            .emit('groupCreated', { groupId, name, imageUrl, members });
+        }
+      }
     });
 
     safeOn<{ groupId: string; changes: Record<string, any> }>(

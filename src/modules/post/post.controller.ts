@@ -37,7 +37,7 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @HttpPost()
-  @UseGuards(JwtAndPostLimitGuard)
+  // @UseGuards(JwtAndPostLimitGuard)
   @CreatePostDocs()
   create(
     @Body() createPostDto: CreatePostDto,

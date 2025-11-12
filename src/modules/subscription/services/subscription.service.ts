@@ -8,14 +8,15 @@ import { Repository, Between, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { DateUtil } from 'src/common/utils/date.util';
-import { UserService } from '../user/user.service';
-import { PostService } from '../post/post.service';
-import { Payment, PaymentStatus } from './entities/payment.entity';
+import { UserService } from '../../user/user.service';
+import { PostService } from '../../post/post.service';
+import { Payment, PaymentStatus } from '../entities/payment.entity';
 import {
   Subscription,
   SubscriptionPlan,
   SubscriptionStatus,
-} from './entities/subscription.entity';
+} from '../entities/subscription.entity';
+import { UserRole } from 'src/modules/user/entities/user.entity';
 
 @Injectable()
 export class SubscriptionService {
@@ -277,6 +278,12 @@ export class SubscriptionService {
   // VERIFICAR LÍMITE DE POSTS
   // ============================================
   async canUserPost(userId: string): Promise<boolean> {
+    // Obtener usuario y verificar rol (admin/teacher sin límites)
+    const user = await this.userService.findOne(userId);
+    if (!user) return false;
+    if (user.role === UserRole.ADMIN || user.role === UserRole.TEACHER)
+      return true;
+
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId },
     });

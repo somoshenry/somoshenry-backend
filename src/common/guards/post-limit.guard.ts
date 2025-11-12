@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { SubscriptionService } from '../../modules/subscription/subscription.service';
+import { SubscriptionService } from '../../modules/subscription/services/subscription.service';
 import { Request } from 'express';
 
 interface JwtPayload {

@@ -7,16 +7,17 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { SubscriptionService } from './subscription.service';
-import { Public } from '../../common/decorators/public.decorator';
+import { ApiTags } from '@nestjs/swagger';
+import { SubscriptionService } from '../services/subscription.service';
+import { Public } from '../../../common/decorators/public.decorator';
+import { ApiMercadoPagoWebhook } from '../docs';
 
 // ============================================
 // ENDPOINTS PARA WEBHOOKS DE PAGOS
 // ============================================
 
 @ApiTags('Webhook de Mercado Pago')
-@Controller('payments')
+@Controller('mercadopago')
 export class PaymentsWebhookController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
 
@@ -24,7 +25,7 @@ export class PaymentsWebhookController {
   @Post('webhook')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Webhook de Mercado Pago' })
+  @ApiMercadoPagoWebhook()
   async handleWebhook(
     @Body() body: any,
     @Headers('x-signature') signature: string,

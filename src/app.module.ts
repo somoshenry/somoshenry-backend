@@ -27,6 +27,9 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
 import { EventDispatcherService } from './common/events/event-dispatcher.service';
+import { CohorteModule } from './modules/cohorte/cohorte/cohorte.module';
+import { CohorteClassModule } from './modules/cohorte/cohorte-class/cohorte-class.module';
+import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcement/cohorte-announcement.module';
 
 @Module({
   imports: [
@@ -68,6 +71,9 @@ import { EventDispatcherService } from './common/events/event-dispatcher.service
     SubscriptionModule,
     SubscriptionModule,
     NotificationModule,
+    CohorteModule,
+    CohorteClassModule,
+    CohorteAnnouncementModule,
   ],
 
   controllers: [AppController],

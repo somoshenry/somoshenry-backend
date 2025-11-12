@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual } from 'typeorm';
-import { Payment, PaymentStatus } from './entities/payment.entity';
-import { DateUtil } from '../../common/utils/date.util';
+import { Payment, PaymentStatus } from '../entities/payment.entity';
+import { DateUtil } from '../../../common/utils/date.util';
 
 @Injectable()
 export class PaymentsService {

@@ -3,49 +3,86 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Conversation } from './entities/conversation.entity';
-import { Message, MessageType } from './entities/message.entity';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { User } from '../user/entities/user.entity';
-// import { v2 as cloudinary } from 'cloudinary';
-import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { FilesRepository } from '../files/files.repository';
+
+import { Conversation, ConversationType } from './entities/conversation.entity';
+import { Message, MessageType } from './entities/message.entity';
+import { User } from '../user/entities/user.entity';
 import { MessageAttachment } from './entities/message-attachment.entity';
-import { SendMessageWithFilesDto } from './dto/send-message-with-files.dto';
-import { ChatGateway } from './chat.gateway';
-import { forwardRef, Inject } from '@nestjs/common';
-import { CreateGroupDto } from './dto/create-group.dto';
-import { ConversationType } from './entities/conversation.entity';
 import {
   ConversationParticipant,
   ConversationRole,
 } from './entities/conversation-participant.entity';
-import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
+
+import { CreateMessageDto } from './dto/create-message.dto';
+import { SendMessageWithFilesDto } from './dto/send-message-with-files.dto';
+import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
+import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+
+import { FilesRepository } from '../files/files.repository';
+import { ChatGateway } from './chat.gateway';
+import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
 
 @Injectable()
 export class ChatService {
   constructor(
     @InjectRepository(Conversation)
     private readonly conversationRepo: Repository<Conversation>,
+
     @InjectRepository(Message)
     private readonly messageRepo: Repository<Message>,
+
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    private readonly eventEmitter: EventEmitter2,
+
     @InjectRepository(MessageAttachment)
     private readonly attachmentRepo: Repository<MessageAttachment>,
-    private readonly filesRepository: FilesRepository,
-    @Inject(forwardRef(() => ChatGateway))
-    private readonly chatGateway: ChatGateway,
+
     @InjectRepository(ConversationParticipant)
     private readonly participantRepo: Repository<ConversationParticipant>,
+
+    private readonly filesRepository: FilesRepository,
+    private readonly eventEmitter: EventEmitter2,
     private readonly eventDispatcher: EventDispatcherService,
+
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
+
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
+
+  async getUserConversations(userId: string): Promise<Conversation[]> {
+    const cacheKey = `user:conversations:${userId}`;
+    const cached = await this.cacheManager.get<Conversation[]>(cacheKey);
+    if (cached) {
+      console.log('⚡ Conversaciones desde Redis');
+      return cached;
+    }
+
+    console.log('📡 Consultando DB para conversaciones...');
+    const conversations = await this.conversationRepo
+      .createQueryBuilder('c')
+      .leftJoinAndSelect('c.participants', 'p')
+      .leftJoinAndSelect('c.messages', 'm')
+      .leftJoinAndSelect('m.sender', 's')
+      .where('p.id = :id', { id: userId })
+      .orderBy('c.updated_at', 'DESC')
+      .getMany();
+
+    await this.cacheManager.set(cacheKey, conversations, 30);
+    console.log('💾 Conversaciones guardadas en Redis');
+
+    return conversations;
+  }
 
   async openConversation(
     userId: string,
@@ -73,25 +110,68 @@ export class ChatService {
     const conversation = this.conversationRepo.create({
       participants: [user as User, peer as User],
     });
-    return await this.conversationRepo.save(conversation);
+    const saved = await this.conversationRepo.save(conversation);
+
+    await this.cacheManager.del(`user:conversations:${userId}`);
+    await this.cacheManager.del(`user:conversations:${peerUserId}`);
+
+    return saved;
   }
 
-  async getUserConversations(userId: string): Promise<Conversation[]> {
-    return this.conversationRepo
-      .createQueryBuilder('c')
-      .leftJoinAndSelect('c.participants', 'p')
-      .leftJoinAndSelect('c.messages', 'm')
-      .leftJoinAndSelect('m.sender', 's')
-      .where('p.id = :id', { id: userId })
-      .orderBy('c.updated_at', 'DESC')
-      .getMany();
+  async deleteConversation(
+    conversationId: string,
+    userId: string,
+  ): Promise<DeleteConversationResponseDto> {
+    const conversation = await this.conversationRepo.findOne({
+      where: { id: conversationId },
+      relations: ['participants', 'messages'],
+    });
+
+    if (!conversation)
+      throw new NotFoundException('Conversación no encontrada');
+
+    const isParticipant = conversation.participants.some(
+      (p) => p.id === userId,
+    );
+    if (!isParticipant)
+      throw new BadRequestException(
+        'No tienes permiso para eliminar esta conversación',
+      );
+
+    await this.conversationRepo.remove(conversation);
+
+    await this.cacheManager.del(`chat:messages:${conversationId}`);
+    for (const p of conversation.participants) {
+      await this.cacheManager.del(`user:conversations:${p.id}`);
+    }
+
+    return {
+      message: 'Conversación eliminada permanentemente',
+      conversationId,
+      deletedAt: new Date(),
+    };
   }
+
+  // ------------------- Mensajes -------------------
 
   async getMessages(
     conversationId: string,
     page = 1,
     limit = 20,
   ): Promise<{ data: Message[]; meta: Record<string, any> }> {
+    const cacheKey = `chat:messages:${conversationId}:page:${page}`;
+
+    const cached = await this.cacheManager.get<{
+      data: Message[];
+      meta: Record<string, any>;
+    }>(cacheKey);
+
+    if (cached) {
+      console.log('⚡ Mensajes desde Redis');
+      return cached;
+    }
+
+    console.log('📡 Consultando DB para mensajes del chat...');
     const [messages, total] = await this.messageRepo.findAndCount({
       where: { conversation: { id: conversationId } },
       order: { createdAt: 'DESC' },
@@ -100,7 +180,7 @@ export class ChatService {
       take: limit,
     });
 
-    return {
+    const response = {
       data: messages.reverse(),
       meta: {
         total,
@@ -109,6 +189,10 @@ export class ChatService {
         totalPages: Math.ceil(total / limit),
       },
     };
+
+    await this.cacheManager.set(cacheKey, response, 30);
+    console.log('💾 Mensajes guardados en Redis');
+    return response;
   }
 
   async sendMessage(senderId: string, dto: CreateMessageDto): Promise<Message> {
@@ -116,7 +200,6 @@ export class ChatService {
       where: { id: dto.conversationId },
       relations: ['participants'],
     });
-
     if (!conversation)
       throw new NotFoundException('Conversación no encontrada');
 
@@ -135,7 +218,12 @@ export class ChatService {
     conversation.updatedAt = new Date();
     await this.conversationRepo.save(conversation);
 
-    // ✅ Nuevo: emitir evento para crear notificación sin romper el front
+    // 🔄 limpiar cache
+    await this.cacheManager.del(`chat:messages:${dto.conversationId}`);
+    for (const p of conversation.participants) {
+      await this.cacheManager.del(`user:conversations:${p.id}`);
+    }
+
     const receiver = conversation.participants.find((p) => p.id !== senderId);
     if (receiver) {
       this.eventEmitter.emit('message.created', {
@@ -149,7 +237,8 @@ export class ChatService {
       });
     }
 
-    return saved; // mantiene la respuesta igual para el frontend
+    this.chatGateway.emitNewMessage(saved);
+    return saved;
   }
 
   async markMessageAsRead(messageId: string): Promise<Message> {
@@ -160,39 +249,6 @@ export class ChatService {
     message.isRead = true;
     message.readAt = new Date();
     return await this.messageRepo.save(message);
-  }
-
-  async deleteConversation(
-    conversationId: string,
-    userId: string,
-  ): Promise<DeleteConversationResponseDto> {
-    const conversation: Conversation | null =
-      await this.conversationRepo.findOne({
-        where: { id: conversationId },
-        relations: ['participants', 'messages'],
-      });
-
-    if (!conversation) {
-      throw new NotFoundException('Conversación no encontrada');
-    }
-
-    const isParticipant: boolean = conversation.participants.some(
-      (p: User) => p.id === userId,
-    );
-
-    if (!isParticipant) {
-      throw new BadRequestException(
-        'No tienes permiso para eliminar esta conversación',
-      );
-    }
-
-    await this.conversationRepo.remove(conversation);
-
-    return {
-      message: 'Conversación eliminada permanentemente',
-      conversationId,
-      deletedAt: new Date(),
-    };
   }
 
   async getConversationById(id: string) {
@@ -409,19 +465,23 @@ export class ChatService {
   }
 
   async getUserGroups(userId: string) {
-    // Buscar todos los registros donde el usuario participa
-    const participations = await this.participantRepo.find({
-      where: { user: { id: userId } },
-      relations: ['conversation'],
-    });
-
-    // Filtrar solo los grupos (no privados ni cohortes)
-    const groups = participations
-      .map((p) => p.conversation)
-      .filter((c) => c.type === ConversationType.GROUP);
+    const groups = await this.conversationRepo
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.participantsWithRoles', 'participantWithRole')
+      .innerJoin('participantWithRole.user', 'user')
+      .leftJoinAndSelect(
+        'conversation.participantsWithRoles',
+        'participantsWithRoles',
+      )
+      .leftJoinAndSelect('participantsWithRoles.user', 'participantUser')
+      .where('conversation.type = :type', { type: ConversationType.GROUP })
+      .andWhere('user.id = :userId', { userId })
+      .orderBy('conversation.updatedAt', 'DESC')
+      .getMany();
 
     return groups;
   }
+
   async promoteMemberToAdmin(
     groupId: string,
     requesterId: string,
@@ -628,5 +688,30 @@ export class ChatService {
     });
 
     return { deleted: true, groupId };
+  }
+
+  async getGroupById(groupId: string) {
+    const group = await this.conversationRepo.findOne({
+      where: { id: groupId, type: ConversationType.GROUP },
+      relations: ['participantsWithRoles', 'participantsWithRoles.user'],
+    });
+
+    if (!group) throw new NotFoundException('Grupo no encontrado');
+
+    return {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      imageUrl: group.imageUrl,
+      createdAt: group.createdAt,
+      participants: group.participantsWithRoles.map((p) => ({
+        id: p.user.id,
+        name: p.user.name,
+        email: p.user.email,
+        profilePicture: p.user.profilePicture,
+        role: p.role,
+        joinedAt: p.joinedAt,
+      })),
+    };
   }
 }

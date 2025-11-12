@@ -3,6 +3,9 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
@@ -29,12 +32,18 @@ export class CohorteAnnouncementGateway
   }
 
   /** el front llama cuando el user entra a su cohorte */
-  joinCohorteRoom(userId: string, cohorteId: string, client: Socket) {
-    client.join(cohorteId);
-    const existing = this.userRooms.get(userId) || [];
-    if (!existing.includes(cohorteId)) existing.push(cohorteId);
-    this.userRooms.set(userId, existing);
-    this.logger.debug(`User ${userId} joined cohorte room ${cohorteId}`);
+  @SubscribeMessage('joinCohorte')
+  joinCohorteRoom(
+    @MessageBody() data: { userId: string; cohorteId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    client.join(data.cohorteId);
+    const existing = this.userRooms.get(data.userId) || [];
+    if (!existing.includes(data.cohorteId)) existing.push(data.cohorteId);
+    this.userRooms.set(data.userId, existing);
+    this.logger.debug(
+      `User ${data.userId} joined cohorte room ${data.cohorteId}`,
+    );
   }
 
   /** enviar evento a todos los miembros de ese cohorte */

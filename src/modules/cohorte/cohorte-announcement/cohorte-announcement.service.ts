@@ -24,6 +24,7 @@ export class CohorteAnnouncementService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(CohorteMember)
     private readonly memberRepo: Repository<CohorteMember>,
+    private readonly gateway: CohorteAnnouncementGateway,
   ) {}
 
   async create(dto: CreateCohorteAnnouncementDto, authorId: string) {
@@ -46,13 +47,31 @@ export class CohorteAnnouncementService {
     }
 
     const author = await this.userRepo.findOne({ where: { id: authorId } });
+
     const newAnnouncement = this.announcementRepo.create({
-      ...dto,
+      ...dto, // ⬅️ ACA ESTABA EL ERROR (.dto)
       cohorte,
       author,
     });
 
-    return this.announcementRepo.save(newAnnouncement);
+    const saved = await this.announcementRepo.save(newAnnouncement);
+
+    // 🔔 emitir anuncio en tiempo real a todos los conectados a esa cohorte
+    this.gateway.emitAnnouncement(cohorte.id, {
+      id: saved.id,
+      cohorteId: cohorte.id,
+      title: saved.title,
+      content: saved.content,
+      author: {
+        id: author.id,
+        name: `${author.firstName} ${author.lastName}`,
+        profileImage: author.profileImage,
+      },
+      createdAt: saved.createdAt,
+      pinned: saved.pinned,
+    });
+
+    return saved;
   }
 
   async findByCohorte(cohorteId: string) {

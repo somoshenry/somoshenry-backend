@@ -46,7 +46,9 @@ export class PostService {
     if (!user) {
       throw new Error('Usuario no encontrado');
     }
-    const isInappropriate = await this.openAiService.isInappropriate(content);
+    const isInappropriate = await this.openAiService.isInappropriate(
+      createPostDto.content,
+    );
 
     const post = this.postRepository.create({
       userId,

@@ -1,9 +1,23 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { SubscriptionService } from './subscription.service';
-import { PaymentsService } from './payments.service';
-import { UserRole } from '../user/entities/user.entity';
-import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
+import { ApiTags } from '@nestjs/swagger';
+import { SubscriptionService } from '../services/subscription.service';
+import { PaymentsService } from '../services/payments.service';
+import { UserRole } from '../../user/entities/user.entity';
+import { AuthProtected } from '../../auth/decorator/auth-protected.decorator';
+
+// Importar decoradores de Swagger
+import {
+  ApiGetDashboardStats,
+  ApiGetRevenue,
+  ApiGetSubscriptionsByPlan,
+  ApiGetSubscriptionGrowth,
+  ApiGetRecentPayments,
+  ApiGetFailedPayments,
+  ApiGetUpcomingRenewals,
+  ApiGetChurnRate,
+  ApiGetLTV,
+  ApiGetUsersByPlan,
+} from '../docs';
 
 // ============================================
 // ENDPOINTS PARA ADMIN - DASHBOARD
@@ -20,14 +34,14 @@ export class SubscriptionAdminController {
 
   // 1. Estadísticas generales
   @Get('stats')
-  @ApiOperation({ summary: '📊 Estadísticas generales del negocio' })
+  @ApiGetDashboardStats()
   async getGeneralStats() {
     return this.paymentsService.getGeneralStats();
   }
 
   // 2. Ingresos por período
   @Get('revenue')
-  @ApiOperation({ summary: '💰 Ingresos por período' })
+  @ApiGetRevenue()
   async getRevenue(
     @Query('period') period: 'day' | 'week' | 'month' | 'year' = 'month',
     @Query('startDate') startDate?: string,
@@ -38,21 +52,21 @@ export class SubscriptionAdminController {
 
   // 3. Gráfica de suscripciones por plan
   @Get('subscriptions/by-plan')
-  @ApiOperation({ summary: '📈 Distribución de suscripciones por plan' })
+  @ApiGetSubscriptionsByPlan()
   async getSubscriptionsByPlan() {
     return this.subscriptionService.getSubscriptionsByPlan();
   }
 
   // 4. Suscripciones nuevas por mes
   @Get('subscriptions/growth')
-  @ApiOperation({ summary: '📅 Crecimiento de suscripciones' })
+  @ApiGetSubscriptionGrowth()
   async getSubscriptionGrowth(@Query('months') months: number = 12) {
     return this.subscriptionService.getSubscriptionGrowth(months);
   }
 
   // 5. Lista de pagos recientes
   @Get('payments/recent')
-  @ApiOperation({ summary: '💳 Pagos recientes' })
+  @ApiGetRecentPayments()
   async getRecentPayments(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
@@ -62,35 +76,35 @@ export class SubscriptionAdminController {
 
   // 6. Pagos fallidos
   @Get('payments/failed')
-  @ApiOperation({ summary: '❌ Pagos fallidos' })
+  @ApiGetFailedPayments()
   async getFailedPayments() {
     return this.paymentsService.getFailedPayments();
   }
 
   // 7. Próximas renovaciones
   @Get('subscriptions/upcoming-renewals')
-  @ApiOperation({ summary: '🔄 Próximas renovaciones' })
+  @ApiGetUpcomingRenewals()
   async getUpcomingRenewals(@Query('days') days: number = 7) {
     return this.subscriptionService.getUpcomingRenewals(days);
   }
 
   // 8. Tasa de cancelación (churn rate)
   @Get('subscriptions/churn-rate')
-  @ApiOperation({ summary: '📉 Tasa de cancelación mensual' })
+  @ApiGetChurnRate()
   async getChurnRate() {
     return this.subscriptionService.getChurnRate();
   }
 
   // 9. Lifetime Value (LTV) promedio
   @Get('subscriptions/ltv')
-  @ApiOperation({ summary: '💎 Lifetime Value promedio de clientes' })
+  @ApiGetLTV()
   async getLTV() {
     return this.subscriptionService.getLTV();
   }
 
   // 10. Usuarios por tipo de plan
   @Get('users/by-plan')
-  @ApiOperation({ summary: '👥 Usuarios distribuidos por plan' })
+  @ApiGetUsersByPlan()
   async getUsersByPlan() {
     return this.subscriptionService.getUsersByPlan();
   }

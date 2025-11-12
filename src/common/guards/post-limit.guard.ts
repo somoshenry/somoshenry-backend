@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   ForbiddenException,
 } from '@nestjs/common';
-import { SubscriptionService } from '../../modules/subscription/subscription.service';
+import { SubscriptionService } from '../../modules/subscription/services/subscription.service';
 
 @Injectable()
 export class PostLimitGuard implements CanActivate {
@@ -22,8 +22,6 @@ export class PostLimitGuard implements CanActivate {
     const canPost = await this.subscriptionService.canUserPost(userId);
 
     if (!canPost) {
-      const remaining =
-        await this.subscriptionService.getRemainingPosts(userId);
       const plan = await this.subscriptionService.getUserPlan(userId);
 
       throw new ForbiddenException({

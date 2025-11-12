@@ -5,12 +5,16 @@ export default registerAs('mercadopago', () => ({
   publicKey: process.env.MERCADO_PAGO_PUBLIC_KEY,
 
   // URLs de notificación (webhooks)
-  webhookUrl: process.env.BACKEND_URL + '/payments/webhook',
+  webhookUrl: process.env.BACKEND_URL + '/mercadopago/webhook',
+  // webhookUrl: process.env.BACKEND_URL + '/payments/webhook',
 
   // URLs de redirección
-  successUrl: process.env.FRONTEND_URL + '/subscription/success',
-  failureUrl: process.env.FRONTEND_URL + '/subscription/failure',
-  pendingUrl: process.env.FRONTEND_URL + '/subscription/pending',
+  successUrl: process.env.FRONTEND_URL + '/redirect/success',
+  failureUrl: process.env.FRONTEND_URL + '/redirect/failure',
+  pendingUrl: process.env.FRONTEND_URL + '/redirect/pending',
+  // successUrl: process.env.FRONTEND_URL + '/subscription/success',
+  // failureUrl: process.env.FRONTEND_URL + '/subscription/failure',
+  // pendingUrl: process.env.FRONTEND_URL + '/subscription/pending',
 
   // Planes de suscripción
   plans: {

@@ -1,5 +1,4 @@
 import {
-  format,
   addMonths,
   addDays,
   startOfMonth,
@@ -8,7 +7,7 @@ import {
   isBefore,
 } from 'date-fns';
 import { parseISO } from 'date-fns/parseISO';
-import { formatInTimeZone, toDate, fromZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 export class DateUtil {
   // ============================================
@@ -32,7 +31,7 @@ export class DateUtil {
   // ============================================
   // FORMATEAR FECHA PARA ENVIAR AL FRONTEND
   // ============================================
-  static formatForClient(date: Date, timezone: string = 'UTC'): string {
+  static formatForClient(date: Date): string {
     // Retornar ISO string (frontend lo convertirá)
     return date.toISOString();
   }
@@ -84,7 +83,7 @@ export class DateUtil {
   //   }
 
   // ============================================
-  // VERIFICAR SI UNA FECHA YA PASÓ
+  // VERIFICAR SI UNA FECHA YA PASÓ O ES FUTURA
   // ============================================
   static isPast(date: Date): boolean {
     return isBefore(date, new Date());

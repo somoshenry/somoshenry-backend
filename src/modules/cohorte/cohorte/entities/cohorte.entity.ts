@@ -7,7 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { CohorteMember } from './cohorte-member.entity';
-import { CohorteClass } from './cohorte-class.entity';
+import { CohorteClass } from '../../cohorte-class/entities/cohorte-class.entity';
 import { CohorteStatusEnum, CohorteModalityEnum } from '../enums/cohorte.enums';
 
 @Entity('cohortes')

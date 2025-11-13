@@ -6,6 +6,7 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import {
   Inject,
@@ -19,14 +20,18 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { SendGroupMessageDto } from './dto/send-group-message.dto';
 import { Message, MessageType } from './entities/message.entity';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
-import { Conversation } from './entities/conversation.entity';
+import Redis from 'ioredis';
+import { createAdapter } from '@socket.io/redis-adapter';
 
 interface JwtPayload {
   sub?: string;
   id?: string;
+}
+
+interface UserSocketData {
+  userId?: string;
 }
 
 interface TypingPayload {
@@ -34,33 +39,53 @@ interface TypingPayload {
   isTyping: boolean;
 }
 
-/**
- * Gateway WebSocket del chat.
- * Maneja conexiones, mensajes, y eventos en tiempo real.
- */
+interface EventEmitterLike {
+  on(event: string, handler: (payload: unknown) => void): void;
+}
+
+interface EventDispatcherWithEmitter {
+  emitter?: EventEmitterLike;
+}
+
 @WebSocketGateway({ cors: { origin: '*' } })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
   @WebSocketServer()
-  private readonly server: Server;
+  private server!: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
   private readonly onlineUsers = new Map<string, string>();
+
+  private redisPub!: Redis;
+  private redisSub!: Redis;
+  private redis!: Redis;
 
   constructor(
     @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
     private readonly eventDispatcher: EventDispatcherService,
-  ) {
+  ) {}
+
+  afterInit(server: Server): void {
+    this.server = server;
+
+    const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
+
+    this.redisPub = new Redis(redisUrl);
+    this.redisSub = new Redis(redisUrl);
+    this.redis = this.redisPub;
+
+    this.server.adapter(createAdapter(this.redisPub, this.redisSub));
+
     this.registerEventListeners();
+    this.logger.log('ChatGateway listo con Redis + Socket.IO');
   }
 
-  // --------------------------
-  // CONEXIÓN / DESCONEXIÓN
-  // --------------------------
-
-  async handleConnection(client: Socket): Promise<void> {
+  handleConnection(client: Socket): void {
     const token = client.handshake.auth?.token;
+
     if (!token) {
       client.disconnect();
       throw new UnauthorizedException('Token no enviado');
@@ -68,30 +93,40 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const payload = this.jwtService.verify<JwtPayload>(token);
-      const userId = payload?.sub ?? payload?.id;
-      if (!userId) throw new UnauthorizedException('Token inválido');
+      const userId = payload.sub ?? payload.id;
 
-      client.data.userId = userId;
+      if (!userId) {
+        throw new UnauthorizedException('Token inválido');
+      }
+
+      const data = client.data as UserSocketData;
+      data.userId = userId;
+
       this.onlineUsers.set(userId, client.id);
       this.broadcastOnlineUsers();
 
       this.logger.log(`Usuario conectado: ${userId}`);
-    } catch (err) {
-      this.logger.error('Error al autenticar socket', err);
+    } catch (error) {
+      this.logger.error('Error autenticando socket', error);
       client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket): void {
-    const userId = [...this.onlineUsers.entries()].find(
-      ([, socketId]) => socketId === client.id,
-    )?.[0];
+    const userId = this.findUserIdBySocket(client.id);
 
-    if (userId) {
+    if (userId !== undefined) {
       this.onlineUsers.delete(userId);
       this.broadcastOnlineUsers();
       this.logger.log(`Usuario desconectado: ${userId}`);
     }
+  }
+
+  private findUserIdBySocket(socketId: string): string | undefined {
+    for (const [userId, id] of this.onlineUsers.entries()) {
+      if (id === socketId) return userId;
+    }
+    return undefined;
   }
 
   private broadcastOnlineUsers(): void {
@@ -99,17 +134,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('onlineUsers', users);
   }
 
-  // --------------------------
-  // CHAT PRIVADO
-  // --------------------------
-
   @SubscribeMessage('joinConversation')
   async joinConversation(
     @ConnectedSocket() client: Socket,
     @MessageBody('conversationId') conversationId: string,
   ): Promise<void> {
-    if (!conversationId)
+    if (!conversationId) {
       throw new BadRequestException('conversationId es obligatorio');
+    }
 
     await client.join(conversationId);
     client.emit('joinedConversation', { conversationId });
@@ -120,35 +152,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: CreateMessageDto,
   ): Promise<void> {
-    try {
-      const userId: string = client.data.userId;
-      if (!userId) throw new UnauthorizedException('Usuario no autenticado');
+    const data = client.data as UserSocketData;
+    const userId = data.userId;
 
+    if (!userId) {
+      throw new UnauthorizedException('Usuario no autenticado');
+    }
+
+    try {
       const message = await this.chatService.sendMessage(userId, dto);
-      const conversation = await this.chatService.getConversationById(
-        dto.conversationId,
-      );
-      if (!conversation)
-        throw new BadRequestException('Conversación no encontrada');
 
       this.server.to(dto.conversationId).emit('messageReceived', message);
       client.emit('messageDelivered', message);
-
-      const receiver = conversation.participants.find((p) => p.id !== userId);
-      if (receiver?.id) {
-        this.eventDispatcher.dispatch({
-          name: 'message.created',
-          payload: {
-            userId,
-            result: {
-              id: message.id,
-              conversationId: dto.conversationId,
-              content: message.content,
-              receiverId: receiver.id,
-            },
-          },
-        });
-      }
     } catch (error) {
       this.logger.error('Error al enviar mensaje', error);
       client.emit('messageError', { error: 'No se pudo enviar el mensaje' });
@@ -157,12 +172,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('markAsRead')
   async markAsRead(@MessageBody('messageId') messageId: string): Promise<void> {
-    try {
-      const updated = await this.chatService.markMessageAsRead(messageId);
-      this.server.emit('messageRead', updated);
-    } catch (err) {
-      this.logger.error('Error al marcar como leído', err);
-    }
+    const updated = await this.chatService.markMessageAsRead(messageId);
+    this.server.emit('messageRead', updated);
   }
 
   @SubscribeMessage('typing')
@@ -170,8 +181,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: TypingPayload,
   ): void {
-    if (!data?.conversationId) return;
-    const userId: string = client.data.userId;
+    if (!data.conversationId) return;
+
+    const socketData = client.data as UserSocketData;
+    const userId = socketData.userId;
+    if (!userId) return;
 
     this.server.to(data.conversationId).emit('userTyping', {
       userId,
@@ -179,21 +193,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  // --------------------------
-  // CHAT GRUPAL
-  // --------------------------
-
   @SubscribeMessage('joinGroup')
   async joinGroup(
     @MessageBody('groupId') groupId: string,
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
-    if (!groupId) throw new BadRequestException('El ID del grupo es requerido');
-    const userId: string = client.data.userId;
+    if (!groupId) {
+      throw new BadRequestException();
+    }
+
+    const data = client.data as UserSocketData;
+    const userId = data.userId;
+    if (!userId) throw new UnauthorizedException();
+
     const isMember = await this.chatService.isGroupMember(groupId, userId);
-    if (!isMember) throw new ForbiddenException('No perteneces a este grupo');
+    if (!isMember) throw new ForbiddenException();
 
     await client.join(groupId);
+
     this.server.to(groupId).emit('systemMessage', {
       content: 'Un usuario se unió al grupo',
       groupId,
@@ -205,7 +222,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody('groupId') groupId: string,
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
-    if (!groupId) throw new BadRequestException('groupId es obligatorio');
+    if (!groupId) throw new BadRequestException();
+
     await client.leave(groupId);
 
     this.server.to(groupId).emit('systemMessage', {
@@ -225,13 +243,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
   ): Promise<void> {
     const { groupId, senderId, content, type } = payload;
-    if (!groupId || !senderId || !content)
-      throw new BadRequestException(
-        'Faltan datos para enviar el mensaje grupal',
-      );
+
+    if (!groupId || !senderId || !content) {
+      throw new BadRequestException();
+    }
 
     const isMember = await this.chatService.isGroupMember(groupId, senderId);
-    if (!isMember) throw new ForbiddenException('No perteneces a este grupo');
+    if (!isMember) throw new ForbiddenException();
 
     const message = await this.chatService.sendGroupMessage(
       senderId,
@@ -239,93 +257,79 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       content,
       type ?? MessageType.TEXT,
     );
+
     this.server.to(groupId).emit('newGroupMessage', message);
   }
 
-  // --------------------------
-  // EVENTOS INTERNOS
-  // --------------------------
-
   private registerEventListeners(): void {
-    const safeOn = <T extends object>(
-      event: string,
-      handler: (payload: T) => void,
-    ): void => {
-      try {
-        (this.eventDispatcher as any)?.emitter?.on?.(event, handler as any);
-      } catch (error) {
-        this.logger.error(`Error registrando listener para ${event}`, error);
-      }
-    };
+    const dispatcher = this
+      .eventDispatcher as unknown as EventDispatcherWithEmitter;
+    const emitter = dispatcher.emitter;
 
-    safeOn<{ groupId: string; message: Message }>(
-      'group.message.created',
-      ({ groupId, message }) => {
-        this.server.to(groupId).emit('newGroupMessage', message);
-      },
-    );
+    if (!emitter) {
+      this.logger.warn('EventDispatcher sin emitter, no se registran eventos');
+      return;
+    }
 
-    safeOn<{
-      groupId: string;
-      name: string;
-      imageUrl?: string;
-      members: string[];
-    }>('group.created', ({ groupId, name, imageUrl, members }) => {
-      this.server.emit('groupCreated', { groupId, name, imageUrl, members });
+    emitter.on('group.message.created', (payload) => {
+      const data = payload as { groupId: string; message: Message };
+      this.server.to(data.groupId).emit('newGroupMessage', data.message);
     });
 
-    safeOn<{ groupId: string; changes: Record<string, any> }>(
-      'group.updated',
-      ({ groupId, changes }) => {
-        this.server.to(groupId).emit('groupUpdated', { groupId, changes });
-      },
-    );
+    emitter.on('group.created', (payload) => {
+      const data = payload as {
+        groupId: string;
+        name: string;
+        imageUrl?: string;
+        members: string[];
+      };
+      this.server.emit('groupCreated', data);
+    });
 
-    safeOn<{ groupId: string; userIds: string[] }>(
-      'group.member.added',
-      ({ groupId, userIds }) => {
-        this.server.to(groupId).emit('memberAdded', { groupId, userIds });
-      },
-    );
+    emitter.on('group.updated', (payload) => {
+      const data = payload as {
+        groupId: string;
+        changes: Record<string, unknown>;
+      };
+      this.server.to(data.groupId).emit('groupUpdated', data);
+    });
 
-    safeOn<{ groupId: string; targetUserId: string }>(
-      'group.member.promoted',
-      ({ groupId, targetUserId }) => {
-        this.server.to(groupId).emit('memberPromoted', {
-          groupId,
-          userId: targetUserId,
-        });
-      },
-    );
+    emitter.on('group.member.added', (payload) => {
+      const data = payload as { groupId: string; userIds: string[] };
+      this.server.to(data.groupId).emit('memberAdded', data);
+    });
 
-    safeOn<{ groupId: string; targetUserId: string }>(
-      'group.member.removed',
-      ({ groupId, targetUserId }) => {
-        this.server.to(groupId).emit('memberRemoved', {
-          groupId,
-          userId: targetUserId,
-        });
-      },
-    );
+    emitter.on('group.member.promoted', (payload) => {
+      const data = payload as { groupId: string; targetUserId: string };
+      this.server.to(data.groupId).emit('memberPromoted', {
+        groupId: data.groupId,
+        userId: data.targetUserId,
+      });
+    });
 
-    safeOn<{ groupId: string; userId: string }>(
-      'group.member.left',
-      ({ groupId, userId }) => {
-        this.server.to(groupId).emit('memberLeft', { groupId, userId });
-      },
-    );
-    // --- Grupo eliminado ---
-    safeOn<{ groupId: string }>('group.deleted', ({ groupId }) => {
-      this.server.to(groupId).emit('groupDeleted', { groupId });
+    emitter.on('group.member.removed', (payload) => {
+      const data = payload as { groupId: string; targetUserId: string };
+      this.server.to(data.groupId).emit('memberRemoved', {
+        groupId: data.groupId,
+        userId: data.targetUserId,
+      });
+    });
+
+    emitter.on('group.member.left', (payload) => {
+      const data = payload as { groupId: string; userId: string };
+      this.server.to(data.groupId).emit('memberLeft', data);
+    });
+
+    emitter.on('group.deleted', (payload) => {
+      const data = payload as { groupId: string };
+      this.server.to(data.groupId).emit('groupDeleted', data);
     });
   }
 
-  /**
-   * Permite emitir un nuevo mensaje (por ejemplo, archivos o multimedia).
-   */
   emitNewMessage(message: Message): void {
     const conversationId = message.conversation?.id;
     if (!conversationId) return;
+
     this.server.to(conversationId).emit('newMessage', message);
   }
 }

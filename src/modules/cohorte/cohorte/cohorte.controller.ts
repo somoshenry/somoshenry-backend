@@ -16,56 +16,89 @@ import { Roles } from '../../auth/decorator/roles.decorator';
 import { UserRole } from '../../user/entities/user.entity';
 import { RolesGuard } from '../../auth/guard/roles.guard';
 import { CohorteRoleEnum } from './enums/cohorte.enums';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
-@ApiTags('Cohortes')
+// ⬅️ IMPORTAMOS TUS DOCS
+import { CohorteDocs } from '../docs/cohorte.docs';
+
+@CohorteDocs.tag()
+@CohorteDocs.auth()
 @Controller('cohortes')
 @UseGuards(RolesGuard)
 export class CohorteController {
   constructor(private readonly cohorteService: CohorteService) {}
 
+  // =============================
+  //        CREATE
+  // =============================
   @Post()
   @AuthProtected()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Crear una nueva cohorte (solo ADMIN)' })
+  @CohorteDocs.create.summary()
+  @CohorteDocs.create.created()
+  @CohorteDocs.create.badRequest()
   create(@Body() dto: CreateCohorteDto) {
     return this.cohorteService.create(dto);
   }
 
+  // =============================
+  //        FIND ALL
+  // =============================
   @Get()
   @AuthProtected()
-  @ApiOperation({ summary: 'Obtener todas las cohortes' })
+  @CohorteDocs.findAll.summary()
+  @CohorteDocs.findAll.ok()
   findAll() {
     return this.cohorteService.findAll();
   }
 
+  // =============================
+  //        FIND ONE
+  // =============================
   @Get(':id')
   @AuthProtected()
-  @ApiOperation({ summary: 'Obtener cohorte por ID' })
+  @CohorteDocs.findOne.summary()
+  @CohorteDocs.findOne.ok()
+  @CohorteDocs.findOne.notFound()
   findOne(@Param('id') id: string) {
     return this.cohorteService.findOne(id);
   }
 
+  // =============================
+  //        UPDATE
+  // =============================
   @Patch(':id')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Actualizar cohorte (solo ADMIN)' })
+  @CohorteDocs.update.summary()
+  @CohorteDocs.update.ok()
+  @CohorteDocs.update.badRequest()
+  @CohorteDocs.update.notFound()
   update(@Param('id') id: string, @Body() dto: UpdateCohorteDto) {
     return this.cohorteService.update(id, dto);
   }
 
+  // =============================
+  //        DELETE
+  // =============================
   @Delete(':id')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Eliminar cohorte (solo ADMIN)' })
+  @CohorteDocs.remove.summary()
+  @CohorteDocs.remove.noContent()
+  @CohorteDocs.remove.notFound()
   remove(@Param('id') id: string) {
     return this.cohorteService.remove(id);
   }
 
+  // =============================
+  //     ADD MEMBER
+  // =============================
   @Post(':id/members/:userId')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Agregar miembro a cohorte (solo ADMIN)' })
+  @CohorteDocs.members.addSummary()
+  @CohorteDocs.members.created()
+  @CohorteDocs.members.notFound()
   addMember(
     @Param('id') cohorteId: string,
     @Param('userId') userId: string,
@@ -74,10 +107,15 @@ export class CohorteController {
     return this.cohorteService.addMember(cohorteId, userId, role);
   }
 
+  // =============================
+  //     REMOVE MEMBER
+  // =============================
   @Delete(':id/members/:userId')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Remover miembro de una cohorte (solo ADMIN)' })
+  @CohorteDocs.members.removeSummary()
+  @CohorteDocs.members.noContent()
+  @CohorteDocs.members.notFound()
   removeMember(
     @Param('id') cohorteId: string,
     @Param('userId') userId: string,

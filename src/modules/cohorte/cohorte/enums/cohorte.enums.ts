@@ -11,9 +11,10 @@ export enum CohorteModalityEnum {
 }
 
 export enum CohorteRoleEnum {
+  ADMIN = 'ADMIN',
   TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT',
   TA = 'TA',
+  STUDENT = 'STUDENT',
 }
 
 export enum MemberStatusEnum {

@@ -7,6 +7,7 @@ import { CreateCohorteClassDto } from './dto/create-cohorte-class.dto';
 import { UpdateCohorteClassDto } from './dto/update-cohorte-class.dto';
 import { Cohorte } from '../cohorte/entities/cohorte.entity';
 import { User } from '../../user/entities/user.entity';
+import { AttendanceService } from './attendance.service'; // ✅ AGREGAR si lo usas
 
 @Injectable()
 export class CohorteClassService {
@@ -19,28 +20,48 @@ export class CohorteClassService {
     private readonly cohorteRepo: Repository<Cohorte>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    // ✅ AGREGAR si usas attendanceService
+    // private readonly attendanceService: AttendanceService,
   ) {}
 
   async create(dto: CreateCohorteClassDto): Promise<CohorteClass> {
     const cohorte = await this.cohorteRepo.findOne({
       where: { id: dto.cohorteId },
+      relations: ['members'], // ✅ Cargar miembros para generar asistencia
     });
     if (!cohorte) throw new NotFoundException('Cohorte no encontrada');
 
-    const teacher = dto.teacherId
-      ? await this.userRepo.findOne({ where: { id: dto.teacherId } })
-      : null;
+    let teacher: User | undefined;
+    if (dto.teacherId) {
+      const foundTeacher = await this.userRepo.findOne({
+        where: { id: dto.teacherId },
+      });
+      if (!foundTeacher) throw new NotFoundException('Profesor no encontrado');
+      teacher = foundTeacher;
+    }
 
+    // ✅ CORREGIR: Solo usar propiedades que existen en la entidad
     const newClass = this.classRepo.create({
-      ...dto,
       cohorte,
-      teacher,
+      name: dto.name,
+      description: dto.description,
+      module: dto.module,
+      scheduledDate: dto.scheduledDate,
+      duration: dto.duration,
+      teacher: teacher,
+      meetingUrl: dto.meetingUrl,
+      recordingUrl: dto.recordingUrl,
+      materialsUrl: dto.materialsUrl,
+      status: dto.status,
+      // ✅ Si agregaste startDate y endDate a la entidad, descomenta:
+      // startDate: dto.startDate,
+      // endDate: dto.endDate,
     });
 
     const saved = await this.classRepo.save(newClass);
 
-    // generar listas automáticas para ambos tipos (stand_up y hands_on)
-    await this.attendanceService.generateForClass(saved.id, cohorte.id);
+    // ✅ Si usas attendanceService, descomenta:
+    // await this.attendanceService.generateForClass(saved.id, cohorte.id);
 
     return saved;
   }

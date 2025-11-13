@@ -10,25 +10,32 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CohorteAnnouncementService } from './cohorte-announcement.service';
-import { CreateCohorteAnnouncementDto } from './dto/create-cohorte-announcement.dto';
 import { AuthProtected } from '../../auth/decorator/auth-protected.decorator';
 import { Roles } from '../../auth/decorator/roles.decorator';
 import { RolesGuard } from '../../auth/guard/roles.guard';
 import { UserRole } from '../../user/entities/user.entity';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
-
 import { Request } from 'express';
 
-@ApiTags('Cohorte Announcements')
+import { CreateCohorteAnnouncementDto } from './dto/create-cohorte-announcement.dto';
+
+// Docs
+import { AnnouncementDocs } from '../docs/cohorte-announcement.docs';
+
+@AnnouncementDocs.tag()
+@AnnouncementDocs.auth()
 @Controller('cohortes')
 @UseGuards(RolesGuard)
 export class CohorteAnnouncementController {
   constructor(private readonly service: CohorteAnnouncementService) {}
 
+  // CREATE
   @Post(':id/announcements')
   @AuthProtected()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'Crear anuncio para un cohorte (Teacher/Admin)' })
+  @AnnouncementDocs.create.summary()
+  @AnnouncementDocs.create.created()
+  @AnnouncementDocs.create.forbidden()
+  @AnnouncementDocs.create.badRequest()
   create(
     @Param('id') cohorteId: string,
     @Body() dto: CreateCohorteAnnouncementDto,
@@ -38,17 +45,24 @@ export class CohorteAnnouncementController {
     return this.service.create(dto, req.user.id);
   }
 
+  // FIND ALL
   @Get(':id/announcements')
   @AuthProtected()
-  @ApiOperation({ summary: 'Ver todos los anuncios de un cohorte' })
+  @AnnouncementDocs.findAll.summary()
+  @AnnouncementDocs.findAll.ok()
+  @AnnouncementDocs.findAll.notFound()
   findAll(@Param('id') cohorteId: string) {
     return this.service.findByCohorte(cohorteId);
   }
 
+  // DELETE
   @Delete('announcements/:id')
   @AuthProtected()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'Eliminar anuncio propio (Teacher/Admin)' })
+  @AnnouncementDocs.remove.summary()
+  @AnnouncementDocs.remove.noContent()
+  @AnnouncementDocs.remove.forbidden()
+  @AnnouncementDocs.remove.notFound()
   remove(
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string } },
@@ -56,10 +70,14 @@ export class CohorteAnnouncementController {
     return this.service.remove(id, req.user.id);
   }
 
+  // PIN / UNPIN
   @Patch('announcements/:id/pin')
   @AuthProtected()
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiOperation({ summary: 'Fijar o desfijar un anuncio (Teacher/Admin)' })
+  @AnnouncementDocs.pin.summary()
+  @AnnouncementDocs.pin.ok()
+  @AnnouncementDocs.pin.forbidden()
+  @AnnouncementDocs.pin.notFound()
   togglePin(
     @Param('id') id: string,
     @Req() req: Request & { user: { id: string } },

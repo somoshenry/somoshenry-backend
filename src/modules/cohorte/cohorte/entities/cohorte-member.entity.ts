@@ -7,7 +7,7 @@ import {
   UpdateDateColumn,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../../user/entities/user.entity';
+import { User } from '../../../user/entities/user.entity';
 import { Cohorte } from './cohorte.entity';
 import { CohorteRoleEnum, MemberStatusEnum } from '../enums/cohorte.enums';
 

@@ -12,6 +12,7 @@ import { User } from '../../user/entities/user.entity';
 import { CohorteMember } from '../cohorte/entities/cohorte-member.entity';
 import { CohorteRoleEnum } from '../cohorte/enums/cohorte.enums';
 import { CohorteAnnouncementGateway } from './cohorte-announcement.gateway';
+import { UserRole } from '../../user/entities/user.entity';
 
 @Injectable()
 export class CohorteAnnouncementService {
@@ -27,36 +28,50 @@ export class CohorteAnnouncementService {
     private readonly gateway: CohorteAnnouncementGateway,
   ) {}
 
-  async create(dto: CreateCohorteAnnouncementDto, authorId: string) {
+  async create(dto: CreateCohorteAnnouncementDto, userId: string) {
     const cohorte = await this.cohorteRepo.findOne({
       where: { id: dto.cohorteId },
     });
     if (!cohorte) throw new NotFoundException('Cohorte no encontrada');
 
     const authorMember = await this.memberRepo.findOne({
-      where: { cohorte: { id: dto.cohorteId }, user: { id: authorId } },
+      where: { cohorte: { id: dto.cohorteId }, user: { id: userId } },
       relations: ['user'],
     });
     if (!authorMember)
       throw new ForbiddenException('No perteneces a esta cohorte');
 
-    if (![CohorteRoleEnum.TEACHER].includes(authorMember.role)) {
-      throw new ForbiddenException(
-        'Solo el TEACHER o ADMIN pueden crear anuncios',
-      );
-    }
-
-    const author = await this.userRepo.findOne({ where: { id: authorId } });
-
-    const newAnnouncement = this.announcementRepo.create({
-      ...dto, // ⬅️ ACA ESTABA EL ERROR (.dto)
-      cohorte,
-      author,
+    // ✅ AGREGAR: Obtener el usuario completo
+    const requestingUser = await this.userRepo.findOne({
+      where: { id: userId },
     });
 
-    const saved = await this.announcementRepo.save(newAnnouncement);
+    if (!requestingUser) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
 
-    // 🔔 emitir anuncio en tiempo real a todos los conectados a esa cohorte
+    // ✅ Verificar permisos
+    if (
+      requestingUser.role !== UserRole.ADMIN &&
+      authorMember.role !== CohorteRoleEnum.TEACHER
+    ) {
+      throw new ForbiddenException('No autorizado');
+    }
+
+    // ✅ author es requestingUser
+    const author = requestingUser;
+
+    const newAnnouncement = this.announcementRepo.create({
+      title: dto.title,
+      content: dto.content,
+      cohorte,
+      author: author, // ✅ Ya no es null
+    });
+
+    const saved: CohorteAnnouncement =
+      await this.announcementRepo.save(newAnnouncement);
+
+    // 🔔 emitir anuncio en tiempo real
     this.gateway.emitAnnouncement(cohorte.id, {
       id: saved.id,
       cohorteId: cohorte.id,
@@ -64,8 +79,13 @@ export class CohorteAnnouncementService {
       content: saved.content,
       author: {
         id: author.id,
-        name: `${author.firstName} ${author.lastName}`,
-        profileImage: author.profileImage,
+        // ✅ CORREGIR: User tiene 'name' y 'lastName'
+        name:
+          author.name && author.lastName
+            ? `${author.name} ${author.lastName}`
+            : author.name || author.username || 'Usuario',
+        // ✅ CORREGIR: User tiene 'profilePicture'
+        profileImage: author.profilePicture || null,
       },
       createdAt: saved.createdAt,
       pinned: saved.pinned,

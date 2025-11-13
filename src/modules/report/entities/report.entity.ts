@@ -54,6 +54,14 @@ export class Report {
   @JoinColumn({ name: 'commentId' })
   comment?: Comment | null;
 
+  // NUEVO: Campo para reportar usuarios
+  @Column({ type: 'uuid', nullable: true })
+  reportedUserId?: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'reportedUserId' })
+  reportedUser?: User | null;
+
   @Column({ type: 'enum', enum: ReportReason })
   reason: ReportReason;
 

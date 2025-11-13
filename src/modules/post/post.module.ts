@@ -9,7 +9,7 @@ import { User } from '../user/entities/user.entity';
 import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
 import { Report } from '../report/entities/report.entity';
-import { SubscriptionModule } from '../subscription/subscription.module';
+// import { SubscriptionModule } from '../subscription/subscription.module';
 import { NotificationModule } from '../notifications/socket/notification.module';
 import { AuthModule } from '../auth/auth.module';
 import { OpenAIModule } from '../open-ai/openai.module';
@@ -25,7 +25,7 @@ import { OpenAIModule } from '../open-ai/openai.module';
       PostView,
       Report,
     ]),
-    forwardRef(() => SubscriptionModule),
+    // forwardRef(() => SubscriptionModule),
     forwardRef(() => AuthModule), // 👈 agregado
     NotificationModule,
     OpenAIModule,

@@ -21,7 +21,7 @@ import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { NotificationModule } from './modules/notifications/socket/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { SubscriptionModule } from './modules/subscription/subscription.module';
+// import { SubscriptionModule } from './modules/subscription/subscription.module';
 
 // Event system
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
@@ -82,8 +82,8 @@ import { OpenAIModule } from './modules/open-ai/openai.module';
     DashboardModule,
     MercadoPagoModule,
     ChatModule,
-    SubscriptionModule,
-    SubscriptionModule,
+    // SubscriptionModule,
+    // SubscriptionModule,
     NotificationModule,
     OpenAIModule,
   ],

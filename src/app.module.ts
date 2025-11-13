@@ -21,9 +21,9 @@ import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { NotificationModule } from './modules/notifications/socket/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { SubscriptionModule } from './modules/subscription/subscription.module';
+// import { SubscriptionModule } from './modules/subscription/subscription.module';
 
-// 🧩 Event system
+// Event system
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
 import { EventDispatcherService } from './common/events/event-dispatcher.service';
@@ -31,16 +31,22 @@ import { CohorteModule } from './modules/cohorte/cohorte/cohorte.module';
 import { CohorteClassModule } from './modules/cohorte/cohorte-class/cohorte-class.module';
 import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcement/cohorte-announcement.module';
 
+//Redis
+
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-redis-store';
+import { OpenAIModule } from './modules/open-ai/openai.module';
+
 @Module({
   imports: [
-    // 🔧 Config
+    // Config
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env.development',
       load: [typeOrmConfig],
     }),
     EventEmitterModule.forRoot(),
-    // 🗄️ Database
+    //Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -52,10 +58,21 @@ import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcemen
       },
     }),
 
-    // ⚡ Event Emitter (para todo el sistema)
+    // Redis
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        store: redisStore as any,
+        url: configService.get<string>('REDIS_URL'),
+        ttl: 60, // tiempo de vida de los datos en cache (segundos)
+      }),
+    }),
+
+    // Event Emitter (para todo el sistema)
     EventEmitterModule.forRoot(),
 
-    // 🧱 Feature Modules
+    // Feature Modules
     UserModule,
     AuthModule.register(new ConfigService()),
     PostModule,
@@ -68,12 +85,13 @@ import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcemen
     DashboardModule,
     MercadoPagoModule,
     ChatModule,
-    SubscriptionModule,
-    SubscriptionModule,
+    // SubscriptionModule,
+    // SubscriptionModule,
     NotificationModule,
     CohorteModule,
     CohorteClassModule,
     CohorteAnnouncementModule,
+    OpenAIModule,
   ],
 
   controllers: [AppController],
@@ -81,7 +99,7 @@ import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcemen
     AppService,
     AuditInterceptor,
 
-    // 🧠 Event infrastructure (nuevo)
+    // Event infrastructure (nuevo)
     EventDispatcherService,
     Reflector,
     {

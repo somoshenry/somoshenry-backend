@@ -25,6 +25,10 @@ import { EventDispatcherService } from '../../common/events/event-dispatcher.ser
 import Redis from 'ioredis';
 import { createAdapter } from '@socket.io/redis-adapter';
 
+import { createAdapter } from '@socket.io/redis-adapter';
+import { Redis } from 'ioredis';
+import { createClient } from 'redis';
+
 interface JwtPayload {
   sub?: string;
   id?: string;
@@ -60,6 +64,9 @@ export class ChatGateway
   private redisPub!: Redis;
   private redisSub!: Redis;
   private redis!: Redis;
+  private redis: ReturnType<typeof createClient>;
+  private readonly ONLINE_SET = 'chat:onlineUsers';
+  private readonly TYPING_SET = 'chat:typingUsers';
 
   constructor(
     @Inject(forwardRef(() => ChatService))
@@ -84,6 +91,37 @@ export class ChatGateway
   }
 
   handleConnection(client: Socket): void {
+  async afterInit(server: Server) {
+    try {
+      const redisUrl = process.env.REDIS_URL;
+      if (!redisUrl) {
+        this.logger.warn(
+          '⚠️ REDIS_URL no configurado, usando modo local de Socket.IO',
+        );
+        return;
+      }
+
+      // 🔌 Conectar Redis para Socket.IO (Pub/Sub)
+      const pubClient = createClient({ url: redisUrl });
+      const subClient = pubClient.duplicate();
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+      server.adapter(createAdapter(pubClient, subClient));
+
+      // ✅ Conectar Redis para manejo de estados (online/escribiendo)
+      this.redis = pubClient;
+      this.logger.log(
+        '🚀 ChatGateway conectado a Redis Pub/Sub y store de estados',
+      );
+    } catch (err) {
+      this.logger.error('❌ Error al conectar Redis Pub/Sub:', err);
+    }
+  }
+
+  // --------------------------
+  // CONEXIÓN / DESCONEXIÓN
+  // --------------------------
+
+  async handleConnection(client: Socket): Promise<void> {
     const token = client.handshake.auth?.token;
 
     if (!token) {
@@ -102,24 +140,37 @@ export class ChatGateway
       const data = client.data as UserSocketData;
       data.userId = userId;
 
-      this.onlineUsers.set(userId, client.id);
-      this.broadcastOnlineUsers();
+      client.data.userId = userId;
 
-      this.logger.log(`Usuario conectado: ${userId}`);
-    } catch (error) {
-      this.logger.error('Error autenticando socket', error);
+      // ✅ Guardar en memoria local y Redis
+      this.onlineUsers.set(userId, client.id);
+      await this.redis.sadd(this.ONLINE_SET, userId);
+
+      // ✅ Emitir lista actualizada a todos
+      await this.broadcastOnlineUsers();
+
+      this.logger.log(`✅ Usuario conectado: ${userId}`);
+    } catch (err) {
+      this.logger.error('❌ Error al autenticar socket', err);
       client.disconnect();
     }
   }
 
-  handleDisconnect(client: Socket): void {
-    const userId = this.findUserIdBySocket(client.id);
+  async handleDisconnect(client: Socket): Promise<void> {
+    const userId = [...this.onlineUsers.entries()].find(
+      ([, socketId]) => socketId === client.id,
+    )?.[0];
 
-    if (userId !== undefined) {
-      this.onlineUsers.delete(userId);
-      this.broadcastOnlineUsers();
-      this.logger.log(`Usuario desconectado: ${userId}`);
-    }
+    if (!userId) return;
+
+    // 🧹 Eliminar de memoria local y Redis
+    this.onlineUsers.delete(userId);
+    await this.redis.srem(this.ONLINE_SET, userId);
+
+    // 🚀 Emitir lista sincronizada
+    await this.broadcastOnlineUsers();
+
+    this.logger.log(`🔴 Usuario desconectado: ${userId}`);
   }
 
   private findUserIdBySocket(socketId: string): string | undefined {
@@ -257,8 +308,7 @@ export class ChatGateway
       content,
       type ?? MessageType.TEXT,
     );
-
-    this.server.to(groupId).emit('newGroupMessage', message);
+    this.server.to(groupId).emit('messageReceived', message);
   }
 
   private registerEventListeners(): void {
@@ -266,14 +316,27 @@ export class ChatGateway
       .eventDispatcher as unknown as EventDispatcherWithEmitter;
     const emitter = dispatcher.emitter;
 
-    if (!emitter) {
-      this.logger.warn('EventDispatcher sin emitter, no se registran eventos');
-      return;
-    }
+    safeOn<{ groupId: string; message: Message }>(
+      'group.message.created',
+      ({ groupId, message }) => {
+        this.server.to(groupId).emit('messageReceived', message); // unificado
+      },
+    );
 
-    emitter.on('group.message.created', (payload) => {
-      const data = payload as { groupId: string; message: Message };
-      this.server.to(data.groupId).emit('newGroupMessage', data.message);
+    safeOn<{
+      groupId: string;
+      name: string;
+      imageUrl?: string;
+      members: string[];
+    }>('group.created', ({ groupId, name, imageUrl, members }) => {
+      for (const userId of members) {
+        const socketId = this.onlineUsers.get(userId);
+        if (socketId) {
+          this.server
+            .to(socketId)
+            .emit('groupCreated', { groupId, name, imageUrl, members });
+        }
+      }
     });
 
     emitter.on('group.created', (payload) => {

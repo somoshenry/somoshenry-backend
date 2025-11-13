@@ -25,10 +25,22 @@ export class ReportService {
   ) {}
 
   async create(dto: CreateReportDto, reporterId: string) {
-    if (!!dto.postId === !!dto.commentId) {
+    // Validación: solo uno de los tres campos debe estar presente
+    const reportTargets = [
+      dto.postId,
+      dto.commentId,
+      dto.reportedUserId,
+    ].filter(Boolean);
+
+    if (reportTargets.length !== 1) {
       throw new BadRequestException(
-        'Debes reportar un post o un comentario, no ambos.',
+        'Debes reportar un post, un comentario o un usuario, no más de uno.',
       );
+    }
+
+    // Validación adicional: no puede reportarse a sí mismo
+    if (dto.reportedUserId && dto.reportedUserId === reporterId) {
+      throw new BadRequestException('No puedes reportarte a ti mismo.');
     }
 
     const report = this.repo.create({
@@ -39,6 +51,7 @@ export class ReportService {
 
     const savedReport = await this.repo.save(report);
 
+    // Solo evaluar auto-flag si es un post
     if (dto.postId) {
       await this.postService.evaluateAutoFlag(dto.postId);
     }
@@ -50,7 +63,7 @@ export class ReportService {
     const where = status ? { status } : {};
     return this.repo.find({
       where,
-      relations: ['reporter', 'post', 'comment', 'reviewer'],
+      relations: ['reporter', 'post', 'comment', 'reportedUser', 'reviewer'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -58,7 +71,7 @@ export class ReportService {
   async findPending() {
     return this.repo.find({
       where: { status: ReportStatus.PENDING },
-      relations: ['reporter', 'post', 'comment'],
+      relations: ['reporter', 'post', 'comment', 'reportedUser'],
       order: { createdAt: 'DESC' },
     });
   }

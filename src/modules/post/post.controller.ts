@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { User, UserRole } from '../user/entities/user.entity';
@@ -26,8 +27,10 @@ import { DeletePostDocs } from './docs/delete-post.swagger';
 import { ModeratePostDocs } from './docs/moderate-post.swagger';
 import { GetReportedPostsDocs } from './docs/get-reported-posts.swagger';
 import { FilterPostsDto } from './dto/filter-posts.dto';
+// import { JwtAndPostLimitGuard } from 'src/common/guards/post-limit.guard';
 import { CurrentUser } from '../auth/decorator/current-user.decorator';
 import { EmitEvent } from 'src/common/events/decorators/emit-event.decorator';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 
 @ApiTags('Posts')
 @Controller('posts')

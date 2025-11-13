@@ -47,6 +47,7 @@ import { GroupMemberGuard } from './guards/group-member.guard';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { CreateGroupDocs } from './docs/create-group.swagger';
 import { GetUserGroupsDocs } from './docs/get-user-groups.swagger';
+import { GetGroupByIdDocs } from './docs/get-group-by-id.swagger';
 
 @Controller('chat')
 export class ChatController {
@@ -172,6 +173,13 @@ export class ChatController {
   @GetUserGroupsDocs()
   async getUserGroups(@Req() req: Request & { user: { id: string } }) {
     return this.chatService.getUserGroups(req.user.id);
+  }
+
+  @Get('groups/:groupId')
+  @AuthProtected()
+  @GetGroupByIdDocs()
+  async getGroupById(@Param('groupId') groupId: string) {
+    return this.chatService.getGroupById(groupId);
   }
 
   // Promover un miembro a Admin

@@ -21,22 +21,29 @@ import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { NotificationModule } from './modules/notifications/socket/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+// import { SubscriptionModule } from './modules/subscription/subscription.module';
 
-// 🧩 Event system
+// Event system
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
 import { EventDispatcherService } from './common/events/event-dispatcher.service';
 
+//Redis
+
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-redis-store';
+import { OpenAIModule } from './modules/open-ai/openai.module';
+
 @Module({
   imports: [
-    // 🔧 Config
+    // Config
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env.development',
       load: [typeOrmConfig],
     }),
     EventEmitterModule.forRoot(),
-    // 🗄️ Database
+    //Database
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -48,10 +55,21 @@ import { EventDispatcherService } from './common/events/event-dispatcher.service
       },
     }),
 
-    // ⚡ Event Emitter (para todo el sistema)
+    // Redis
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        store: redisStore as any,
+        url: configService.get<string>('REDIS_URL'),
+        ttl: 60, // tiempo de vida de los datos en cache (segundos)
+      }),
+    }),
+
+    // Event Emitter (para todo el sistema)
     EventEmitterModule.forRoot(),
 
-    // 🧱 Feature Modules
+    // Feature Modules
     UserModule,
     AuthModule.register(new ConfigService()),
     PostModule,
@@ -64,7 +82,10 @@ import { EventDispatcherService } from './common/events/event-dispatcher.service
     DashboardModule,
     MercadoPagoModule,
     ChatModule,
+    // SubscriptionModule,
+    // SubscriptionModule,
     NotificationModule,
+    OpenAIModule,
   ],
 
   controllers: [AppController],
@@ -72,7 +93,7 @@ import { EventDispatcherService } from './common/events/event-dispatcher.service
     AppService,
     AuditInterceptor,
 
-    // 🧠 Event infrastructure (nuevo)
+    // Event infrastructure (nuevo)
     EventDispatcherService,
     Reflector,
     {

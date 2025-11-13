@@ -3,7 +3,7 @@ import { MercadoPagoService } from './mercadopago.service';
 import { RequestPreferenceDto } from './request.preference.dto';
 import type { MercadoPagoWebhookBody } from './mercadopago.interface';
 
-@Controller('mercadopagoJhonny')
+@Controller('mercadopago')
 export class MercadoPagoController {
   constructor(private readonly mercadoPagoService: MercadoPagoService) {}
 

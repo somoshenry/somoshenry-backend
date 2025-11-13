@@ -13,6 +13,7 @@ import { CommentLike } from './entities/comment-like.entity';
 import { Post } from '../post/entities/post.entity';
 import { User } from '../user/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OpenAIService } from '../open-ai/openai.service';
 
 @Injectable()
 export class CommentService {
@@ -26,6 +27,7 @@ export class CommentService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly openAiService: OpenAIService,
   ) {}
 
   async create(
@@ -50,11 +52,14 @@ export class CommentService {
       }
     }
 
+    const isInappropriate = await this.openAiService.isInappropriate(content);
+
     const comment = this.commentRepository.create({
       postId,
       authorId: userId,
       parentId: parentComment?.id || null,
       content,
+      isInappropriate,
     });
 
     await this.commentRepository.save(comment);

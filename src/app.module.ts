@@ -32,6 +32,7 @@ import { EventDispatcherService } from './common/events/event-dispatcher.service
 
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
+import { OpenAIModule } from './modules/open-ai/openai.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import * as redisStore from 'cache-manager-redis-store';
     // SubscriptionModule,
     // SubscriptionModule,
     NotificationModule,
+    OpenAIModule,
   ],
 
   controllers: [AppController],

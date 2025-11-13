@@ -17,6 +17,7 @@ import { Report } from '../report/entities/report.entity';
 import { FilterPostsDto } from './dto/filter-posts.dto';
 import { NotificationService } from '../notifications/socket/notification.service';
 import { NotificationType } from '../notifications/socket/entities/notification.entity';
+import { OpenAIService } from '../open-ai/openai.service';
 
 @Injectable()
 export class PostService {
@@ -34,6 +35,7 @@ export class PostService {
     @InjectRepository(PostLike)
     private readonly postLikeRepository: Repository<PostLike>,
     private readonly notificationService: NotificationService,
+    private readonly openAiService: OpenAIService,
   ) {}
 
   async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {
@@ -44,10 +46,14 @@ export class PostService {
     if (!user) {
       throw new Error('Usuario no encontrado');
     }
+    const isInappropriate = await this.openAiService.isInappropriate(
+      createPostDto.content,
+    );
 
     const post = this.postRepository.create({
       userId,
       ...createPostDto,
+      isInappropriate,
     });
 
     const savedPost = await this.postRepository.save(post);

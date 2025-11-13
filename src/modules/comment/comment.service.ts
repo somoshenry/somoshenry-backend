@@ -14,6 +14,9 @@ import { Post } from '../post/entities/post.entity';
 import { User } from '../user/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OpenAIService } from '../open-ai/openai.service';
+import { ReportService } from '../report/report.service';
+import { CreateReportDto } from '../report/dto/create-report.dto';
+import { ReportReason } from '../report/entities/report.entity';
 
 @Injectable()
 export class CommentService {
@@ -28,6 +31,7 @@ export class CommentService {
     private readonly userRepository: Repository<User>,
     private readonly eventEmitter: EventEmitter2,
     private readonly openAiService: OpenAIService,
+    private readonly reportService: ReportService,
   ) {}
 
   async create(
@@ -59,10 +63,16 @@ export class CommentService {
       authorId: userId,
       parentId: parentComment?.id || null,
       content,
-      isInappropriate,
     });
 
     await this.commentRepository.save(comment);
+
+    if (isInappropriate) {
+      const createReportDto = new CreateReportDto();
+      createReportDto.commentId = comment.id;
+      createReportDto.reason = ReportReason.INAPPROPRIATE;
+      await this.reportService.create(createReportDto, userId);
+    }
 
     if (parentComment) {
       await this.commentRepository.increment(

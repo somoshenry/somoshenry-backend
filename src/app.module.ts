@@ -27,6 +27,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
 import { EventDispatcherService } from './common/events/event-dispatcher.service';
+import { CohorteModule } from './modules/cohorte/cohorte/cohorte.module';
+import { CohorteClassModule } from './modules/cohorte/cohorte-class/cohorte-class.module';
+import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcement/cohorte-announcement.module';
 
 //Redis
 
@@ -85,6 +88,9 @@ import { OpenAIModule } from './modules/open-ai/openai.module';
     // SubscriptionModule,
     // SubscriptionModule,
     NotificationModule,
+    CohorteModule,
+    CohorteClassModule,
+    CohorteAnnouncementModule,
     OpenAIModule,
   ],
 

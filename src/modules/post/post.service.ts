@@ -13,11 +13,13 @@ import { PostLike } from './entities/post-like.entity';
 import { User } from '../user/entities/user.entity';
 import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
-import { Report } from '../report/entities/report.entity';
+import { Report, ReportReason } from '../report/entities/report.entity';
 import { FilterPostsDto } from './dto/filter-posts.dto';
 import { NotificationService } from '../notifications/socket/notification.service';
 import { NotificationType } from '../notifications/socket/entities/notification.entity';
 import { OpenAIService } from '../open-ai/openai.service';
+import { CreateReportDto } from '../report/dto/create-report.dto';
+import { ReportService } from '../report/report.service';
 
 @Injectable()
 export class PostService {
@@ -36,6 +38,7 @@ export class PostService {
     private readonly postLikeRepository: Repository<PostLike>,
     private readonly notificationService: NotificationService,
     private readonly openAiService: OpenAIService,
+    private readonly reportService: ReportService,
   ) {}
 
   async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {
@@ -53,10 +56,16 @@ export class PostService {
     const post = this.postRepository.create({
       userId,
       ...createPostDto,
-      isInappropriate,
     });
 
     const savedPost = await this.postRepository.save(post);
+
+    if (isInappropriate) {
+      const createReportDto = new CreateReportDto();
+      createReportDto.postId = post.id;
+      createReportDto.reason = ReportReason.INAPPROPRIATE;
+      await this.reportService.create(createReportDto, userId);
+    }
 
     const createdPost = await this.postRepository.findOne({
       where: { id: savedPost.id },

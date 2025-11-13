@@ -9,5 +9,6 @@ import { PostModule } from '../post/post.module';
   imports: [TypeOrmModule.forFeature([Report]), PostModule],
   controllers: [ReportController],
   providers: [ReportService],
+  exports: [ReportService],
 })
 export class ReportModule {}

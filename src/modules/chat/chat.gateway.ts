@@ -25,7 +25,8 @@ import { EventDispatcherService } from '../../common/events/event-dispatcher.ser
 import { Conversation } from './entities/conversation.entity';
 
 import { createAdapter } from '@socket.io/redis-adapter';
-import { createClient, Redis } from 'ioredis';
+import { Redis } from 'ioredis';
+import { createClient } from 'redis';
 
 interface JwtPayload {
   sub?: string;
@@ -49,7 +50,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ChatGateway.name);
   private readonly onlineUsers = new Map<string, string>();
 
-  private redis: Redis;
+  private redis: ReturnType<typeof createClient>;
   private readonly ONLINE_SET = 'chat:onlineUsers';
   private readonly TYPING_SET = 'chat:typingUsers';
 

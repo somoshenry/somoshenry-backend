@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
@@ -38,6 +40,7 @@ export class PostService {
     private readonly postLikeRepository: Repository<PostLike>,
     private readonly notificationService: NotificationService,
     private readonly openAiService: OpenAIService,
+    @Inject(forwardRef(() => ReportService))
     private readonly reportService: ReportService,
   ) {}
 

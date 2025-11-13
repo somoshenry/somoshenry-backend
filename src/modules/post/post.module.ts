@@ -30,7 +30,7 @@ import { ReportModule } from '../report/report.module';
     forwardRef(() => AuthModule), // 👈 agregado
     NotificationModule,
     OpenAIModule,
-    ReportModule,
+    forwardRef(() => ReportModule),
   ],
   controllers: [PostController],
   providers: [PostService],

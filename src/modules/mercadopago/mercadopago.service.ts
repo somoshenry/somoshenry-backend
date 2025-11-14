@@ -116,8 +116,8 @@ export class MercadoPagoService {
     console.log(`✅ PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
 
     // 🔥 ID TEMPORALES PARA TEST
-    const fakeUserId = 'd567b2e1-a831-4792-9879-1a7d08723193';
-    const fakeSubscriptionId = 'e1bacfdd-12c2-4b70-8b3a-81427bede634';
+    const fakeUserId = '273cc593-2993-48a5-be3e-330edd1dc3bc';
+    const fakeSubscriptionId = 'f9406d7e-51aa-42ea-9fed-f8270f05b55a';
 
     // 🔥 Fechas UTC
     const now = DateUtil.nowUTC();

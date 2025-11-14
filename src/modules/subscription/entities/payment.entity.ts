@@ -54,7 +54,7 @@ export class Payment {
   status: PaymentStatus;
 
   // Mercado Pago
-  @Column({ name: 'mercado_pago_id', unique: true, nullable: true })
+  @Column({ name: 'mercado_pago_id', unique: false, nullable: true })
   mercadoPagoId: string;
 
   @Column({ name: 'mercado_pago_status', nullable: true })

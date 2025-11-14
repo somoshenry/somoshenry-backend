@@ -14,6 +14,11 @@ import { ConversationParticipant } from './entities/conversation-participant.ent
 import { GroupMemberGuard } from './guards/group-member.guard';
 import { GroupAdminGuard } from './guards/group-admin.guard';
 
+// mongo
+import { MongooseModule } from '@nestjs/mongoose';
+import { MessageMongo, MessageMongoSchema } from './mongo/message-mongo.schema';
+import { MessageMongoService } from './mongo/message-mongo.service';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -24,6 +29,9 @@ import { GroupAdminGuard } from './guards/group-admin.guard';
       ConversationParticipant,
     ]),
     forwardRef(() => AuthModule),
+    MongooseModule.forFeature([
+      { name: MessageMongo.name, schema: MessageMongoSchema },
+    ]),
   ],
   controllers: [ChatController],
   providers: [
@@ -33,6 +41,7 @@ import { GroupAdminGuard } from './guards/group-admin.guard';
     FilesRepository,
     GroupMemberGuard,
     GroupAdminGuard,
+    MessageMongoService,
   ],
   exports: [ChatService, ChatGateway],
 })

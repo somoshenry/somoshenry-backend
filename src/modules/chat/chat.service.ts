@@ -1,3 +1,4 @@
+// NESTJS
 import {
   Injectable,
   NotFoundException,
@@ -7,29 +8,36 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+// TYPEORM
 import { Repository } from 'typeorm';
+// CACHE
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+// EVENT
 import { EventEmitter2 } from '@nestjs/event-emitter';
-
+import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
+// ENTITIES MENSAJES
 import { Conversation, ConversationType } from './entities/conversation.entity';
 import { Message, MessageType } from './entities/message.entity';
-import { User } from '../user/entities/user.entity';
 import { MessageAttachment } from './entities/message-attachment.entity';
+// ENTITIES PRINCIPALES
+import { User } from '../user/entities/user.entity';
 import {
   ConversationParticipant,
   ConversationRole,
 } from './entities/conversation-participant.entity';
-
+// DTO
 import { CreateMessageDto } from './dto/create-message.dto';
 import { SendMessageWithFilesDto } from './dto/send-message-with-files.dto';
 import { DeleteConversationResponseDto } from './dto/delete-conversation-response.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-
+// EN VIVO Y FILES
 import { FilesRepository } from '../files/files.repository';
 import { ChatGateway } from './chat.gateway';
-import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
+// MONGODB
+import { MessageMongoService } from './mongo/message-mongo.service';
+import { MessageMongoResponse } from './mongo/message-mongo.service';
 
 @Injectable()
 export class ChatService {
@@ -39,6 +47,8 @@ export class ChatService {
 
     @InjectRepository(Message)
     private readonly messageRepo: Repository<Message>,
+
+    private readonly messageMongoService: MessageMongoService,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -158,11 +168,12 @@ export class ChatService {
     conversationId: string,
     page = 1,
     limit = 20,
-  ): Promise<{ data: Message[]; meta: Record<string, any> }> {
+  ): Promise<{ data: MessageMongoResponse[]; meta: Record<string, any> }> {
+    // CACHE KEY
     const cacheKey = `chat:messages:${conversationId}:page:${page}`;
 
     const cached = await this.cacheManager.get<{
-      data: Message[];
+      data: MessageMongoResponse[];
       meta: Record<string, any>;
     }>(cacheKey);
 
@@ -171,17 +182,23 @@ export class ChatService {
       return cached;
     }
 
-    console.log('📡 Consultando DB para mensajes del chat...');
-    const [messages, total] = await this.messageRepo.findAndCount({
-      where: { conversation: { id: conversationId } },
-      order: { createdAt: 'DESC' },
-      relations: ['sender'],
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    console.log('📡 Consultando MongoDB para mensajes del chat...');
+
+    // 1. Total de mensajes
+    const total = await this.messageMongoService.countMessages(conversationId);
+
+    // 2. Obtener mensajes paginados (ordenados DESC)
+    const messagesDesc = await this.messageMongoService.getMessagesPaginated(
+      conversationId,
+      page,
+      limit,
+    );
+
+    // 3. Revertir para mantener el orden ASC como antes
+    const messages = [...messagesDesc].reverse();
 
     const response = {
-      data: messages.reverse(),
+      data: messages,
       meta: {
         total,
         page,
@@ -195,36 +212,47 @@ export class ChatService {
     return response;
   }
 
-  async sendMessage(senderId: string, dto: CreateMessageDto): Promise<Message> {
+  async sendMessage(
+    senderId: string,
+    dto: CreateMessageDto,
+  ): Promise<MessageMongoResponse> {
+    // 1. Verificar conversación
     const conversation = await this.conversationRepo.findOne({
       where: { id: dto.conversationId },
       relations: ['participants'],
     });
-    if (!conversation)
+    if (!conversation) {
       throw new NotFoundException('Conversación no encontrada');
+    }
 
+    // 2. Verificar usuario
     const sender = await this.userRepo.findOne({ where: { id: senderId } });
-    if (!sender) throw new NotFoundException('Usuario no encontrado');
+    if (!sender) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
 
-    const message = this.messageRepo.create({
-      conversation,
-      sender,
+    // 3. Guardar mensaje en MONGO (nuevo)
+    const saved = await this.messageMongoService.createMessage({
+      conversationId: dto.conversationId,
+      senderId,
+      content: dto.content ?? undefined,
       type: dto.type || MessageType.TEXT,
-      content: dto.content || null,
-      mediaUrl: dto.mediaUrl || null,
+      attachments: dto.mediaUrl ? { mediaUrl: dto.mediaUrl } : undefined,
     });
 
-    const saved = await this.messageRepo.save(message);
+    // 4. Actualizar la fecha de última actividad de la conversación
     conversation.updatedAt = new Date();
     await this.conversationRepo.save(conversation);
 
-    // 🔄 limpiar cache
+    // 5. Limpiar caches relacionados
     await this.cacheManager.del(`chat:messages:${dto.conversationId}`);
     for (const p of conversation.participants) {
       await this.cacheManager.del(`user:conversations:${p.id}`);
     }
 
+    // 6. Emitir notificación a un receptor (para eventos)
     const receiver = conversation.participants.find((p) => p.id !== senderId);
+
     if (receiver) {
       this.eventEmitter.emit('message.created', {
         senderId,
@@ -237,7 +265,10 @@ export class ChatService {
       });
     }
 
+    // 7. Emitir por Socket.IO (nuestro mapper ya lo formatea)
     this.chatGateway.emitNewMessage(saved);
+
+    // 8. Retornar el mensaje formateado igual que antes
     return saved;
   }
 
@@ -713,5 +744,10 @@ export class ChatService {
         joinedAt: p.joinedAt,
       })),
     };
+  }
+
+  //MONGO
+  async testMongoMessage(conversationId: string) {
+    return this.messageMongoService.getMessagesByConversation(conversationId);
   }
 }

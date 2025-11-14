@@ -1,16 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { MercadopagoMapper } from './mercadopago.mapper';
-import { RequestPreferenceDto } from './request.preference.dto';
-import { ResponsePreferenceDto } from './responce.preference.dto';
+import { RequestPreferenceDto } from './dto/request.preference.dto';
+import { ResponsePreferenceDto } from './dto/responce.preference.dto';
 import { MercadopagoConnector } from './mercadopago.connector';
 import { PaymentResponse } from 'mercadopago/dist/clients/payment/commonTypes';
 import { MercadoPagoWebhookBody } from './mercadopago.interface';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  Payment,
+  PaymentStatus,
+} from '../subscription/entities/payment.entity';
+import { DateUtil } from 'src/common/utils/date.util';
 
 @Injectable()
 export class MercadoPagoService {
   constructor(
     private percadopagoConnector: MercadopagoConnector,
     private mercadopagoMapper: MercadopagoMapper,
+    @InjectRepository(Payment)
+    private readonly paymentRepository: Repository<Payment>,
   ) {}
 
   async createPaymentPreference(
@@ -94,14 +103,48 @@ export class MercadoPagoService {
     }
   }
 
-  private handleApprovedPayment(paymentDetails: PaymentResponse) {
-    const { id, status_detail } = paymentDetails;
+  private async handleApprovedPayment(paymentDetails: PaymentResponse) {
+    const {
+      id,
+      status_detail,
+      transaction_amount,
+      currency_id,
+      payment_method_id,
+      payment_type_id,
+    } = paymentDetails;
+
     console.log(`✅ PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
 
-    // 1. Actualizar estado de la orden en DB a 'Completada'.
-    // 2. Enviar correo de confirmación al cliente.
-    // 3. Reducir inventario/stock.
-    // 4. Iniciar proceso de envío/fulfillment.
+    // 🔥 ID TEMPORALES PARA TEST
+    const fakeUserId = 'd567b2e1-a831-4792-9879-1a7d08723193';
+    const fakeSubscriptionId = 'e1bacfdd-12c2-4b70-8b3a-81427bede634';
+
+    // 🔥 Fechas UTC
+    const now = DateUtil.nowUTC();
+    const nextDay = DateUtil.addDays(now, 1); // renovamos 1 día por test
+
+    // 💾 Crear registro de pago
+    const paymentRecord = this.paymentRepository.create({
+      subscriptionId: fakeSubscriptionId,
+      userId: fakeUserId,
+      amount: transaction_amount,
+      currency: currency_id || 'USD',
+
+      status: PaymentStatus.APPROVED,
+      mercadoPagoId: id?.toString(),
+      mercadoPagoStatus: status_detail,
+      paymentMethod: payment_method_id,
+      paymentType: payment_type_id,
+
+      periodStart: now,
+      periodEnd: nextDay,
+      billingDate: now,
+      description: 'Pago registrado desde webhook (TEST)',
+    });
+
+    await this.paymentRepository.save(paymentRecord);
+
+    console.log('💾 Payment guardado en BD →', paymentRecord.id);
   }
 
   private handleRejectedPayment(paymentDetails: PaymentResponse) {

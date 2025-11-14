@@ -6,10 +6,10 @@ import {
   PreferenceResponse,
 } from 'mercadopago/dist/clients/preference/commonTypes';
 import { PreferenceCreateData } from 'mercadopago/dist/clients/preference/create/types';
-import { RequestPreferenceDto } from './request.preference.dto';
-import { RequestProductDto } from './request.product.dto';
+import { RequestPreferenceDto } from './dto/request.preference.dto';
+import { RequestProductDto } from './dto/request.product.dto';
 import { Injectable } from '@nestjs/common';
-import { ResponsePreferenceDto } from './responce.preference.dto';
+import { ResponsePreferenceDto } from './dto/responce.preference.dto';
 import { ConfigService } from '@nestjs/config';
 
 function buidItem(product: RequestProductDto) {

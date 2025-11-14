@@ -10,12 +10,19 @@ import { User, UserStatus, UserRole } from './entities/user.entity';
 import randomatic from 'randomatic';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FilterUsersDto } from './dto/filter-users.dto';
+import {
+  Subscription,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '../subscription/entities/subscription.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
   ) {}
 
   async create(data: Partial<User>): Promise<User> {
@@ -37,8 +44,35 @@ export class UserService {
       }
     }
 
-    const userCreated = this.userRepository.create(data);
-    return await this.userRepository.save(userCreated);
+    // Crear usuario
+    const userCreated = await this.userRepository.save(
+      this.userRepository.create(data),
+    );
+
+    // Solo crear suscripción para usuarios tipo MEMBER
+    if (
+      userCreated.role === UserRole.MEMBER ||
+      userCreated.role === UserRole.TEACHER
+    ) {
+      let existing = await this.subscriptionRepository.findOne({
+        where: { userId: userCreated.id },
+      });
+
+      if (!existing) {
+        const subscription = this.subscriptionRepository.create({
+          userId: userCreated.id,
+          plan: SubscriptionPlan.BRONCE,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          endDate: null,
+        });
+
+        await this.subscriptionRepository.save(subscription);
+      }
+    }
+
+    // Devolver usuario final
+    return userCreated;
   }
 
   async findAll(

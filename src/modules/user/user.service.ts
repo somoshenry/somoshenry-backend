@@ -68,6 +68,7 @@ export class UserService {
         });
 
         await this.subscriptionRepository.save(subscription);
+        console.log('🆕 Suscripción creada para usuario ID:', userCreated.id);
       }
     }
 

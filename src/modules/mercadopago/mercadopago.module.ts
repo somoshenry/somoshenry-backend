@@ -5,9 +5,11 @@ import { MercadopagoConnector } from './mercadopago.connector';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from '../subscription/entities/payment.entity';
 import { MercadoPagoService } from './mercadopago.service';
+import { User } from '../user/entities/user.entity';
+import { Subscription } from '../subscription/entities/subscription.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment])],
+  imports: [TypeOrmModule.forFeature([Payment, User, Subscription])],
   controllers: [MercadoPagoController],
   providers: [MercadoPagoService, MercadopagoMapper, MercadopagoConnector],
 })

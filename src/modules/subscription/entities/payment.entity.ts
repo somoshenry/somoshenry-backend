@@ -10,13 +10,13 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { Subscription } from './subscription.entity';
 
-// export enum PaymentStatus {
-//   PENDING = 'PENDING',
-//   APPROVED = 'APPROVED',
-//   FAILED = 'FAILED',
-//   CANCELLED = 'CANCELLED',
-//   REFUNDED = 'REFUNDED',
-// }
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+}
 
 @Entity('payments')
 export class Payment {
@@ -46,15 +46,15 @@ export class Payment {
   @Column({ length: 3, default: 'USD' })
   currency: string;
 
-  // @Column({
-  //   type: 'enum',
-  //   enum: PaymentStatus,
-  //   default: PaymentStatus.PENDING,
-  // })
-  // status: PaymentStatus;
+  @Column({
+    type: 'enum',
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
+  })
+  status: PaymentStatus;
 
-  @Column({ name: 'status', nullable: true })
-  status: string;
+  // @Column({ name: 'status', nullable: true })
+  // status: string;
 
   // Mercado Pago
   @Column({ name: 'mercado_pago_id', unique: true, nullable: true })

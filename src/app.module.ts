@@ -22,7 +22,6 @@ import { ChatModule } from './modules/chat/chat.module';
 import { NotificationModule } from './modules/notifications/socket/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 // import { SubscriptionModule } from './modules/subscription/subscription.module';
-
 // Event system
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
@@ -30,14 +29,15 @@ import { EventDispatcherService } from './common/events/event-dispatcher.service
 import { CohorteModule } from './modules/cohorte/cohorte/cohorte.module';
 import { CohorteClassModule } from './modules/cohorte/cohorte-class/cohorte-class.module';
 import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcement/cohorte-announcement.module';
-
-//Redis
-
+// Redis
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
+// OpenAI Moderacion
 import { OpenAIModule } from './modules/open-ai/openai.module';
-
+// Mongo
 import { MongooseModule } from '@nestjs/mongoose';
+// WebRTC
+import { WebRTCModule } from './modules/webrtc/webrtc.module';
 
 @Module({
   imports: [
@@ -102,6 +102,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     CohorteClassModule,
     CohorteAnnouncementModule,
     OpenAIModule,
+    WebRTCModule,
   ],
 
   controllers: [AppController],

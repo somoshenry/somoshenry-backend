@@ -4,6 +4,9 @@ import { RequestProductDto } from './request.product.dto';
 
 export class RequestPreferenceDto {
   @IsString()
+  userId: string;
+
+  @IsString()
   @IsEmail()
   clientEmail: string;
 

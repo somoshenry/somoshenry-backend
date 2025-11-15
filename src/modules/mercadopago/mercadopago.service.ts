@@ -118,34 +118,35 @@ export class MercadoPagoService {
       currency_id,
       payment_method_id,
       payment_type_id,
-      payer,
+      external_reference,
     } = paymentDetails;
 
     console.log(`✅ PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
 
-    // Verificar payer al inicio
-    if (!payer) {
-      console.error('No hay información del pagador');
+    // =============================
+    // 1) Obtener userId desde external_reference
+    // =============================
+    const userId = external_reference;
+
+    if (!userId) {
+      console.error('❌ No vino external_reference en el pago');
       return;
     }
 
     // =============================
-    // 1) Obtener al usuario por email
+    // 2) Obtener al usuario
     // =============================
     const user = await this.userRepository.findOne({
-      where: { email: payer.email },
+      where: { id: userId },
     });
 
     if (!user) {
-      console.error(
-        '❌ No existe un usuario con el email del pago:',
-        payer.email,
-      );
+      console.error('❌ No existe el usuario con id:', userId);
       return;
     }
 
     // =============================
-    // 2) Obtener su subscripción activa
+    // 3) Obtener su subscripción activa
     // =============================
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId: user.id },
@@ -162,7 +163,7 @@ export class MercadoPagoService {
     const nextBillingDate = DateUtil.addDays(now, 1); // Intento de cobro en 1 día
 
     // =============================
-    // 3) Crear el registro de pago
+    // 4) Crear el registro de pago
     // =============================
     const paymentRecord = this.paymentRepository.create({
       userId: user.id,
@@ -171,7 +172,7 @@ export class MercadoPagoService {
       amount: transaction_amount,
       currency: currency_id || 'USD',
 
-      status: status,
+      status,
 
       mercadoPagoId: id?.toString(),
       mercadoPagoStatus: status_detail,
@@ -192,7 +193,9 @@ export class MercadoPagoService {
 
     console.log('Payment guardado en BD →', paymentRecord.id);
 
-    // Actualizar subscripción
+    // =============================
+    // 5) Actualizar la subscripción
+    // =============================
     subscription.startDate = now;
     subscription.updatedAt = now;
     subscription.endDate = nextDay;
@@ -215,11 +218,50 @@ export class MercadoPagoService {
     // 3. Notificar al cliente que reintente el pago (sin revelar el motivo de riesgo).
   }
 
-  private handlePendingPayment(paymentDetails: PaymentResponse) {
-    const { id, status_detail } = paymentDetails;
-    console.warn(`⚠️ PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
-
+  private async handlePendingPayment(paymentDetails: PaymentResponse) {
     // 1. Actualizar estado de la orden a 'Pendiente de Pago'.
     // 2. Esperar un futuro Webhook (payment.updated) con estado 'approved' o 'rejected'.
+    //   const {
+    //     id,
+    //     status,
+    //     status_detail,
+    //     transaction_amount,
+    //     currency_id,
+    //     payment_method_id,
+    //     payment_type_id,
+    //     external_reference,
+    //   } = paymentDetails;
+    //   console.warn(`⚠️ PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
+    //   const userId = external_reference;
+    //   if (!userId)
+    //     return console.error('❌ No vino external_reference en pendiente');
+    //   const user = await this.userRepository.findOne({ where: { id: userId } });
+    //   if (!user)
+    //     return console.error('❌ User no encontrado en Pending:', userId);
+    //   const subscription = await this.subscriptionRepository.findOne({
+    //     where: { userId: user.id },
+    //   });
+    //   if (!subscription)
+    //     return console.error('❌ User sin subscripción en Pending:', user.id);
+    //   const now = DateUtil.nowUTC();
+    //   const paymentRecord = this.paymentRepository.create({
+    //     userId: user.id,
+    //     subscriptionId: subscription.id,
+    //     amount: transaction_amount,
+    //     currency: currency_id || 'USD',
+    //     status,
+    //     mercadoPagoId: id?.toString(),
+    //     mercadoPagoStatus: status_detail,
+    //     paymentMethod: payment_method_id,
+    //     paymentType: payment_type_id,
+    //     periodStart: now,
+    //     periodEnd: null,
+    //     billingDate: null,
+    //     description: `Pago pendiente - ${subscription.plan}`,
+    //   });
+    //   await this.paymentRepository.upsert(paymentRecord, {
+    //     conflictPaths: ['mercadoPagoId'],
+    //   });
+    //   console.log('🕒 Pago pendiente registrado en BD.');
   }
 }

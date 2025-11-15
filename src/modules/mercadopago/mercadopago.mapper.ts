@@ -51,6 +51,7 @@ export class MercadopagoMapper {
     const backUrls: BackUrls = buildBackUrls(this.frontUrl);
 
     const preferenceRequest: PreferenceRequest = {
+      external_reference: requestPreferenceDto.userId,
       items: items,
       payer: payer,
       back_urls: backUrls,

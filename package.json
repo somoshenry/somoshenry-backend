@@ -53,6 +53,7 @@
     "ioredis": "^5.8.2",
     "json2csv": "^6.0.0-alpha.2",
     "mercadopago": "^2.10.0",
+    "mongodb": "^6.21.0",
     "mongoose": "^8.19.3",
     "multer": "^2.0.2",
     "openai": "^6.5.0",

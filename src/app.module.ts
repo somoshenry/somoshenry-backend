@@ -37,6 +37,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 import { OpenAIModule } from './modules/open-ai/openai.module';
 
+import { MongooseModule } from '@nestjs/mongoose';
+
 @Module({
   imports: [
     // Config
@@ -56,6 +58,14 @@ import { OpenAIModule } from './modules/open-ai/openai.module';
           ...dbConfig,
         };
       },
+    }),
+
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO_URI'),
+      }),
     }),
 
     // Redis

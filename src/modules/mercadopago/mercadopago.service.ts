@@ -7,10 +7,7 @@ import { PaymentResponse } from 'mercadopago/dist/clients/payment/commonTypes';
 import { MercadoPagoWebhookBody } from './mercadopago.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  Payment,
-  PaymentStatus,
-} from '../subscription/entities/payment.entity';
+import { Payment } from '../subscription/entities/payment.entity';
 import { DateUtil } from 'src/common/utils/date.util';
 import { User } from '../user/entities/user.entity';
 import { Subscription } from '../subscription/entities/subscription.entity';
@@ -174,7 +171,7 @@ export class MercadoPagoService {
       amount: transaction_amount,
       currency: currency_id || 'USD',
 
-      status: status as PaymentStatus,
+      status: status,
 
       mercadoPagoId: id?.toString(),
       mercadoPagoStatus: status_detail,

@@ -10,7 +10,7 @@ import axios from 'axios';
 import { DateUtil } from 'src/common/utils/date.util';
 import { UserService } from '../../user/user.service';
 import { PostService } from '../../post/post.service';
-import { Payment, PaymentStatus } from '../entities/payment.entity';
+import { Payment } from '../entities/payment.entity';
 import {
   Subscription,
   SubscriptionPlan,
@@ -177,7 +177,7 @@ export class SubscriptionService {
         userId: subscription.userId,
         amount: paymentInfo.transaction_amount,
         currency: paymentInfo.currency_id,
-        status: this.mapMercadoPagoStatus(status),
+        // status: this.mapMercadoPagoStatus(status),
         mercadoPagoId: mercadoPagoPaymentId.toString(),
         mercadoPagoStatus: status,
         paymentMethod: paymentInfo.payment_method_id,
@@ -189,7 +189,7 @@ export class SubscriptionService {
       });
     } else {
       // Actualizar payment existente
-      payment.status = this.mapMercadoPagoStatus(status);
+      // payment.status = this.mapMercadoPagoStatus(status);
       payment.mercadoPagoStatus = status;
     }
 
@@ -238,19 +238,19 @@ export class SubscriptionService {
   // ============================================
   // MAPEAR ESTADOS DE MERCADO PAGO
   // ============================================
-  private mapMercadoPagoStatus(mpStatus: string): PaymentStatus {
-    const statusMap = {
-      approved: PaymentStatus.APPROVED,
-      pending: PaymentStatus.PENDING,
-      in_process: PaymentStatus.PENDING,
-      rejected: PaymentStatus.FAILED,
-      cancelled: PaymentStatus.CANCELLED,
-      refunded: PaymentStatus.REFUNDED,
-      charged_back: PaymentStatus.REFUNDED,
-    };
+  // private mapMercadoPagoStatus(mpStatus: string): PaymentStatus {
+  //   const statusMap = {
+  //     approved: PaymentStatus.APPROVED,
+  //     pending: PaymentStatus.PENDING,
+  //     in_process: PaymentStatus.PENDING,
+  //     rejected: PaymentStatus.FAILED,
+  //     cancelled: PaymentStatus.CANCELLED,
+  //     refunded: PaymentStatus.REFUNDED,
+  //     charged_back: PaymentStatus.REFUNDED,
+  //   };
 
-    return statusMap[mpStatus] || PaymentStatus.PENDING;
-  }
+  //   return statusMap[mpStatus] || PaymentStatus.PENDING;
+  // }
 
   // ============================================
   // CREAR SUBSCRIPTION GRATUITA

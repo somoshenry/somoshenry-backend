@@ -1,7 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { SubscriptionController } from './controllers/subscription.controller';
+// import { SubscriptionController } from './controllers/subscription.controller';
 import { SubscriptionService } from './services/subscription.service';
 import { PaymentsService } from './services/payments.service';
 import { SubscriptionCron } from './subscription.cron';
@@ -9,7 +9,7 @@ import { Subscription } from './entities/subscription.entity';
 import { Payment } from './entities/payment.entity';
 import { PostModule } from '../post/post.module';
 import { User } from '../user/entities/user.entity';
-import { SubscriptionAdminController } from './controllers/subscription-admin.controller';
+// import { SubscriptionAdminController } from './controllers/subscription-admin.controller';
 import { PaymentsWebhookController } from './controllers/payments-webhook.controller';
 import { UserModule } from '../user/user.module';
 
@@ -21,8 +21,8 @@ import { UserModule } from '../user/user.module';
     forwardRef(() => PostModule), // Evitar dependencia circular
   ],
   controllers: [
-    SubscriptionController,
-    SubscriptionAdminController,
+    // SubscriptionController,
+    // SubscriptionAdminController,
     PaymentsWebhookController,
   ],
   providers: [SubscriptionService, PaymentsService, SubscriptionCron],

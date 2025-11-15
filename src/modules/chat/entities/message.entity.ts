@@ -26,7 +26,7 @@ export class Message {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Conversation, (conversation) => conversation.messages, {
+  @ManyToOne(() => Conversation, {
     onDelete: 'CASCADE',
   })
   conversation: Conversation;

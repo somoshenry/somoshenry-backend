@@ -48,14 +48,16 @@ export class UserService {
     const userCreated = await this.userRepository.save(
       this.userRepository.create(data),
     );
-
+    console.log('USER ROLES', userCreated.role);
+    console.log('TYPE ROLES', UserRole.MEMBER);
     // Solo crear suscripción para usuarios tipo MEMBER
     if (userCreated.role === UserRole.MEMBER) {
       let existing = await this.subscriptionRepository.findOne({
         where: { userId: userCreated.id },
       });
-
+      console.log('EXOSTING', existing);
       if (!existing) {
+        console.log('CREANDO REGISTRO EN SOBSCRIPTION');
         const subscription = this.subscriptionRepository.create({
           userId: userCreated.id,
           plan: SubscriptionPlan.BRONCE,

@@ -50,10 +50,7 @@ export class UserService {
     );
 
     // Solo crear suscripción para usuarios tipo MEMBER
-    if (
-      userCreated.role === UserRole.MEMBER ||
-      userCreated.role === UserRole.TEACHER
-    ) {
+    if (userCreated.role === UserRole.MEMBER) {
       let existing = await this.subscriptionRepository.findOne({
         where: { userId: userCreated.id },
       });
@@ -71,6 +68,7 @@ export class UserService {
         console.log('🆕 Suscripción creada para usuario ID:', userCreated.id);
       }
     }
+    console.log('🆕 Usuario creado →', userCreated.id);
 
     // Devolver usuario final
     return userCreated;

@@ -9,7 +9,6 @@ import {
   Column,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { Message } from './message.entity';
 import { ConversationParticipant } from './conversation-participant.entity';
 
 export enum ConversationType {
@@ -35,11 +34,6 @@ export class Conversation {
     cascade: true,
   })
   participantsWithRoles: ConversationParticipant[];
-
-  @OneToMany(() => Message, (message) => message.conversation, {
-    cascade: true,
-  })
-  messages: Message[];
 
   @Column({
     type: 'enum',

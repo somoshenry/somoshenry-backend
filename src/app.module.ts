@@ -27,12 +27,17 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { DomainEventsInterceptor } from './common/interceptors/domain-events.interceptor';
 import { EventDispatcherService } from './common/events/event-dispatcher.service';
+import { CohorteModule } from './modules/cohorte/cohorte/cohorte.module';
+import { CohorteClassModule } from './modules/cohorte/cohorte-class/cohorte-class.module';
+import { CohorteAnnouncementModule } from './modules/cohorte/cohorte-announcement/cohorte-announcement.module';
 
 //Redis
 
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 import { OpenAIModule } from './modules/open-ai/openai.module';
+
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
@@ -53,6 +58,14 @@ import { OpenAIModule } from './modules/open-ai/openai.module';
           ...dbConfig,
         };
       },
+    }),
+
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO_URI'),
+      }),
     }),
 
     // Redis
@@ -84,6 +97,9 @@ import { OpenAIModule } from './modules/open-ai/openai.module';
     ChatModule,
     SubscriptionModule,
     NotificationModule,
+    CohorteModule,
+    CohorteClassModule,
+    CohorteAnnouncementModule,
     OpenAIModule,
   ],
 

@@ -10,13 +10,13 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { Subscription } from './subscription.entity';
 
-// export enum PaymentStatus {
-//   PENDING = 'PENDING',
-//   APPROVED = 'APPROVED',
-//   FAILED = 'FAILED',
-//   CANCELLED = 'CANCELLED',
-//   REFUNDED = 'REFUNDED',
-// }
+ export enum PaymentStatus {
+   PENDING = 'PENDING',
+   APPROVED = 'APPROVED',
+   FAILED = 'FAILED',
+   CANCELLED = 'CANCELLED',
+   REFUNDED = 'REFUNDED',
+ }
 
 @Entity('payments')
 export class Payment {

@@ -7,19 +7,25 @@ import { PaymentResponse } from 'mercadopago/dist/clients/payment/commonTypes';
 import { MercadoPagoWebhookBody } from './mercadopago.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  Payment,
-  PaymentStatus,
-} from '../subscription/entities/payment.entity';
+import { Payment } from '../subscription/entities/payment.entity';
 import { DateUtil } from 'src/common/utils/date.util';
+import { User } from '../user/entities/user.entity';
+import { Subscription } from '../subscription/entities/subscription.entity';
 
 @Injectable()
 export class MercadoPagoService {
   constructor(
     private percadopagoConnector: MercadopagoConnector,
     private mercadopagoMapper: MercadopagoMapper,
+
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
+
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
   ) {}
 
   async createPaymentPreference(
@@ -106,31 +112,67 @@ export class MercadoPagoService {
   private async handleApprovedPayment(paymentDetails: PaymentResponse) {
     const {
       id,
+      status,
       status_detail,
       transaction_amount,
       currency_id,
       payment_method_id,
       payment_type_id,
+      payer,
     } = paymentDetails;
 
     console.log(`✅ PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
 
-    // 🔥 ID TEMPORALES PARA TEST
-    const fakeUserId = '273cc593-2993-48a5-be3e-330edd1dc3bc';
-    const fakeSubscriptionId = 'f9406d7e-51aa-42ea-9fed-f8270f05b55a';
+    // Verificar payer al inicio
+    if (!payer) {
+      console.error('No hay información del pagador');
+      return;
+    }
 
-    // 🔥 Fechas UTC
+    // =============================
+    // 1) Obtener al usuario por email
+    // =============================
+    const user = await this.userRepository.findOne({
+      where: { email: payer.email },
+    });
+
+    if (!user) {
+      console.error(
+        '❌ No existe un usuario con el email del pago:',
+        payer.email,
+      );
+      return;
+    }
+
+    // =============================
+    // 2) Obtener su subscripción activa
+    // =============================
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!subscription) {
+      console.error('❌ El usuario no tiene subscripción:', user.id);
+      return;
+    }
+
+    // Fechas UTC
     const now = DateUtil.nowUTC();
-    const nextDay = DateUtil.addDays(now, 1); // renovamos 1 día por test
+    const nextDay = DateUtil.addDays(now, 2); // Plan expira en 2 días
+    const nextBillingDate = DateUtil.addDays(now, 1); // Intento de cobro en 1 día
 
-    // 💾 Crear registro de pago
+    // =============================
+    // 3) Crear el registro de pago
+    // =============================
     const paymentRecord = this.paymentRepository.create({
-      subscriptionId: fakeSubscriptionId,
-      userId: fakeUserId,
+      userId: user.id,
+      subscriptionId: subscription.id,
+
       amount: transaction_amount,
       currency: currency_id || 'USD',
 
-      status: PaymentStatus.APPROVED,
+      status: status,
+
       mercadoPagoId: id?.toString(),
       mercadoPagoStatus: status_detail,
       paymentMethod: payment_method_id,
@@ -138,13 +180,29 @@ export class MercadoPagoService {
 
       periodStart: now,
       periodEnd: nextDay,
-      billingDate: now,
-      description: 'Pago registrado desde webhook (TEST)',
+      billingDate: nextBillingDate,
+
+      description: `Pago de suscripción - ${subscription.plan}`,
+      paidAt: now,
     });
 
-    await this.paymentRepository.save(paymentRecord);
+    await this.paymentRepository.upsert(paymentRecord, {
+      conflictPaths: ['mercadoPagoId'],
+    });
 
-    console.log('💾 Payment guardado en BD →', paymentRecord.id);
+    console.log('Payment guardado en BD →', paymentRecord.id);
+
+    // Actualizar subscripción
+    subscription.startDate = now;
+    subscription.updatedAt = now;
+    subscription.endDate = nextDay;
+    subscription.nextBillingDate = nextBillingDate;
+
+    await this.subscriptionRepository.save(subscription);
+
+    console.log(
+      `🔄 Subscripción renovada hasta ${nextBillingDate.toISOString()}`,
+    );
   }
 
   private handleRejectedPayment(paymentDetails: PaymentResponse) {

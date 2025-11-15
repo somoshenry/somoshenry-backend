@@ -8,10 +8,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Report } from './entities/report.entity';
+import { Report, ReportStatus } from './entities/report.entity';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
-import { ReportStatus } from './entities/report.entity';
 import { UserRole } from '../user/entities/user.entity';
 import { PostService } from '../post/post.service';
 
@@ -20,29 +19,67 @@ export class ReportService {
   constructor(
     @InjectRepository(Report)
     private readonly repo: Repository<Report>,
+
     @Inject(forwardRef(() => PostService))
     private readonly postService: PostService,
   ) {}
 
   async create(dto: CreateReportDto, reporterId: string) {
-    // Validación: solo uno de los tres campos debe estar presente
-    const reportTargets = [
-      dto.postId,
-      dto.commentId,
-      dto.reportedUserId,
-    ].filter(Boolean);
+    // 🔹 Validar que solo venga un objetivo
+    const targets = [dto.postId, dto.commentId, dto.reportedUserId].filter(
+      Boolean,
+    );
 
-    if (reportTargets.length !== 1) {
+    if (targets.length !== 1) {
       throw new BadRequestException(
         'Debes reportar un post, un comentario o un usuario, no más de uno.',
       );
     }
 
-    // Validación adicional: no puede reportarse a sí mismo
+    // 🔹 No puede reportarse a sí mismo
     if (dto.reportedUserId && dto.reportedUserId === reporterId) {
       throw new BadRequestException('No puedes reportarte a ti mismo.');
     }
 
+    // -------------------------
+    // VALIDACIONES DE OBJETIVO
+    // -------------------------
+
+    // 🔸 Validar usuario reportado
+    if (dto.reportedUserId) {
+      const user = await this.repo.manager.findOne('User', {
+        where: { id: dto.reportedUserId },
+      });
+      if (!user) {
+        throw new NotFoundException('Usuario a reportar no encontrado.');
+      }
+    }
+
+    // 🔸 Validar post
+    if (dto.postId) {
+      const post = await this.repo.manager.findOne('Post', {
+        where: { id: dto.postId },
+      });
+      if (!post) {
+        throw new NotFoundException('El post que intentas reportar no existe.');
+      }
+    }
+
+    // 🔸 Validar comentario
+    if (dto.commentId) {
+      const comment = await this.repo.manager.findOne('Comment', {
+        where: { id: dto.commentId },
+      });
+      if (!comment) {
+        throw new NotFoundException(
+          'El comentario que intentas reportar no existe.',
+        );
+      }
+    }
+
+    // -------------------------
+    // CREAR REPORTE
+    // -------------------------
     const report = this.repo.create({
       ...dto,
       reporterId,
@@ -51,7 +88,7 @@ export class ReportService {
 
     const savedReport = await this.repo.save(report);
 
-    // Solo evaluar auto-flag si es un post
+    // 🔹 Auto-flag solo para post
     if (dto.postId) {
       await this.postService.evaluateAutoFlag(dto.postId);
     }
@@ -61,6 +98,7 @@ export class ReportService {
 
   async findAll(status?: ReportStatus) {
     const where = status ? { status } : {};
+
     return this.repo.find({
       where,
       relations: ['reporter', 'post', 'comment', 'reportedUser', 'reviewer'],

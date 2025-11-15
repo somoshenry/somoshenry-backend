@@ -76,10 +76,26 @@ export class ChatGateway
   afterInit(server: Server): void {
     this.server = server;
 
-    const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
+    const redisUrl = process.env.REDIS_URL;
 
-    this.redisPub = new Redis(redisUrl);
-    this.redisSub = new Redis(redisUrl);
+    // 🟡 LOCAL → SIN REDIS
+    if (!redisUrl) {
+      this.logger.warn('⚠️ Redis desactivado (modo local)');
+      this.registerEventListeners();
+      return;
+    }
+
+    // 🟢 PRODUCCIÓN → CON REDIS
+    this.redisPub = new Redis(redisUrl, {
+      maxRetriesPerRequest: 1,
+      connectTimeout: 500,
+    });
+
+    this.redisSub = new Redis(redisUrl, {
+      maxRetriesPerRequest: 1,
+      connectTimeout: 500,
+    });
+
     this.redis = this.redisPub;
 
     this.server.adapter(createAdapter(this.redisPub, this.redisSub));
@@ -371,8 +387,8 @@ export class ChatGateway
   // --------------------------
   // MÉTODO AUXILIAR PÚBLICO
   // --------------------------
-  emitNewMessage(message: Message): void {
-    const conversationId = message.conversation?.id;
+  emitNewMessage(message: Record<string, any>): void {
+    const conversationId = message.conversationId;
     if (!conversationId) return;
 
     this.server.to(conversationId).emit('newMessage', message);

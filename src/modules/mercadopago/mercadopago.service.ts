@@ -164,12 +164,7 @@ export class MercadoPagoService {
       // );
       return;
     }
-    console.log('######################################################');
-    console.log('######################################################');
-    console.log('######################################################');
-    console.log('######################################################');
-    await this.notificationService.sendPaymentSuccessNotification(user.email);
-    console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
+
     // =============================
     // 3) Obtener su subscripción activa
     // =============================
@@ -181,6 +176,12 @@ export class MercadoPagoService {
       console.error(`❌ El usuario ${user.id} no tiene subscripción`);
       return;
     }
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    await this.notificationService.sendPaymentSuccessNotification(user.email);
+    console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
 
     // Fechas UTC
     const now = DateUtil.nowUTC();

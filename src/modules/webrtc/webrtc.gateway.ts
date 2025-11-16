@@ -11,7 +11,6 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
-  UseGuards,
 } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -31,30 +30,37 @@ interface UserSocketData {
 
 @WebSocketGateway({
   cors: { origin: '*' },
-  namespace: '/webrtc', // Namespace separado para WebRTC
+  namespace: '/webrtc',
 })
 export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private server!: Server;
 
   private readonly logger = new Logger(WebRTCGateway.name);
-  private readonly socketToRoom = new Map<string, string>(); // socketId -> roomId
-  private readonly socketToUser = new Map<string, string>(); // socketId -> userId
+  private readonly socketToRoom = new Map<string, string>();
+  private readonly socketToUser = new Map<string, string>();
 
   constructor(
     private readonly webrtcService: WebRTCService,
     private readonly jwtService: JwtService,
   ) {}
 
-  // --------------------------
-  // CONEXIÓN / DESCONEXIÓN
-  // --------------------------
-
+  // ------------------------------------------
+  // 🔥 FIX REAL — retry si token llega tarde
+  // ------------------------------------------
   async handleConnection(client: Socket): Promise<void> {
-    const token = client.handshake.auth?.token;
+    let token = client.handshake.auth?.token;
 
+    // Primer intento
     if (!token) {
-      this.logger.warn('❌ Conexión rechazada: sin token');
+      this.logger.warn('⚠️ token no llegó — retry 200ms...');
+      await new Promise((r) => setTimeout(r, 200));
+      token = client.handshake.auth?.token;
+    }
+
+    // Si sigue sin token → desconectar
+    if (!token) {
+      this.logger.error('❌ Sin token después del retry → disconnect');
       client.disconnect();
       return;
     }
@@ -67,10 +73,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new UnauthorizedException('Token inválido');
       }
 
-      const data = client.data as UserSocketData;
-      data.userId = userId;
       client.data.userId = userId;
-
       this.socketToUser.set(client.id, userId);
 
       this.logger.log(
@@ -79,11 +82,14 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.emit('connected', { userId });
     } catch (err) {
-      this.logger.error('❌ Error al autenticar WebRTC socket', err);
+      this.logger.error('❌ Error autenticando socket WebRTC', err);
       client.disconnect();
     }
   }
 
+  // ------------------------------------------
+  // DESCONEXIÓN
+  // ------------------------------------------
   async handleDisconnect(client: Socket): Promise<void> {
     const userId = this.socketToUser.get(client.id);
     const roomId = this.socketToRoom.get(client.id);
@@ -92,7 +98,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       try {
         await this.webrtcService.removeParticipant(roomId, userId);
 
-        // Notificar a todos en la sala que este usuario se fue
         this.server.to(roomId).emit('userLeft', {
           userId,
           roomId,
@@ -100,10 +105,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.leave(roomId);
       } catch (error) {
-        this.logger.error(
-          'Error al eliminar participante en desconexión',
-          error,
-        );
+        this.logger.error('Error al eliminar participante', error);
       }
     }
 
@@ -113,10 +115,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`🔴 WebRTC: Usuario desconectado (socket: ${client.id})`);
   }
 
-  // --------------------------
-  // MANEJO DE ROOMS
-  // --------------------------
-
+  // ------------------------------------------
+  // JOIN
+  // ------------------------------------------
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
@@ -130,7 +131,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      // Agregar participante a la room
       const participant = await this.webrtcService.addParticipant(
         dto.roomId,
         userId,
@@ -139,14 +139,11 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         dto.video ?? true,
       );
 
-      // Unirse a la sala de Socket.IO
       await client.join(dto.roomId);
       this.socketToRoom.set(client.id, dto.roomId);
 
-      // Obtener lista de participantes actuales
       const participants = await this.webrtcService.getParticipants(dto.roomId);
 
-      // Notificar al usuario que se unió exitosamente
       client.emit('joinedRoom', {
         roomId: dto.roomId,
         userId,
@@ -158,7 +155,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })),
       });
 
-      // Notificar a otros usuarios que alguien se unió
       client.to(dto.roomId).emit('userJoined', {
         userId,
         audio: participant.audio,
@@ -176,6 +172,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // ------------------------------------------
+  // LEAVE
+  // ------------------------------------------
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
@@ -191,7 +190,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       await this.webrtcService.removeParticipant(roomId, userId);
 
-      // Notificar a otros que el usuario se fue
       this.server.to(roomId).emit('userLeft', { userId, roomId });
 
       await client.leave(roomId);
@@ -205,23 +203,17 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // --------------------------
-  // SEÑALIZACIÓN WEBRTC
-  // --------------------------
-
+  // ------------------------------------------
+  // SIGNALING: OFFER / ANSWER / ICE
+  // ------------------------------------------
   @SubscribeMessage('offer')
   async handleOffer(
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: WebRTCSignalDto,
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
 
-    if (!userId) {
-      throw new UnauthorizedException('Usuario no autenticado');
-    }
-
-    // Enviar la oferta al usuario objetivo
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -230,7 +222,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sdp: dto.sdp,
         roomId: dto.roomId,
       });
-
       this.logger.log(`📤 Offer: ${userId} -> ${dto.targetUserId}`);
     } else {
       client.emit('error', { message: 'Usuario objetivo no conectado' });
@@ -242,14 +233,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: WebRTCSignalDto,
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
 
-    if (!userId) {
-      throw new UnauthorizedException('Usuario no autenticado');
-    }
-
-    // Enviar la respuesta al usuario objetivo
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -258,7 +244,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sdp: dto.sdp,
         roomId: dto.roomId,
       });
-
       this.logger.log(`📥 Answer: ${userId} -> ${dto.targetUserId}`);
     } else {
       client.emit('error', { message: 'Usuario objetivo no conectado' });
@@ -270,14 +255,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: IceCandidateDto,
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
 
-    if (!userId) {
-      throw new UnauthorizedException('Usuario no autenticado');
-    }
-
-    // Enviar el ICE candidate al usuario objetivo
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -286,26 +266,20 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         candidate: dto.candidate,
         roomId: dto.roomId,
       });
-
       this.logger.log(`🧊 ICE: ${userId} -> ${dto.targetUserId}`);
     }
   }
 
-  // --------------------------
-  // CONTROL DE MEDIA
-  // --------------------------
-
+  // ------------------------------------------
+  // MEDIA CONTROLS
+  // ------------------------------------------
   @SubscribeMessage('toggleAudio')
   async handleToggleAudio(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { roomId: string; enabled: boolean },
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
-
-    if (!userId) {
-      throw new UnauthorizedException('Usuario no autenticado');
-    }
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
 
     try {
       await this.webrtcService.updateParticipantMedia(
@@ -316,13 +290,10 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         undefined,
       );
 
-      // Notificar a todos en la sala
       this.server.to(payload.roomId).emit('userMediaChanged', {
         userId,
         audio: payload.enabled,
       });
-
-      this.logger.log(`🎤 Audio ${payload.enabled ? 'ON' : 'OFF'}: ${userId}`);
     } catch (error) {
       this.logger.error('Error al cambiar audio', error);
     }
@@ -333,12 +304,8 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { roomId: string; enabled: boolean },
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
-
-    if (!userId) {
-      throw new UnauthorizedException('Usuario no autenticado');
-    }
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
 
     try {
       await this.webrtcService.updateParticipantMedia(
@@ -349,13 +316,10 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         undefined,
       );
 
-      // Notificar a todos en la sala
       this.server.to(payload.roomId).emit('userMediaChanged', {
         userId,
         video: payload.enabled,
       });
-
-      this.logger.log(`📹 Video ${payload.enabled ? 'ON' : 'OFF'}: ${userId}`);
     } catch (error) {
       this.logger.error('Error al cambiar video', error);
     }
@@ -366,12 +330,8 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { roomId: string; enabled: boolean },
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
-
-    if (!userId) {
-      throw new UnauthorizedException('Usuario no autenticado');
-    }
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
 
     try {
       await this.webrtcService.updateParticipantMedia(
@@ -382,27 +342,21 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         payload.enabled,
       );
 
-      // Notificar a todos en la sala
       this.server.to(payload.roomId).emit('userMediaChanged', {
         userId,
         screen: payload.enabled,
       });
-
-      this.logger.log(`🖥️ Screen ${payload.enabled ? 'ON' : 'OFF'}: ${userId}`);
     } catch (error) {
       this.logger.error('Error al cambiar screen share', error);
     }
   }
 
-  // --------------------------
+  // ------------------------------------------
   // HELPERS
-  // --------------------------
-
+  // ------------------------------------------
   private getUserSocket(userId: string): string | undefined {
     for (const [socketId, uid] of this.socketToUser.entries()) {
-      if (uid === userId) {
-        return socketId;
-      }
+      if (uid === userId) return socketId;
     }
     return undefined;
   }

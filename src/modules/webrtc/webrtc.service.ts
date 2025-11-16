@@ -19,8 +19,8 @@ export class WebRTCService {
   private readonly REDIS_ROOM_PREFIX = 'webrtc:room:';
 
   constructor() {
-    // Inicializar Redis si está disponible
     const redisUrl = process.env.REDIS_URL;
+
     if (redisUrl) {
       this.redis = new Redis(redisUrl, {
         maxRetriesPerRequest: 1,
@@ -32,9 +32,9 @@ export class WebRTCService {
     }
   }
 
-  // --------------------------
-  // CRUD DE ROOMS
-  // --------------------------
+  // ==========================
+  //   CRUD DE ROOMS
+  // ==========================
 
   async createRoom(dto: CreateRoomDto, createdBy: string): Promise<RoomEntity> {
     const roomId = uuidv4();
@@ -45,14 +45,13 @@ export class WebRTCService {
       description: dto.description,
       createdBy,
       maxParticipants: dto.maxParticipants || 10,
-      participants: new Map(),
+      participants: new Map<string, Participant>(),
       createdAt: new Date(),
       isActive: true,
     });
 
     this.rooms.set(roomId, room);
 
-    // Persistir en Redis si está disponible
     if (this.redis) {
       await this.saveRoomToRedis(room);
     }
@@ -62,7 +61,7 @@ export class WebRTCService {
   }
 
   async getRoom(roomId: string): Promise<RoomEntity> {
-    let room = this.rooms.get(roomId);
+    let room: RoomEntity | null = this.rooms.get(roomId) ?? null;
 
     // Si no está en memoria, buscar en Redis
     if (!room && this.redis) {
@@ -80,7 +79,7 @@ export class WebRTCService {
   }
 
   async getRooms(): Promise<RoomEntity[]> {
-    // Si hay Redis, cargar todas las rooms activas
+    // Usar Redis si está disponible
     if (this.redis) {
       const roomIds = await this.redis.smembers(this.REDIS_ROOMS_KEY);
       const rooms = await Promise.all(
@@ -89,7 +88,7 @@ export class WebRTCService {
       return rooms.filter((room) => room !== null) as RoomEntity[];
     }
 
-    // Si no hay Redis, devolver de memoria
+    // Local memory fallback
     return Array.from(this.rooms.values()).filter((room) => room.isActive);
   }
 
@@ -108,9 +107,9 @@ export class WebRTCService {
     this.logger.log(`🗑️ Room eliminada: ${roomId}`);
   }
 
-  // --------------------------
-  // PARTICIPANTES
-  // --------------------------
+  // ==========================
+  //     PARTICIPANTES
+  // ==========================
 
   async addParticipant(
     roomId: string,
@@ -152,7 +151,7 @@ export class WebRTCService {
     const room = await this.getRoom(roomId);
     room.removeParticipant(userId);
 
-    // Si la sala queda vacía, eliminarla después de 5 minutos
+    // Eliminar sala si queda vacía después de 5 minutos
     if (room.isEmpty()) {
       setTimeout(() => this.deleteRoom(roomId), 5 * 60 * 1000);
     }
@@ -194,9 +193,9 @@ export class WebRTCService {
     return participant;
   }
 
-  // --------------------------
-  // HELPERS REDIS
-  // --------------------------
+  // ==========================
+  //        REDIS
+  // ==========================
 
   private async saveRoomToRedis(room: RoomEntity): Promise<void> {
     if (!this.redis) return;
@@ -204,7 +203,7 @@ export class WebRTCService {
     const roomData = {
       id: room.id,
       name: room.name,
-      description: room.description,
+      description: room.description || '',
       createdBy: room.createdBy,
       maxParticipants: room.maxParticipants,
       createdAt: room.createdAt.toISOString(),
@@ -214,7 +213,7 @@ export class WebRTCService {
 
     await this.redis.sadd(this.REDIS_ROOMS_KEY, room.id);
     await this.redis.hmset(`${this.REDIS_ROOM_PREFIX}${room.id}`, roomData);
-    await this.redis.expire(`${this.REDIS_ROOM_PREFIX}${room.id}`, 86400); // 24 horas
+    await this.redis.expire(`${this.REDIS_ROOM_PREFIX}${room.id}`, 86400);
   }
 
   private async loadRoomFromRedis(roomId: string): Promise<RoomEntity | null> {
@@ -223,7 +222,10 @@ export class WebRTCService {
     const data = await this.redis.hgetall(`${this.REDIS_ROOM_PREFIX}${roomId}`);
     if (!data || !data.id) return null;
 
-    const participants = new Map(JSON.parse(data.participants || '[]'));
+    // Map<string, Participant>
+    const participants = new Map<string, Participant>(
+      JSON.parse(data.participants || '[]'),
+    );
 
     return new RoomEntity({
       id: data.id,

@@ -1,19 +1,14 @@
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class IceCandidateDto {
   @IsString()
-  targetUserId: string;
+  @IsNotEmpty()
+  roomId!: string;
 
   @IsString()
-  roomId: string;
+  @IsNotEmpty()
+  targetUserId!: string;
 
-  @IsString()
-  candidate: string;
-
-  @IsString()
-  sdpMid: string;
-
-  @IsOptional()
-  @IsNumber()
-  sdpMLineIndex?: number;
+  @IsNotEmpty()
+  candidate!: any;
 }

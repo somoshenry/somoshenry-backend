@@ -1,15 +1,14 @@
-import { IsString } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class WebRTCSignalDto {
   @IsString()
-  targetUserId: string;
+  @IsNotEmpty()
+  roomId!: string;
 
   @IsString()
-  roomId: string;
+  @IsNotEmpty()
+  targetUserId!: string;
 
-  @IsString()
-  type: 'offer' | 'answer';
-
-  @IsString()
-  sdp: string;
+  @IsNotEmpty()
+  sdp!: any;
 }

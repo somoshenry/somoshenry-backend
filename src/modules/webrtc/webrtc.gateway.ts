@@ -110,7 +110,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // ============================================================
-  // 🟢 JOIN ROOM (AQUÍ AGREGAMOS NOMBRE + APELLIDO + AVATAR)
+  // 🟢 JOIN ROOM (datos completos para el front)
   // ============================================================
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
@@ -122,6 +122,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!userId) throw new UnauthorizedException('Usuario no autenticado');
 
     try {
+      // Validar que la sala exista (se crea por HTTP en el controller)
+      await this.webrtcService.getRoom(dto.roomId);
+
       // 1) Agregar participante a la sala
       const participant = await this.webrtcService.addParticipant(
         dto.roomId,
@@ -134,29 +137,35 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await client.join(dto.roomId);
       this.socketToRoom.set(client.id, dto.roomId);
 
-      // 2) Obtener usuario actual desde DB
+      // 2) Datos del usuario desde DB
       const user = await this.userService.findById(userId);
 
       const fullName = `${user.name ?? ''} ${user.lastName ?? ''}`.trim();
       const avatar = user.profilePicture ?? null;
+      const username = user.username ?? user.email ?? (fullName || 'Usuario');
 
       const currentUser = {
         userId: user.id,
-        name: fullName,
+        name: user.name ?? null,
+        lastName: user.lastName ?? null,
+        username,
         avatar,
       };
 
-      // 3) Obtener TODOS los participantes actuales con nombres+apellidos
+      // 3) Participantes actuales con nombres / username / avatar
       const participants = await this.webrtcService.getParticipants(dto.roomId);
 
       const participantsWithNames = await Promise.all(
         participants.map(async (p) => {
           const u = await this.userService.findById(p.userId);
           const full = `${u.name ?? ''} ${u.lastName ?? ''}`.trim();
+          const uUsername = u.username ?? u.email ?? (full || 'Usuario');
 
           return {
             userId: u.id,
-            name: full,
+            name: u.name ?? null,
+            lastName: u.lastName ?? null,
+            username: uUsername,
             avatar: u.profilePicture ?? null,
             audio: p.audio,
             video: p.video,
@@ -165,7 +174,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }),
       );
 
-      // 4) Emitir "joinedRoom" al usuario que entra
+      // 4) Emitir "joinedRoom" al que entra
       client.emit('joinedRoom', {
         roomId: dto.roomId,
         user: currentUser,
@@ -175,7 +184,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 5) Emitir "userJoined" al resto
       client.to(dto.roomId).emit('userJoined', {
         userId: user.id,
-        name: fullName,
+        name: user.name ?? null,
+        lastName: user.lastName ?? null,
+        username,
         avatar,
         audio: participant.audio,
         video: participant.video,

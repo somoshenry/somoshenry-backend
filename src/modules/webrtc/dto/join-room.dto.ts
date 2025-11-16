@@ -1,15 +1,15 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsNotEmpty } from 'class-validator';
 
 export class JoinRoomDto {
   @IsString()
   @IsNotEmpty()
-  roomId: string;
+  roomId!: string;
 
-  @IsOptional()
   @IsBoolean()
-  audio?: boolean = true;
+  @IsOptional()
+  audio?: boolean;
 
-  @IsOptional()
   @IsBoolean()
-  video?: boolean = true;
+  @IsOptional()
+  video?: boolean;
 }

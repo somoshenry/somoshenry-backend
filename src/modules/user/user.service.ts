@@ -48,16 +48,14 @@ export class UserService {
     const userCreated = await this.userRepository.save(
       this.userRepository.create(data),
     );
-    console.log('USER ROLES', userCreated.role);
-    console.log('TYPE ROLES', UserRole.MEMBER);
+
     // Solo crear suscripción para usuarios tipo MEMBER
     if (userCreated.role === UserRole.MEMBER) {
       let existing = await this.subscriptionRepository.findOne({
         where: { userId: userCreated.id },
       });
-      console.log('EXOSTING', existing);
+
       if (!existing) {
-        console.log('CREANDO REGISTRO EN SOBSCRIPTION');
         const subscription = this.subscriptionRepository.create({
           userId: userCreated.id,
           plan: SubscriptionPlan.BRONCE,
@@ -179,12 +177,20 @@ export class UserService {
   //   };
   // }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string): Promise<any> {
     const user = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },
     });
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { userId: id },
+    });
     if (!user) throw new NotFoundException('Usuario no encontrado');
-    return user;
+    return {
+      user,
+      plan: subscription?.plan,
+      endDate: subscription?.endDate,
+      nextBilling: subscription?.nextBillingDate,
+    };
   }
 
   async findOneByEmail(email: string): Promise<User> {

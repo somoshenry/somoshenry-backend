@@ -14,6 +14,7 @@ import {
   Subscription,
   SubscriptionStatus,
 } from '../subscription/entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class MercadoPagoService {
@@ -29,6 +30,8 @@ export class MercadoPagoService {
 
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
+
+    private notificationService: NotificationsService,
   ) {}
 
   async createPaymentPreference(
@@ -173,6 +176,12 @@ export class MercadoPagoService {
       console.error(`❌ El usuario ${user.id} no tiene subscripción`);
       return;
     }
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    await this.notificationService.sendPaymentSuccessNotification(user.email);
+    console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
 
     // Fechas UTC
     const now = DateUtil.nowUTC();
@@ -270,6 +279,12 @@ export class MercadoPagoService {
       // );
       return;
     }
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    await this.notificationService.sendPaymentRejectedNotification(user.email);
+    console.log(`📧 Notificación de pago rechazado enviada a ${user.email}`);
 
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId: user.id },

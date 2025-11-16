@@ -30,11 +30,7 @@ const RoomChatMessageSchema = {
     ]),
   ],
   controllers: [WebRTCController],
-  providers: [
-    WebRTCService,
-    RoomChatService,
-    WebRTCGateway,
-  ],
+  providers: [WebRTCService, RoomChatService, WebRTCGateway],
   exports: [WebRTCService, RoomChatService],
 })
 export class WebRTCModule {}

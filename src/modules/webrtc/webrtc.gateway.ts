@@ -18,6 +18,7 @@ import { WebRTCService } from './webrtc.service';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { WebRTCSignalDto } from './dto/webrtc-signal.dto';
 import { IceCandidateDto } from './dto/ice-candidate.dto';
+import { UserService } from '../user/user.service';
 
 interface JwtPayload {
   sub?: string;
@@ -43,22 +44,21 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly webrtcService: WebRTCService,
     private readonly jwtService: JwtService,
+    private readonly userService: UserService,
   ) {}
 
-  // ------------------------------------------
-  // 🔥 FIX REAL — retry si token llega tarde
-  // ------------------------------------------
+  // ============================================================
+  // 🔥 AUTENTICACIÓN SOCKET
+  // ============================================================
   async handleConnection(client: Socket): Promise<void> {
     let token = client.handshake.auth?.token;
 
-    // Primer intento
     if (!token) {
       this.logger.warn('⚠️ token no llegó — retry 200ms...');
       await new Promise((r) => setTimeout(r, 200));
       token = client.handshake.auth?.token;
     }
 
-    // Si sigue sin token → desconectar
     if (!token) {
       this.logger.error('❌ Sin token después del retry → disconnect');
       client.disconnect();
@@ -69,27 +69,25 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const payload = this.jwtService.verify<JwtPayload>(token);
       const userId = payload.sub ?? payload.id;
 
-      if (!userId) {
-        throw new UnauthorizedException('Token inválido');
-      }
+      if (!userId) throw new UnauthorizedException();
 
       client.data.userId = userId;
       this.socketToUser.set(client.id, userId);
 
       this.logger.log(
-        `✅ WebRTC: Usuario ${userId} conectado (socket: ${client.id})`,
+        `✅ WebRTC conectado → user ${userId}, socket ${client.id}`,
       );
 
       client.emit('connected', { userId });
     } catch (err) {
-      this.logger.error('❌ Error autenticando socket WebRTC', err);
+      this.logger.error('❌ Error autenticando socket', err);
       client.disconnect();
     }
   }
 
-  // ------------------------------------------
-  // DESCONEXIÓN
-  // ------------------------------------------
+  // ============================================================
+  // 🔴 DESCONEXIÓN
+  // ============================================================
   async handleDisconnect(client: Socket): Promise<void> {
     const userId = this.socketToUser.get(client.id);
     const roomId = this.socketToRoom.get(client.id);
@@ -98,11 +96,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       try {
         await this.webrtcService.removeParticipant(roomId, userId);
 
-        this.server.to(roomId).emit('userLeft', {
-          userId,
-          roomId,
-        });
-
+        this.server.to(roomId).emit('userLeft', { userId, roomId });
         client.leave(roomId);
       } catch (error) {
         this.logger.error('Error al eliminar participante', error);
@@ -112,25 +106,23 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.socketToUser.delete(client.id);
     this.socketToRoom.delete(client.id);
 
-    this.logger.log(`🔴 WebRTC: Usuario desconectado (socket: ${client.id})`);
+    this.logger.log(`🔴 Usuario ${userId} desconectado`);
   }
 
-  // ------------------------------------------
-  // JOIN
-  // ------------------------------------------
+  // ============================================================
+  // 🟢 JOIN ROOM (AQUÍ AGREGAMOS NOMBRE + APELLIDO + AVATAR)
+  // ============================================================
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: JoinRoomDto,
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
+    const userId = (client.data as UserSocketData).userId;
 
-    if (!userId) {
-      throw new UnauthorizedException('Usuario no autenticado');
-    }
+    if (!userId) throw new UnauthorizedException('Usuario no autenticado');
 
     try {
+      // 1) Agregar participante a la sala
       const participant = await this.webrtcService.addParticipant(
         dto.roomId,
         userId,
@@ -142,21 +134,49 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await client.join(dto.roomId);
       this.socketToRoom.set(client.id, dto.roomId);
 
+      // 2) Obtener usuario actual desde DB
+      const user = await this.userService.findById(userId);
+
+      const fullName = `${user.name ?? ''} ${user.lastName ?? ''}`.trim();
+      const avatar = user.profilePicture ?? null;
+
+      const currentUser = {
+        userId: user.id,
+        name: fullName,
+        avatar,
+      };
+
+      // 3) Obtener TODOS los participantes actuales con nombres+apellidos
       const participants = await this.webrtcService.getParticipants(dto.roomId);
 
+      const participantsWithNames = await Promise.all(
+        participants.map(async (p) => {
+          const u = await this.userService.findById(p.userId);
+          const full = `${u.name ?? ''} ${u.lastName ?? ''}`.trim();
+
+          return {
+            userId: u.id,
+            name: full,
+            avatar: u.profilePicture ?? null,
+            audio: p.audio,
+            video: p.video,
+            screen: p.screen,
+          };
+        }),
+      );
+
+      // 4) Emitir "joinedRoom" al usuario que entra
       client.emit('joinedRoom', {
         roomId: dto.roomId,
-        userId,
-        participants: participants.map((p) => ({
-          userId: p.userId,
-          audio: p.audio,
-          video: p.video,
-          screen: p.screen,
-        })),
+        user: currentUser,
+        participants: participantsWithNames,
       });
 
+      // 5) Emitir "userJoined" al resto
       client.to(dto.roomId).emit('userJoined', {
-        userId,
+        userId: user.id,
+        name: fullName,
+        avatar,
         audio: participant.audio,
         video: participant.video,
         screen: participant.screen,
@@ -172,20 +192,17 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ------------------------------------------
-  // LEAVE
-  // ------------------------------------------
+  // ============================================================
+  // 👋 LEAVE
+  // ============================================================
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody('roomId') roomId: string,
   ): Promise<void> {
-    const data = client.data as UserSocketData;
-    const userId = data.userId;
+    const userId = client.data.userId;
 
-    if (!userId || !roomId) {
-      throw new BadRequestException('Datos inválidos');
-    }
+    if (!userId || !roomId) throw new BadRequestException('Datos inválidos');
 
     try {
       await this.webrtcService.removeParticipant(roomId, userId);
@@ -203,9 +220,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ------------------------------------------
-  // SIGNALING: OFFER / ANSWER / ICE
-  // ------------------------------------------
+  // ============================================================
+  // 📡 SIGNALING (OFFER / ANSWER / ICE)
+  // ============================================================
   @SubscribeMessage('offer')
   async handleOffer(
     @ConnectedSocket() client: Socket,
@@ -270,14 +287,14 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ------------------------------------------
-  // MEDIA CONTROLS
-  // ------------------------------------------
+  // ============================================================
+  // 🎛 MEDIA CONTROLS
+  // ============================================================
   @SubscribeMessage('toggleAudio')
   async handleToggleAudio(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { roomId: string; enabled: boolean },
-  ): Promise<void> {
+  ) {
     const userId = client.data.userId;
     if (!userId) throw new UnauthorizedException();
 
@@ -286,16 +303,13 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         payload.roomId,
         userId,
         payload.enabled,
-        undefined,
-        undefined,
       );
 
-      this.server.to(payload.roomId).emit('userMediaChanged', {
-        userId,
-        audio: payload.enabled,
-      });
-    } catch (error) {
-      this.logger.error('Error al cambiar audio', error);
+      this.server
+        .to(payload.roomId)
+        .emit('userMediaChanged', { userId, audio: payload.enabled });
+    } catch (e) {
+      this.logger.error('Error al cambiar audio', e);
     }
   }
 
@@ -303,7 +317,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleToggleVideo(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { roomId: string; enabled: boolean },
-  ): Promise<void> {
+  ) {
     const userId = client.data.userId;
     if (!userId) throw new UnauthorizedException();
 
@@ -313,15 +327,13 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId,
         undefined,
         payload.enabled,
-        undefined,
       );
 
-      this.server.to(payload.roomId).emit('userMediaChanged', {
-        userId,
-        video: payload.enabled,
-      });
-    } catch (error) {
-      this.logger.error('Error al cambiar video', error);
+      this.server
+        .to(payload.roomId)
+        .emit('userMediaChanged', { userId, video: payload.enabled });
+    } catch (e) {
+      this.logger.error('Error al cambiar video', e);
     }
   }
 
@@ -329,7 +341,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleToggleScreenShare(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { roomId: string; enabled: boolean },
-  ): Promise<void> {
+  ) {
     const userId = client.data.userId;
     if (!userId) throw new UnauthorizedException();
 
@@ -342,18 +354,17 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         payload.enabled,
       );
 
-      this.server.to(payload.roomId).emit('userMediaChanged', {
-        userId,
-        screen: payload.enabled,
-      });
-    } catch (error) {
-      this.logger.error('Error al cambiar screen share', error);
+      this.server
+        .to(payload.roomId)
+        .emit('userMediaChanged', { userId, screen: payload.enabled });
+    } catch (e) {
+      this.logger.error('Error al cambiar screen share', e);
     }
   }
 
-  // ------------------------------------------
+  // ============================================================
   // HELPERS
-  // ------------------------------------------
+  // ============================================================
   private getUserSocket(userId: string): string | undefined {
     for (const [socketId, uid] of this.socketToUser.entries()) {
       if (uid === userId) return socketId;

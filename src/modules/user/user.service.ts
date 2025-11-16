@@ -61,6 +61,30 @@ export class UserService {
     return { data, total };
   }
 
+  //algo de webrtc
+  async findById(id: string) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return user;
+  }
+
+  async findById_ForWebRTC(id: string) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      select: ['id', 'name', 'lastName', 'profilePicture'],
+    });
+
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    return user;
+  }
+
   // async findAllWithFilters(filterDto: FilterUsersDto) {
   //   const {
   //     page = 1,

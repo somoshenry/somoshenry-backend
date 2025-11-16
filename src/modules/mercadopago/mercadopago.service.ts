@@ -164,7 +164,12 @@ export class MercadoPagoService {
       // );
       return;
     }
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
     await this.notificationService.sendPaymentSuccessNotification(user.email);
+    console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
     // =============================
     // 3) Obtener su subscripción activa
     // =============================
@@ -273,7 +278,12 @@ export class MercadoPagoService {
       // );
       return;
     }
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
+    console.log('######################################################');
     await this.notificationService.sendPaymentRejectedNotification(user.email);
+    console.log(`📧 Notificación de pago rechazado enviada a ${user.email}`);
 
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId: user.id },

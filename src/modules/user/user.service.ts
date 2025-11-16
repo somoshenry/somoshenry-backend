@@ -15,6 +15,7 @@ import {
   SubscriptionPlan,
   SubscriptionStatus,
 } from '../subscription/entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UserService {
@@ -23,6 +24,7 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
+    private notificationService: NotificationsService,
   ) {}
 
   async create(data: Partial<User>): Promise<User> {
@@ -71,6 +73,8 @@ export class UserService {
       }
     }
     console.log('🆕 Usuario creado →', userCreated.id);
+    await this.notificationService.sendWelcomeNotification(userCreated.email);
+    console.log('📧 Notificación de bienvenida enviada a:', userCreated.email);
 
     // Devolver usuario final
     return userCreated;

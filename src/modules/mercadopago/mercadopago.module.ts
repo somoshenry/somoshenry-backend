@@ -7,9 +7,13 @@ import { Payment } from '../subscription/entities/payment.entity';
 import { MercadoPagoService } from './mercadopago.service';
 import { User } from '../user/entities/user.entity';
 import { Subscription } from '../subscription/entities/subscription.entity';
+import { NotificationModule } from '../notifications/motifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, User, Subscription])],
+  imports: [
+    TypeOrmModule.forFeature([Payment, User, Subscription]),
+    NotificationModule,
+  ],
   controllers: [MercadoPagoController],
   providers: [MercadoPagoService, MercadopagoMapper, MercadopagoConnector],
 })

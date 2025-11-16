@@ -14,6 +14,7 @@ import {
   Subscription,
   SubscriptionStatus,
 } from '../subscription/entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class MercadoPagoService {
@@ -29,6 +30,8 @@ export class MercadoPagoService {
 
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
+
+    private notificationService: NotificationsService,
   ) {}
 
   async createPaymentPreference(
@@ -161,7 +164,7 @@ export class MercadoPagoService {
       // );
       return;
     }
-
+    await this.notificationService.sendPaymentSuccessNotification(user.email);
     // =============================
     // 3) Obtener su subscripción activa
     // =============================
@@ -270,6 +273,7 @@ export class MercadoPagoService {
       // );
       return;
     }
+    await this.notificationService.sendPaymentRejectedNotification(user.email);
 
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId: user.id },

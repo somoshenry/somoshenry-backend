@@ -3,9 +3,12 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { RoomEntity, Participant } from './entities/room.entity';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { RoomChatService } from './room-chat.service';
 import Redis from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,7 +21,10 @@ export class WebRTCService {
   private readonly REDIS_ROOMS_KEY = 'webrtc:rooms';
   private readonly REDIS_ROOM_PREFIX = 'webrtc:room:';
 
-  constructor() {
+  constructor(
+    @Inject(forwardRef(() => RoomChatService))
+    private readonly roomChatService: RoomChatService,
+  ) {
     const redisUrl = process.env.REDIS_URL;
 
     if (redisUrl) {
@@ -125,6 +131,14 @@ export class WebRTCService {
     if (this.redis) {
       await this.redis.srem(this.REDIS_ROOMS_KEY, roomId);
       await this.redis.del(`${this.REDIS_ROOM_PREFIX}${roomId}`);
+    }
+
+    // Eliminar mensajes de MongoDB
+    try {
+      await this.roomChatService.deleteRoomMessages(roomId);
+      this.logger.log(`🗑️ Mensajes de chat de room ${roomId} eliminados`);
+    } catch (error) {
+      this.logger.error('Error eliminando mensajes de room:', error);
     }
 
     this.logger.log(`🗑️ Room eliminada: ${roomId}`);

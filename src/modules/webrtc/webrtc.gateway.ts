@@ -15,6 +15,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { WebRTCService } from './webrtc.service';
+import { RoomChatService } from './room-chat.service';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { WebRTCSignalDto } from './dto/webrtc-signal.dto';
 import { IceCandidateDto } from './dto/ice-candidate.dto';
@@ -43,6 +44,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly webrtcService: WebRTCService,
+    private readonly roomChatService: RoomChatService,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
   ) {}
@@ -384,8 +386,19 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data.userId;
     if (!userId) throw new UnauthorizedException();
 
-    // El usuario ya se unió a la sala con joinRoom, aquí solo confirmamos
-    this.logger.log(`💬 ${userId} joined chat in room ${payload.roomId}`);
+    // Cargar mensajes previos de MongoDB
+    try {
+      const previousMessages = await this.roomChatService.getMessages(
+        payload.roomId,
+        50,
+      );
+      client.emit('previousMessages', previousMessages);
+      this.logger.log(
+        `💬 ${userId} joined chat in room ${payload.roomId}, loaded ${previousMessages.length} messages`,
+      );
+    } catch (error) {
+      this.logger.error('Error loading previous messages', error);
+    }
   }
 
   @SubscribeMessage('sendChatMessage')
@@ -418,14 +431,14 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new BadRequestException('No estás en esta sala');
       }
 
-      const chatMessage = {
-        id: Date.now().toString(),
+      // Guardar en MongoDB
+      const chatMessage = await this.roomChatService.saveMessage({
+        roomId: payload.roomId,
         userId,
         userName: payload.userName,
         userAvatar: payload.userAvatar,
         message: payload.message,
-        timestamp: new Date(),
-      };
+      });
 
       // Emitir a todos en la sala (incluyendo al remitente)
       this.server.to(payload.roomId).emit('chatMessage', chatMessage);

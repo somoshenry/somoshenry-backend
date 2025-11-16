@@ -7,15 +7,20 @@ import {
   Param,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { WebRTCService } from './webrtc.service';
+import { RoomChatService } from './room-chat.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 
 @Controller('webrtc')
 @UseGuards(JwtAuthGuard)
 export class WebRTCController {
-  constructor(private readonly webrtcService: WebRTCService) {}
+  constructor(
+    private readonly webrtcService: WebRTCService,
+    private readonly roomChatService: RoomChatService,
+  ) {}
 
   @Post('rooms')
   async createRoom(@Body() dto: CreateRoomDto, @Request() req: any) {
@@ -101,7 +106,6 @@ export class WebRTCController {
     }));
   }
 
-  // Endpoint para obtener configuración de ICE servers
   @Get('ice-servers')
   getIceServers() {
     return {
@@ -112,6 +116,21 @@ export class WebRTCController {
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
       ],
+    };
+  }
+
+  @Get('rooms/:id/chat')
+  async getRoomChatMessages(
+    @Param('id') roomId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const msgLimit = limit ? parseInt(limit, 10) : 50;
+    const messages = await this.roomChatService.getMessages(roomId, msgLimit);
+
+    return {
+      roomId,
+      messages,
+      count: messages.length,
     };
   }
 

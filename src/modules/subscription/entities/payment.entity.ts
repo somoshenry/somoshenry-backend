@@ -73,10 +73,18 @@ export class Payment {
   @Column({ name: 'period_start', type: 'timestamp with time zone' })
   periodStart: Date;
 
-  @Column({ name: 'period_end', type: 'timestamp with time zone' })
+  @Column({
+    name: 'period_end',
+    type: 'timestamp with time zone',
+    nullable: true,
+  })
   periodEnd: Date;
 
-  @Column({ name: 'billing_date', type: 'timestamp with time zone' })
+  @Column({
+    name: 'billing_date',
+    type: 'timestamp with time zone',
+    nullable: true,
+  })
   billingDate: Date;
 
   // Metadata

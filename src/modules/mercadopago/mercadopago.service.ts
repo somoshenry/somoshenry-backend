@@ -122,14 +122,14 @@ export class MercadoPagoService {
       payment_method_id,
       payment_type_id,
       external_reference,
-      payer, // Borrar si se envía external_reference
+      // payer, // Borrar si se envía external_reference
     } = paymentDetails;
 
     // Borrar este chequeo si se envía external_reference
-    if (!payer) {
-      console.error('No hay información del pagador');
-      return;
-    }
+    // if (!payer) {
+    //   console.error('No hay información del pagador');
+    //   return;
+    // }
     // Fin borrar
 
     console.log(`✅ PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
@@ -148,17 +148,17 @@ export class MercadoPagoService {
     // 2) Obtener al usuario
     // =============================
     const user = await this.userRepository.findOne({
-      // where: { id: userId },
-      where: { email: payer.email }, // Borrar si se envía external_reference
+      where: { id: userId },
+      // where: { email: payer.email }, // Borrar si se envía external_reference
     });
 
     if (!user) {
-      // console.error('❌ No existe el usuario con id:', userId);
-      console.error(
-        // Borrar este console.error si se envía external_reference
-        '❌ No existe un usuario con el email del pago:',
-        payer.email,
-      );
+      console.error('❌ No existe el usuario con id:', userId);
+      // console.error(
+      //   // Borrar este console.error si se envía external_reference
+      //   '❌ No existe un usuario con el email del pago:',
+      //   payer.email,
+      // );
       return;
     }
 
@@ -239,14 +239,14 @@ export class MercadoPagoService {
       payment_method_id,
       payment_type_id,
       external_reference,
-      payer, // Borrar si se envía external_reference
+      // payer, // Borrar si se envía external_reference
     } = paymentDetails;
 
     // Borrar este chequeo si se envía external_reference
-    if (!payer) {
-      console.error('No hay información del pagador');
-      return;
-    }
+    // if (!payer) {
+    //   console.error('No hay información del pagador');
+    //   return;
+    // }
     // Fin borrar
 
     console.error(`❌ PAGO RECHAZADO ID: ${id}. Motivo: ${status_detail}`);
@@ -257,17 +257,17 @@ export class MercadoPagoService {
       return console.error('❌ No vino external_reference en Reject');
 
     const user = await this.userRepository.findOne({
-      // where: { id: userId },
-      where: { email: payer.email }, // Borrar si se envía external_reference
+      where: { id: userId },
+      // where: { email: payer.email }, // Borrar si se envía external_reference
     });
 
     if (!user) {
-      // console.error('❌ No existe el usuario con id:', userId);
-      console.error(
-        // Borrar este console.error si se envía external_reference
-        '❌ No existe un usuario con el email del pago:',
-        payer.email,
-      );
+      console.error('❌ No existe el usuario con id:', userId);
+      // console.error(
+      //   // Borrar este console.error si se envía external_reference
+      //   '❌ No existe un usuario con el email del pago:',
+      //   payer.email,
+      // );
       return;
     }
 
@@ -322,14 +322,14 @@ export class MercadoPagoService {
       payment_method_id,
       payment_type_id,
       external_reference,
-      payer, // Borrar si se envía external_reference
+      // payer, // Borrar si se envía external_reference
     } = paymentDetails;
 
     // Borrar este chequeo si se envía external_reference
-    if (!payer) {
-      console.error('No hay información del pagador');
-      return;
-    }
+    // if (!payer) {
+    //   console.error('No hay información del pagador');
+    //   return;
+    // }
     // Fin borrar
 
     console.warn(`⚠️ PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
@@ -340,17 +340,17 @@ export class MercadoPagoService {
       return console.error('❌ No vino external_reference en pendiente');
 
     const user = await this.userRepository.findOne({
-      // where: { id: userId },
-      where: { email: payer.email }, // Borrar si se envía external_reference
+      where: { id: userId },
+      // where: { email: payer.email }, // Borrar si se envía external_reference
     });
 
     if (!user) {
-      // console.error('❌ No existe el usuario con id:', userId);
-      console.error(
-        // Borrar este console.error si se envía external_reference
-        '❌ No existe un usuario con el email del pago:',
-        payer.email,
-      );
+      console.error('❌ No existe el usuario con id:', userId);
+      // console.error(
+      //   // Borrar este console.error si se envía external_reference
+      //   '❌ No existe un usuario con el email del pago:',
+      //   payer.email,
+      // );
       return;
     }
 

@@ -1,8 +1,11 @@
 import { IsString, IsEmail, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer'; // Necesario para anidar DTOs
-import { RequestProductDto } from './request.product.dto'; // Asegúrate de tener esta ruta
+import { RequestProductDto } from './request.product.dto';
 
 export class RequestPreferenceDto {
+  @IsString()
+  userId: string;
+
   @IsString()
   @IsEmail()
   clientEmail: string;

@@ -10,12 +10,21 @@ import { User, UserStatus, UserRole } from './entities/user.entity';
 import randomatic from 'randomatic';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FilterUsersDto } from './dto/filter-users.dto';
+import {
+  Subscription,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '../subscription/entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
+    private notificationService: NotificationsService,
   ) {}
 
   async create(data: Partial<User>): Promise<User> {
@@ -37,8 +46,38 @@ export class UserService {
       }
     }
 
-    const userCreated = this.userRepository.create(data);
-    return await this.userRepository.save(userCreated);
+    // Crear usuario
+    const userCreated = await this.userRepository.save(
+      this.userRepository.create(data),
+    );
+    console.log('USER ROLES', userCreated.role);
+    console.log('TYPE ROLES', UserRole.MEMBER);
+    // Solo crear suscripción para usuarios tipo MEMBER
+    if (userCreated.role === UserRole.MEMBER) {
+      let existing = await this.subscriptionRepository.findOne({
+        where: { userId: userCreated.id },
+      });
+      console.log('EXOSTING', existing);
+      if (!existing) {
+        console.log('CREANDO REGISTRO EN SOBSCRIPTION');
+        const subscription = this.subscriptionRepository.create({
+          userId: userCreated.id,
+          plan: SubscriptionPlan.BRONCE,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          endDate: null,
+        });
+
+        await this.subscriptionRepository.save(subscription);
+        console.log('🆕 Suscripción creada para usuario ID:', userCreated.id);
+      }
+    }
+    console.log('🆕 Usuario creado →', userCreated.id);
+    await this.notificationService.sendWelcomeNotification(userCreated.email);
+    console.log('📧 Notificación de bienvenida enviada a:', userCreated.email);
+
+    // Devolver usuario final
+    return userCreated;
   }
 
   async findAll(

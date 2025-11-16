@@ -374,7 +374,74 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // ============================================================
-  // HELPERS
+  // 💬 CHAT
+  // ============================================================
+  @SubscribeMessage('joinChatRoom')
+  async handleJoinChatRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { roomId: string },
+  ): Promise<void> {
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
+
+    // El usuario ya se unió a la sala con joinRoom, aquí solo confirmamos
+    this.logger.log(`💬 ${userId} joined chat in room ${payload.roomId}`);
+  }
+
+  @SubscribeMessage('sendChatMessage')
+  async handleChatMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    payload: {
+      roomId: string;
+      message: string;
+      userName: string;
+      userAvatar?: string;
+    },
+  ): Promise<void> {
+    const userId = client.data.userId;
+    if (!userId) throw new UnauthorizedException();
+
+    if (!payload.message?.trim()) {
+      client.emit('error', { message: 'Mensaje vacío' });
+      return;
+    }
+
+    try {
+      // Verificar que el usuario esté en la sala
+      const participants = await this.webrtcService.getParticipants(
+        payload.roomId,
+      );
+      const isInRoom = participants.some((p) => p.userId === userId);
+
+      if (!isInRoom) {
+        throw new BadRequestException('No estás en esta sala');
+      }
+
+      const chatMessage = {
+        id: Date.now().toString(),
+        userId,
+        userName: payload.userName,
+        userAvatar: payload.userAvatar,
+        message: payload.message,
+        timestamp: new Date(),
+      };
+
+      // Emitir a todos en la sala (incluyendo al remitente)
+      this.server.to(payload.roomId).emit('chatMessage', chatMessage);
+
+      this.logger.log(
+        `💬 Mensaje en ${payload.roomId} de ${payload.userName}: ${payload.message.substring(0, 50)}...`,
+      );
+    } catch (error) {
+      this.logger.error('Error al enviar mensaje de chat', error);
+      client.emit('error', {
+        message:
+          error instanceof Error ? error.message : 'Error al enviar mensaje',
+      });
+    }
+  }
+
   // ============================================================
   private getUserSocket(userId: string): string | undefined {
     for (const [socketId, uid] of this.socketToUser.entries()) {

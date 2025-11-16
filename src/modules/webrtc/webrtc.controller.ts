@@ -45,6 +45,7 @@ export class WebRTCController {
       createdBy: room.createdBy,
       createdAt: room.createdAt,
       participantsCount: room.participants.size,
+      currentParticipants: room.participants.size,
       isFull: room.isFull(),
     }));
   }

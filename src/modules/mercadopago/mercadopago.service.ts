@@ -251,6 +251,7 @@ export class MercadoPagoService {
     subscription.updatedAt = now;
     subscription.endDate = nextDay;
     subscription.nextBillingDate = nextBillingDate;
+    subscription.status = SubscriptionStatus.ACTIVE;
 
     await this.subscriptionRepository.save(subscription);
 

@@ -212,6 +212,9 @@ export class UserService {
       Object.entries(data).filter(([_, v]) => v !== undefined),
     );
     Object.assign(user, validData);
+    if (data.status && data.status === UserStatus.BANNED) {
+      await this.notificationService.sendUserBannedNotification(user.email);
+    }
     return await this.userRepository.save(user);
   }
 

@@ -6,12 +6,14 @@ import {
   Subscription,
   SubscriptionPlan,
   SubscriptionStatus,
-} from './entities/subscription.entity';
-import { DateUtil } from '../../common/utils/date.util';
+} from '../entities/subscription.entity';
+import { DateUtil } from '../../../common/utils/date.util';
+import { SubscriptionService } from './subscription.service';
 
 @Injectable()
 export class SubscriptionCron {
   private readonly logger = new Logger(SubscriptionCron.name);
+  private readonly subscriptionService: SubscriptionService;
 
   constructor(
     @InjectRepository(Subscription)
@@ -21,7 +23,7 @@ export class SubscriptionCron {
   // Ejecutar todos los días a las 00:00 UTC
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async checkExpiredSubscriptions() {
-    this.logger.log('🔍 Verificando subscriptions expiradas...');
+    this.logger.log('Verificando subscriptions expiradas');
 
     const now = DateUtil.nowUTC();
 
@@ -36,26 +38,26 @@ export class SubscriptionCron {
 
     for (const subscription of expired) {
       subscription.status = SubscriptionStatus.EXPIRED;
-      subscription.plan = SubscriptionPlan.BRONCE; // Degradar a plan gratis
+      // subscription.plan = SubscriptionPlan.BRONCE; // Degradar a plan gratis
       await this.subscriptionRepository.save(subscription);
 
-      this.logger.log(`⬇️ Subscription ${subscription.id} degradada a BRONCE`);
+      this.logger.log(`Subscription ${subscription.id} degradada a BRONCE`);
 
       // TODO: Enviar email al usuario notificando
     }
 
-    this.logger.log(`✅ Procesadas ${expired.length} subscriptions expiradas`);
+    this.logger.log(`Procesadas ${expired.length} subscriptions expiradas`);
   }
 
   // Intentar renovación automática (si autoRenew = true)
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async attemptAutoRenewal() {
-    this.logger.log('🔄 Intentando renovaciones automáticas...');
+    this.logger.log('Intentando renovaciones automáticas');
 
     const now = DateUtil.nowUTC();
-    const tomorrow = DateUtil.addDays(now, 1);
+    const tomorrow = DateUtil.addDays(now, 2);
 
-    // Subscriptions que vencen mañana y tienen autoRenew
+    // Subscriptions que vencen pasado mañana y tienen autoRenew
     const toRenew = await this.subscriptionRepository.find({
       where: {
         status: SubscriptionStatus.ACTIVE,

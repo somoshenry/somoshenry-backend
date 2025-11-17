@@ -12,10 +12,12 @@ import { User } from '../user/entities/user.entity';
 import { UserModule } from '../user/user.module';
 import { SubscriptionController } from './controllers/subscription.controller';
 import { PaymentController } from './controllers/payment.controller';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Subscription, Payment, User]),
+    ScheduleModule.forRoot(),
     ConfigModule,
     UserModule,
     forwardRef(() => PostModule), // Evitar dependencia circular

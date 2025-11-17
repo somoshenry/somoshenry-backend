@@ -30,7 +30,7 @@ export class UserController {
   @AuthProtected()
   @applyDecorators(...SwaggerUserDocs.me)
   async getProfile(@Req() req: Request & { user: { id: string } }) {
-    const user = await this.userService.findOne(req.user.id)
+    const user = await this.userService.findOne(req.user.id);
     return { message: 'Perfil del usuario', user };
   }
 

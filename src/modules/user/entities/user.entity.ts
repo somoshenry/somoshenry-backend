@@ -7,6 +7,7 @@ import {
   DeleteDateColumn,
   Index,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Follow } from '../../follow/entities/follow.entity';
@@ -103,11 +104,11 @@ export class User {
   @OneToMany(() => Notification, (notification) => notification.sender)
   sentNotifications: Notification[];
 
-  // Relación con las suscripciones del usuario
-  @OneToMany(() => Subscription, (subscription) => subscription.user)
-  suscriptions: Subscription[];
+  @OneToOne(() => Subscription, (subscription) => subscription.user)
+  subscription: Subscription;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: Date | null;
 
-  // Relación con los pagos del usuario
   @OneToMany(() => Payment, (payment) => payment.user)
   payments: Payment[];
 }

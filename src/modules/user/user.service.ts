@@ -205,21 +205,17 @@ export class UserService {
   //   };
   // }
 
-  async findOne(id: string): Promise<any> {
+  async findOne(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },
-      relations: ['suscriptions'],
-    });
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { userId: id },
+      relations: ['subscription'],
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
-    return {
-      user,
-      plan: subscription?.plan,
-      endDate: subscription?.endDate,
-      nextBilling: subscription?.nextBillingDate,
-    };
+    if (user.subscription) {
+      user.subscriptionPlan = user.subscription.plan;
+      user.subscriptionExpiresAt = user.subscription.endDate;
+    }
+    return user;
   }
 
   async findOneByEmail(email: string): Promise<User> {

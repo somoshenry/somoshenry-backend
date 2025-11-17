@@ -205,20 +205,12 @@ export class UserService {
   //   };
   // }
 
-  async findOne(id: string): Promise<any> {
+  async findOne(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },
     });
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { userId: id },
-    });
     if (!user) throw new NotFoundException('Usuario no encontrado');
-    return {
-      user,
-      plan: subscription?.plan,
-      endDate: subscription?.endDate,
-      nextBilling: subscription?.nextBillingDate,
-    };
+    return user;
   }
 
   async findOneByEmail(email: string): Promise<User> {

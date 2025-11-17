@@ -105,7 +105,7 @@ export class User {
 
   // Relación con las suscripciones del usuario
   @OneToMany(() => Subscription, (subscription) => subscription.user)
-  subscriptions: Subscription[];
+  suscriptions: Subscription[];
 
   // Relación con los pagos del usuario
   @OneToMany(() => Payment, (payment) => payment.user)

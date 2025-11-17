@@ -14,7 +14,7 @@ export class AuthController {
   @Post('register')
   @applyDecorators(...SwaggerAuthDocs.register)
   registerUser(@Body() user: CreateUserDto) {
-    return this.authService.registerUser(user as User);
+    return this.authService.registerUser(user);
   }
 
   @Post('login')

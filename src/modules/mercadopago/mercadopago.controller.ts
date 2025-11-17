@@ -17,7 +17,7 @@ export class MercadoPagoController {
 
   @Post('webhook')
   async webhook(@Body() body: MercadoPagoWebhookBody) {
-    console.log('🔔 Webhook de Mercado Pago recibido:', body);
+    console.log('Webhook de Mercado Pago recibido:', body);
     return await this.mercadoPagoService.webhook(body);
   }
 }

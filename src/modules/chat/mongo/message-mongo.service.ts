@@ -85,7 +85,7 @@ export class MessageMongoService {
     return await Promise.all(docs.map((doc) => this.toFrontendFormat(doc)));
   }
 
-  // 🔥 NUEVO: Marcar mensaje como leído
+  // Marcar mensaje como leído
   async markAsRead(messageId: string): Promise<MessageMongoResponse | null> {
     try {
       const updated = await this.messageModel
@@ -111,7 +111,7 @@ export class MessageMongoService {
     }
   }
 
-  // 🔥 NUEVO: Eliminar todos los mensajes de una conversación
+  // Eliminar todos los mensajes de una conversación
   async deleteMessagesByConversation(conversationId: string): Promise<number> {
     try {
       const result = await this.messageModel
@@ -119,7 +119,7 @@ export class MessageMongoService {
         .exec();
 
       console.log(
-        `🗑️ ${result.deletedCount} mensajes eliminados de la conversación ${conversationId}`,
+        `${result.deletedCount} mensajes eliminados de la conversación ${conversationId}`,
       );
       return result.deletedCount || 0;
     } catch (error) {
@@ -128,7 +128,7 @@ export class MessageMongoService {
     }
   }
 
-  // 🔥 NUEVO: Eliminar un mensaje específico
+  // Eliminar un mensaje específico
   async deleteMessage(messageId: string): Promise<boolean> {
     try {
       const result = await this.messageModel
@@ -141,7 +141,7 @@ export class MessageMongoService {
     }
   }
 
-  // 🔥 NUEVO: Obtener último mensaje de una conversación
+  // Obtener último mensaje de una conversación
   async getLastMessage(
     conversationId: string,
   ): Promise<MessageMongoResponse | null> {
@@ -161,7 +161,7 @@ export class MessageMongoService {
     }
   }
 
-  // 🔥 Método crítico que formatea para el frontend
+  // Método crítico que formatea para el frontend
   private async toFrontendFormat(
     doc: MessageMongoDocument,
   ): Promise<MessageMongoResponse> {

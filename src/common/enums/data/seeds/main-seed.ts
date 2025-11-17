@@ -20,7 +20,7 @@ async function bootstrap() {
     await seeder.run();
     logger.log('🌾 Seed finalizado sin errores.');
   } catch (e) {
-    logger.error('❌ Falló el seeder', e);
+    logger.error(' Falló el seeder', e);
     process.exitCode = 1;
   } finally {
     await app.close();

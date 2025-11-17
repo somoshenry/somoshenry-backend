@@ -7,9 +7,9 @@ import {
 import Redis from 'ioredis';
 
 interface CacheOptions {
-  ttl?: number; // en segundos
-  nx?: boolean; // solo si no existe
-  xx?: boolean; // solo si existe
+  ttl?: number;
+  nx?: boolean;
+  xx?: boolean;
 }
 
 @Injectable()
@@ -24,7 +24,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const redisUrl = process.env.REDIS_URL;
 
       if (!redisUrl) {
-        this.logger.warn('⚠️ Redis desactivado - REDIS_URL no configurado');
+        this.logger.warn('Redis desactivado - REDIS_URL no configurado');
         return;
       }
 
@@ -51,19 +51,19 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       // Listeners
       this.redis.on('connect', () => {
-        this.logger.log('✅ Redis conectado (cliente principal)');
+        this.logger.log('Redis conectado (cliente principal)');
       });
 
       this.redis.on('error', (err) => {
-        this.logger.error('❌ Error Redis:', err.message);
+        this.logger.error('Error Redis:', err.message);
       });
 
       this.redisPub.on('connect', () => {
-        this.logger.log('✅ Redis Pub conectado');
+        this.logger.log('Redis Pub conectado');
       });
 
       this.redisSub.on('connect', () => {
-        this.logger.log('✅ Redis Sub conectado');
+        this.logger.log('Redis Sub conectado');
       });
     } catch (error) {
       this.logger.error('Error inicializando Redis:', error);
@@ -76,37 +76,32 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (this.redisSub) await this.redisSub.quit();
   }
 
-  /**
-   * Obtener cliente Redis principal
-   */
+  // Obtener cliente Redis principal
+
   getRedis(): Redis | null {
     return this.redis;
   }
 
-  /**
-   * Obtener cliente Redis Pub
-   */
+  //  Obtener cliente Redis Pub
+
   getRedisPub(): Redis | null {
     return this.redisPub;
   }
 
-  /**
-   * Obtener cliente Redis Sub
-   */
+  //Obtener cliente Redis Sub
+
   getRedisSub(): Redis | null {
     return this.redisSub;
   }
 
-  /**
-   * Verificar si Redis está disponible
-   */
+  // Verificar si Redis está disponible
+
   isConnected(): boolean {
     return this.redis != null && this.redis.status === 'ready';
   }
 
-  /**
-   * GET: Obtener valor
-   */
+  // GET: Obtener valor
+
   async get<T = string>(key: string): Promise<T | null> {
     if (!this.redis) return null;
     try {
@@ -119,9 +114,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * SET: Guardar valor con opcional TTL
-   */
+  //SET: Guardar valor con opcional TTL
+
   async set(
     key: string,
     value: unknown,
@@ -150,9 +144,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * DEL: Eliminar clave/s
-   */
+  //Eliminar clave/s
+
   async del(...keys: string[]): Promise<boolean> {
     if (!this.redis || keys.length === 0) return false;
     try {
@@ -164,9 +157,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * EXISTS: Verificar si existe clave
-   */
+  // EXISTS: Verificar si existe clave
+
   async exists(key: string): Promise<boolean> {
     if (!this.redis) return false;
     try {
@@ -178,9 +170,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * HSET: Guardar hash
-   */
+  //HSET: Guardar hash
+
   async hset(
     key: string,
     field: string,
@@ -200,9 +191,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * HGET: Obtener valor de hash
-   */
+  //HGET: Obtener valor de hash
+
   async hget<T = string>(key: string, field: string): Promise<T | null> {
     if (!this.redis) return null;
     try {
@@ -215,9 +205,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * HGETALL: Obtener todos los campos de hash
-   */
+  //HGETALL: Obtener todos los campos de hash
+
   async hgetall<T = Record<string, unknown>>(key: string): Promise<T | null> {
     if (!this.redis) return null;
     try {
@@ -239,9 +228,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * LPUSH: Agregar a lista (principio)
-   */
+  // LPUSH: Agregar a lista (principio)
+
   async lpush(key: string, ...values: unknown[]): Promise<number> {
     if (!this.redis) return 0;
     try {
@@ -253,9 +241,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * RPUSH: Agregar a lista (final)
-   */
+  //RPUSH: Agregar a lista (final)
+
   async rpush(key: string, ...values: unknown[]): Promise<number> {
     if (!this.redis) return 0;
     try {
@@ -267,9 +254,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * LRANGE: Obtener rango de lista
-   */
+  //LRANGE: Obtener rango de lista
+
   async lrange<T = unknown>(
     key: string,
     start: number = 0,
@@ -291,9 +277,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * LLEN: Obtener largo de lista
-   */
+  // LLEN: Obtener largo de lista
+
   async llen(key: string): Promise<number> {
     if (!this.redis) return 0;
     try {
@@ -304,9 +289,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * SADD: Agregar a conjunto
-   */
+  // SADD: Agregar a conjunto
+
   async sadd(key: string, ...members: unknown[]): Promise<number> {
     if (!this.redis) return 0;
     try {
@@ -318,9 +302,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * SREM: Remover de conjunto
-   */
+  // SREM: Remover de conjunto
+
   async srem(key: string, ...members: unknown[]): Promise<number> {
     if (!this.redis) return 0;
     try {
@@ -332,9 +315,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * SMEMBERS: Obtener todos los miembros de conjunto
-   */
+  //SMEMBERS: Obtener todos los miembros de conjunto
+
   async smembers<T = unknown>(key: string): Promise<T[]> {
     if (!this.redis) return [];
     try {
@@ -352,9 +334,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * SCARD: Contar miembros de conjunto
-   */
+  //SCARD: Contar miembros de conjunto
+
   async scard(key: string): Promise<number> {
     if (!this.redis) return 0;
     try {
@@ -365,9 +346,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * EXPIRE: Establecer TTL
-   */
+  //EXPIRE: Establecer TTL
+
   async expire(key: string, seconds: number): Promise<boolean> {
     if (!this.redis) return false;
     try {
@@ -379,9 +359,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * TTL: Obtener tiempo restante
-   */
+  //TTL: Obtener tiempo restante
+
   async ttl(key: string): Promise<number> {
     if (!this.redis) return -2;
     try {
@@ -392,9 +371,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * PUBLISH: Publicar mensaje
-   */
+  //PUBLISH: Publicar mensaje
+
   async publish(channel: string, message: unknown): Promise<number> {
     if (!this.redisPub) return 0;
     try {
@@ -406,9 +384,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * SUBSCRIBE: Suscribirse a canal
-   */
+  // SUBSCRIBE: Suscribirse a canal
+
   async subscribe(
     channel: string,
     handler: (message: unknown) => void,
@@ -432,14 +409,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * FLUSHALL: Limpiar toda la BD (desarrollo)
-   */
+  //FLUSHALL: Limpiar toda la BD (desarrollo)
+
   async flushall(): Promise<boolean> {
     if (!this.redis) return false;
     try {
       await this.redis.flushall();
-      this.logger.warn('⚠️ Redis flusheado (FLUSHALL)');
+      this.logger.warn('Redis flusheado (FLUSHALL)');
       return true;
     } catch (error) {
       this.logger.error('Error en FLUSHALL:', error);

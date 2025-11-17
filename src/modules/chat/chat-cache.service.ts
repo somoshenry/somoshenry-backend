@@ -2,10 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../../common/services/redis.service';
 import { Message } from './entities/message.entity';
 
-/**
- * Servicio de caché para Chat
- * Cachea conversaciones, mensajes recientes y miembros de grupo
- */
+// Servicio de caché para Chat
+// Cachea conversaciones, mensajes recientes y miembros de grupo
+
 @Injectable()
 export class ChatCacheService {
   private readonly logger = new Logger(ChatCacheService.name);

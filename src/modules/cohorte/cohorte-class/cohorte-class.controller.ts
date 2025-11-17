@@ -17,10 +17,10 @@ import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 import { AuthProtected } from '../../auth/decorator/auth-protected.decorator';
 import { Roles } from '../../auth/decorator/roles.decorator';
 import { RolesGuard } from '../../auth/guard/roles.guard';
-import { UserRole } from '../../user/entities/user.entity'; // ✅ Importar UserRole
+import { UserRole } from '../../user/entities/user.entity';
 import { Request } from 'express';
 
-// 📘 Tus docs externos
+// Tus docs externos
 import { CohorteClassDocs } from '../docs/cohorte-class.docs';
 
 @CohorteClassDocs.tag()
@@ -33,12 +33,11 @@ export class CohorteClassController {
     private readonly attendanceService: AttendanceService,
   ) {}
 
-  // ============================================================
   // CREATE
-  // ============================================================
+
   @Post()
   @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER) // ✅ Usar UserRole (roles globales)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @CohorteClassDocs.create.summary()
   @CohorteClassDocs.create.created()
   @CohorteClassDocs.create.badRequest()
@@ -46,9 +45,8 @@ export class CohorteClassController {
     return this.classService.create(dto);
   }
 
-  // ============================================================
   // FIND ALL
-  // ============================================================
+
   @Get()
   @AuthProtected()
   @CohorteClassDocs.findAll.summary()
@@ -57,9 +55,7 @@ export class CohorteClassController {
     return this.classService.findAll();
   }
 
-  // ============================================================
   // FIND ONE
-  // ============================================================
   @Get(':id')
   @AuthProtected()
   @CohorteClassDocs.findOne.summary()
@@ -69,12 +65,10 @@ export class CohorteClassController {
     return this.classService.findOne(id);
   }
 
-  // ============================================================
   // UPDATE
-  // ============================================================
   @Patch(':id')
   @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER) // ✅ Usar UserRole
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @CohorteClassDocs.update.summary()
   @CohorteClassDocs.update.ok()
   @CohorteClassDocs.update.badRequest()
@@ -83,12 +77,10 @@ export class CohorteClassController {
     return this.classService.update(id, dto);
   }
 
-  // ============================================================
   // REMOVE
-  // ============================================================
   @Delete(':id')
   @AuthProtected()
-  @Roles(UserRole.ADMIN) // ✅ Usar UserRole
+  @Roles(UserRole.ADMIN)
   @CohorteClassDocs.remove.summary()
   @CohorteClassDocs.remove.noContent()
   @CohorteClassDocs.remove.notFound()
@@ -96,12 +88,10 @@ export class CohorteClassController {
     return this.classService.remove(id);
   }
 
-  // ============================================================
   // MARK ATTENDANCE
-  // ============================================================
   @Post(':id/attendance')
   @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER) // ✅ Usar UserRole
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @CohorteClassDocs.attendance.markSummary()
   @CohorteClassDocs.attendance.ok()
   @CohorteClassDocs.attendance.badRequest()
@@ -114,12 +104,10 @@ export class CohorteClassController {
     return this.attendanceService.markAttendance(classId, dto, req.user.id);
   }
 
-  // ============================================================
   // GET CLASS ATTENDANCE
-  // ============================================================
   @Get(':id/attendance')
   @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER) // ✅ Usar UserRole - Solo admins y teachers pueden ver asistencia
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @CohorteClassDocs.attendance.classSummary()
   @CohorteClassDocs.attendance.ok()
   @CohorteClassDocs.attendance.notFound()
@@ -127,12 +115,10 @@ export class CohorteClassController {
     return this.attendanceService.getClassAttendance(classId);
   }
 
-  // ============================================================
   // GET STUDENT ATTENDANCE IN COHORTE
-  // ============================================================
   @Get('cohorte/:cohorteId/student/:studentId')
   @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER) // ✅ Usar UserRole - Cualquier miembro puede ver
+  @Roles(UserRole.ADMIN, UserRole.TEACHER, UserRole.MEMBER)
   @CohorteClassDocs.attendance.studentSummary()
   @CohorteClassDocs.attendance.ok()
   @CohorteClassDocs.attendance.notFound()

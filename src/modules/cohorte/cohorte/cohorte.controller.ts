@@ -17,7 +17,6 @@ import { UserRole } from '../../user/entities/user.entity';
 import { RolesGuard } from '../../auth/guard/roles.guard';
 import { CohorteRoleEnum } from './enums/cohorte.enums';
 
-// ⬅️ IMPORTAMOS TUS DOCS
 import { CohorteDocs } from '../docs/cohorte.docs';
 
 @CohorteDocs.tag()
@@ -27,9 +26,8 @@ import { CohorteDocs } from '../docs/cohorte.docs';
 export class CohorteController {
   constructor(private readonly cohorteService: CohorteService) {}
 
-  // =============================
   //        CREATE
-  // =============================
+
   @Post()
   @AuthProtected()
   @Roles(UserRole.ADMIN)
@@ -40,9 +38,8 @@ export class CohorteController {
     return this.cohorteService.create(dto);
   }
 
-  // =============================
   //        FIND ALL
-  // =============================
+
   @Get()
   @AuthProtected()
   @CohorteDocs.findAll.summary()
@@ -51,9 +48,8 @@ export class CohorteController {
     return this.cohorteService.findAll();
   }
 
-  // =============================
   //        FIND ONE
-  // =============================
+
   @Get(':id')
   @AuthProtected()
   @CohorteDocs.findOne.summary()
@@ -63,9 +59,8 @@ export class CohorteController {
     return this.cohorteService.findOne(id);
   }
 
-  // =============================
   //        UPDATE
-  // =============================
+
   @Patch(':id')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
@@ -77,9 +72,8 @@ export class CohorteController {
     return this.cohorteService.update(id, dto);
   }
 
-  // =============================
   //        DELETE
-  // =============================
+
   @Delete(':id')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
@@ -90,9 +84,8 @@ export class CohorteController {
     return this.cohorteService.remove(id);
   }
 
-  // =============================
   //     ADD MEMBER
-  // =============================
+
   @Post(':id/members/:userId')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
@@ -107,9 +100,8 @@ export class CohorteController {
     return this.cohorteService.addMember(cohorteId, userId, role);
   }
 
-  // =============================
   //     REMOVE MEMBER
-  // =============================
+
   @Delete(':id/members/:userId')
   @AuthProtected()
   @Roles(UserRole.ADMIN)

@@ -49,21 +49,19 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly userService: UserService,
   ) {}
 
-  // ============================================================
-  // 🔥 AUTENTICACIÓN SOCKET
-  // ============================================================
+  // AUTENTICACIÓN SOCKET
   async handleConnection(client: Socket): Promise<void> {
     let token: string | undefined =
       (client.handshake.auth?.token as string) || undefined;
 
     if (!token) {
-      this.logger.warn('⚠️ token no llegó — retry 200ms...');
+      this.logger.warn('token no llegó — retry 200ms...');
       await new Promise((r) => setTimeout(r, 200));
       token = (client.handshake.auth?.token as string) || undefined;
     }
 
     if (!token) {
-      this.logger.error('❌ Sin token después del retry → disconnect');
+      this.logger.error('Sin token después del retry → disconnect');
       client.disconnect();
       return;
     }
@@ -77,20 +75,16 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (client.data as UserSocketData).userId = userId;
       this.socketToUser.set(client.id, userId);
 
-      this.logger.log(
-        `✅ WebRTC conectado → user ${userId}, socket ${client.id}`,
-      );
+      this.logger.log(`WebRTC conectado → user ${userId}, socket ${client.id}`);
 
       client.emit('connected', { userId });
     } catch (err) {
-      this.logger.error('❌ Error autenticando socket', err);
+      this.logger.error('Error autenticando socket', err);
       client.disconnect();
     }
   }
 
-  // ============================================================
-  // 🔴 DESCONEXIÓN
-  // ============================================================
+  // DESCONEXIÓN
   async handleDisconnect(client: Socket): Promise<void> {
     const userId = this.socketToUser.get(client.id);
     const roomId = this.socketToRoom.get(client.id);
@@ -112,9 +106,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`🔴 Usuario ${userId} desconectado`);
   }
 
-  // ============================================================
   // 🟢 JOIN ROOM (datos completos para el front)
-  // ============================================================
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
@@ -206,9 +198,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ============================================================
   // 👋 LEAVE ROOM
-  // ============================================================
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
@@ -254,9 +244,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ============================================================
   // 📡 SIGNALING (OFFER / ANSWER / ICE)
-  // ============================================================
   @SubscribeMessage('offer')
   handleOffer(
     @ConnectedSocket() client: Socket,
@@ -321,9 +309,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ============================================================
   // 🎛 MEDIA CONTROLS
-  // ============================================================
   @SubscribeMessage('toggleAudio')
   async handleToggleAudio(
     @ConnectedSocket() client: Socket,
@@ -396,9 +382,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ============================================================
   // 💬 CHAT
-  // ============================================================
   @SubscribeMessage('joinChatRoom')
   async handleJoinChatRoom(
     @ConnectedSocket() client: Socket,
@@ -476,7 +460,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ============================================================
   private getUserSocket(userId: string): string | undefined {
     for (const [socketId, uid] of this.socketToUser.entries()) {
       if (uid === userId) return socketId;

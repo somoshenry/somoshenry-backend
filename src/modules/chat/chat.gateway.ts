@@ -70,22 +70,21 @@ export class ChatGateway
     private readonly eventDispatcher: EventDispatcherService,
   ) {}
 
-  // --------------------------
   // INIT + REDIS
-  // --------------------------
+
   afterInit(server: Server): void {
     this.server = server;
 
     const redisUrl = process.env.REDIS_URL;
 
-    // 🟡 LOCAL → SIN REDIS
+    // LOCAL → SIN REDIS
     if (!redisUrl) {
-      this.logger.warn('⚠️ Redis desactivado (modo local)');
+      this.logger.warn('Redis desactivado (modo local)');
       this.registerEventListeners();
       return;
     }
 
-    // 🟢 PRODUCCIÓN → CON REDIS
+    //PRODUCCIÓN → CON REDIS
     this.redisPub = new Redis(redisUrl, {
       maxRetriesPerRequest: 1,
       connectTimeout: 500,
@@ -104,9 +103,8 @@ export class ChatGateway
     this.logger.log('ChatGateway listo con Redis + Socket.IO');
   }
 
-  // --------------------------
   // CONEXIÓN / DESCONEXIÓN
-  // --------------------------
+
   async handleConnection(client: Socket): Promise<void> {
     const token = client.handshake.auth?.token;
 
@@ -135,9 +133,9 @@ export class ChatGateway
 
       await this.broadcastOnlineUsers();
 
-      this.logger.log(`✅ Usuario conectado: ${userId}`);
+      this.logger.log(`Usuario conectado: ${userId}`);
     } catch (err) {
-      this.logger.error('❌ Error al autenticar socket', err);
+      this.logger.error('Error al autenticar socket', err);
       client.disconnect();
     }
   }
@@ -157,7 +155,7 @@ export class ChatGateway
 
     await this.broadcastOnlineUsers();
 
-    this.logger.log(`🔴 Usuario desconectado: ${userId}`);
+    this.logger.log(`Usuario desconectado: ${userId}`);
   }
 
   private findUserIdBySocket(socketId: string): string | undefined {
@@ -172,9 +170,8 @@ export class ChatGateway
     this.server.emit('onlineUsers', users);
   }
 
-  // --------------------------
   // EVENTOS WS
-  // --------------------------
+
   @SubscribeMessage('joinConversation')
   async joinConversation(
     @ConnectedSocket() client: Socket,
@@ -301,9 +298,8 @@ export class ChatGateway
     this.server.to(groupId).emit('messageReceived', message);
   }
 
-  // --------------------------
   // EVENTOS DE DOMINIO (EventDispatcher)
-  // --------------------------
+
   private registerEventListeners(): void {
     const dispatcher = this
       .eventDispatcher as unknown as EventDispatcherWithEmitter;
@@ -384,9 +380,8 @@ export class ChatGateway
     });
   }
 
-  // --------------------------
   // MÉTODO AUXILIAR PÚBLICO
-  // --------------------------
+
   emitNewMessage(message: Record<string, any>): void {
     const conversationId = message.conversationId;
     if (!conversationId) return;

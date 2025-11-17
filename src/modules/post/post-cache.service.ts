@@ -174,7 +174,7 @@ export class PostCacheService {
         if (keys && keys.length > 0) {
           await this.redisService.del(...keys);
           this.logger.log(
-            `✅ Invalidado caché de feed (${keys.length} claves)`,
+            ` Invalidado caché de feed (${keys.length} claves)`,
           );
           return true;
         }
@@ -200,7 +200,7 @@ export class PostCacheService {
       if (keys && keys.length > 0) {
         await this.redisService.del(...keys);
         this.logger.log(
-          `✅ Invalidado caché de búsqueda (${keys.length} claves)`,
+          ` Invalidado caché de búsqueda (${keys.length} claves)`,
         );
         return true;
       }

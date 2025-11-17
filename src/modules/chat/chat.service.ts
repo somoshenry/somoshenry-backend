@@ -62,19 +62,18 @@ export class ChatService {
     private readonly cacheManager: Cache,
   ) {}
 
-  /**
-   * Obtiene todas las conversaciones del usuario con sus últimos mensajes desde MongoDB
-   */
+  // Obtiene todas las conversaciones del usuario con sus últimos mensajes desde MongoDB
+
   async getUserConversations(userId: string): Promise<any[]> {
     const cacheKey = `user:conversations:${userId}`;
     const cached = await this.cacheManager.get<any[]>(cacheKey);
 
     if (cached) {
-      console.log('⚡ Conversaciones desde Redis');
+      console.log('Conversaciones desde Redis');
       return cached;
     }
 
-    console.log('📡 Consultando conversaciones y mensajes desde MongoDB...');
+    console.log('Consultando conversaciones y mensajes desde MongoDB...');
 
     // Traer conversaciones (solo metadata, sin mensajes de PostgreSQL)
     const conversations = await this.conversationRepo
@@ -98,7 +97,7 @@ export class ChatService {
             messages,
           };
         } catch (error) {
-          console.error(`❌ Error cargando mensajes para ${conv.id}:`, error);
+          console.error(`Error cargando mensajes para ${conv.id}:`, error);
           return {
             ...conv,
             messages: [],
@@ -108,14 +107,13 @@ export class ChatService {
     );
 
     await this.cacheManager.set(cacheKey, conversationsWithMessages, 30);
-    console.log('💾 Conversaciones cacheadas con mensajes de MongoDB');
+    console.log('Conversaciones cacheadas con mensajes de MongoDB');
 
     return conversationsWithMessages;
   }
 
-  /**
-   * Abre o crea una conversación 1-a-1
-   */
+  // Abre o crea una conversación 1-a-1
+
   async openConversation(
     userId: string,
     peerUserId: string,
@@ -154,9 +152,8 @@ export class ChatService {
     return saved;
   }
 
-  /**
-   * Elimina una conversación y todos sus mensajes de MongoDB
-   */
+  //Elimina una conversación y todos sus mensajes de MongoDB
+
   async deleteConversation(
     conversationId: string,
     userId: string,
@@ -184,9 +181,9 @@ export class ChatService {
         await this.messageMongoService.deleteMessagesByConversation(
           conversationId,
         );
-      console.log(`🗑️ ${deleted} mensajes eliminados de MongoDB`);
+      console.log(`${deleted} mensajes eliminados de MongoDB`);
     } catch (error) {
-      console.error('❌ Error eliminando mensajes de MongoDB:', error);
+      console.error('Error eliminando mensajes de MongoDB:', error);
     }
 
     // Eliminar conversación de PostgreSQL
@@ -205,9 +202,8 @@ export class ChatService {
     };
   }
 
-  /**
-   * Obtiene mensajes paginados de una conversación desde MongoDB
-   */
+  //Obtiene mensajes paginados de una conversación desde MongoDB
+
   async getMessages(
     conversationId: string,
     page = 1,
@@ -220,11 +216,11 @@ export class ChatService {
     }>(cacheKey);
 
     if (cached) {
-      console.log('⚡ Mensajes desde Redis');
+      console.log('Mensajes desde Redis');
       return cached;
     }
 
-    console.log('📡 Consultando mensajes desde MongoDB...');
+    console.log('Consultando mensajes desde MongoDB...');
 
     const total = await this.messageMongoService.countMessages(conversationId);
     const messagesDesc = await this.messageMongoService.getMessagesPaginated(
@@ -250,9 +246,8 @@ export class ChatService {
     return response;
   }
 
-  /**
-   * Envía un mensaje de texto (MongoDB)
-   */
+  // Envía un mensaje de texto (MongoDB)
+
   async sendMessage(
     senderId: string,
     dto: CreateMessageDto,
@@ -310,18 +305,17 @@ export class ChatService {
     return saved;
   }
 
-  /**
-   * Marca un mensaje como leído en MongoDB
-   */
+  // Marca un mensaje como leído en MongoDB
+
   async markMessageAsRead(messageId: string): Promise<any> {
     try {
       const updated = await this.messageMongoService.markAsRead(messageId);
       if (updated) {
-        console.log('✅ Mensaje marcado como leído');
+        console.log('Mensaje marcado como leído');
         return updated;
       }
     } catch (error) {
-      console.error('❌ Error marcando mensaje como leído:', error);
+      console.error('Error marcando mensaje como leído:', error);
     }
 
     return {
@@ -331,9 +325,8 @@ export class ChatService {
     };
   }
 
-  /**
-   * Obtiene una conversación por ID
-   */
+  // Obtiene una conversación por ID
+
   async getConversationById(id: string) {
     return this.conversationRepo.findOne({
       where: { id },
@@ -341,10 +334,9 @@ export class ChatService {
     });
   }
 
-  /**
-   * Envía un mensaje con archivos (imágenes, videos, etc.)
-   * TODO: Migrar a MongoDB cuando el frontend lo use
-   */
+  //  Envía un mensaje con archivos (imágenes, videos, etc.)
+  //  TODO: Migrar a MongoDB cuando el frontend lo use
+
   async sendMessageWithFiles(
     senderId: string,
     dto: SendMessageWithFilesDto,
@@ -445,11 +437,10 @@ export class ChatService {
     return saved;
   }
 
-  // ==================== GRUPOS ====================
+  // GRUPOS
 
-  /**
-   * Crea un grupo de chat
-   */
+  //  Crea un grupo de chat
+
   async createGroup(creatorId: string, dto: CreateGroupDto) {
     const creator = await this.userRepo.findOne({ where: { id: creatorId } });
     if (!creator) throw new NotFoundException('Creador no encontrado');
@@ -499,9 +490,8 @@ export class ChatService {
     return { ...conversation, participants };
   }
 
-  /**
-   * Envía un mensaje a un grupo (MongoDB)
-   */
+  // Envía un mensaje a un grupo (MongoDB)
+
   async sendGroupMessage(
     senderId: string,
     groupId: string,
@@ -566,9 +556,8 @@ export class ChatService {
     return saved;
   }
 
-  /**
-   * Obtiene los grupos del usuario
-   */
+  // Obtiene los grupos del usuario
+
   async getUserGroups(userId: string) {
     const groups = await this.conversationRepo
       .createQueryBuilder('conversation')
@@ -788,9 +777,9 @@ export class ChatService {
     try {
       const deleted =
         await this.messageMongoService.deleteMessagesByConversation(groupId);
-      console.log(`🗑️ ${deleted} mensajes del grupo eliminados`);
+      console.log(`${deleted} mensajes del grupo eliminados`);
     } catch (error) {
-      console.error('❌ Error eliminando mensajes del grupo:', error);
+      console.error('Error eliminando mensajes del grupo:', error);
     }
 
     await this.conversationRepo.remove(convo);

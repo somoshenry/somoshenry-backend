@@ -5,17 +5,20 @@ import {
   SubscriptionPlan,
   SubscriptionStatus,
 } from '../entities/subscription.entity';
-import { Repository } from 'typeorm';
+import { Between, LessThan, Repository } from 'typeorm';
 import { DateUtil } from 'src/common/utils/date.util';
 import { PostService } from 'src/modules/post/post.service';
 import { UserService } from 'src/modules/user/user.service';
 import { UserRole } from 'src/modules/user/entities/user.entity';
+import { Payment } from '../entities/payment.entity';
 
 @Injectable()
 export class SubscriptionService {
   constructor(
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(Payment)
+    private readonly paymentRepository: Repository<Payment>,
     private readonly postsService: PostService,
     private readonly userService: UserService,
   ) {}
@@ -199,6 +202,7 @@ export class SubscriptionService {
       throw new NotFoundException('Suscripción no encontrada');
     }
 
+    subscription.status = SubscriptionStatus.CANCELLED;
     subscription.autoRenew = false;
     subscription.cancelledAt = DateUtil.nowUTC();
     subscription.cancellationReason = reason || 'Sin especificar';
@@ -209,6 +213,9 @@ export class SubscriptionService {
       message:
         'Suscripción cancelada. Seguirás teniendo acceso hasta el fin del período.',
       endsAt: subscription.endDate,
+      status: subscription.status,
+      cancelledAt: subscription.cancelledAt,
+      cancellationReason: subscription.cancellationReason,
     };
   }
 
@@ -224,6 +231,7 @@ export class SubscriptionService {
       throw new NotFoundException('Suscripción no encontrada');
     }
 
+    subscription.status = SubscriptionStatus.ACTIVE;
     subscription.autoRenew = true;
     subscription.cancelledAt = null;
     subscription.cancellationReason = null;
@@ -232,7 +240,146 @@ export class SubscriptionService {
 
     return {
       message: 'Suscripción reactivada',
+      status: subscription.status,
       nextBillingDate: subscription.nextBillingDate,
     };
+  }
+
+  // ============================================
+  // ADMIN
+  // ============================================
+
+  // ============================================
+  // DISTRIBUCIÓN POR PLAN
+  // ============================================
+  async getSubscriptionsByPlan() {
+    const result = await this.subscriptionRepository
+      .createQueryBuilder('sub')
+      .select('sub.plan', 'plan')
+      .addSelect('COUNT(*)', 'count')
+      .where('sub.status = :status', { status: SubscriptionStatus.ACTIVE })
+      .groupBy('sub.plan')
+      .getRawMany();
+
+    return result.map((r) => ({
+      plan: r.plan,
+      count: parseInt(r.count),
+    }));
+  }
+
+  // ============================================
+  // CRECIMIENTO DE SUSCRIPCIONES
+  // ============================================
+  async getSubscriptionGrowth(months: number) {
+    const startDate = DateUtil.addMonth(DateUtil.nowUTC(), -months);
+
+    const result = await this.subscriptionRepository
+      .createQueryBuilder('sub')
+      .select("DATE_TRUNC('month', sub.createdAt)", 'month')
+      .addSelect('sub.plan', 'plan')
+      .addSelect('COUNT(*)', 'count')
+      .where('sub.createdAt >= :startDate', { startDate })
+      .groupBy('month, sub.plan')
+      .orderBy('month', 'ASC')
+      .getRawMany();
+
+    return result.map((r) => ({
+      month: r.month,
+      plan: r.plan,
+      count: parseInt(r.count),
+    }));
+  }
+
+  // ============================================
+  // PRÓXIMAS RENOVACIONES
+  // ============================================
+  async getUpcomingRenewals(days: number) {
+    const now = DateUtil.nowUTC();
+    const future = DateUtil.addDays(now, days);
+
+    return await this.subscriptionRepository.find({
+      where: {
+        status: SubscriptionStatus.ACTIVE,
+        autoRenew: true,
+        nextBillingDate: Between(now, future),
+      },
+      relations: ['user'],
+      order: { nextBillingDate: 'ASC' },
+    });
+  }
+
+  // ============================================
+  // TASA DE CANCELACIÓN (CHURN RATE)
+  // ============================================
+  async getChurnRate() {
+    const monthStart = DateUtil.getStartOfMonth();
+    const now = DateUtil.nowUTC();
+
+    // Total al inicio del mes
+    const startTotal = await this.subscriptionRepository.count({
+      where: {
+        createdAt: LessThan(monthStart),
+        status: SubscriptionStatus.ACTIVE,
+      },
+    });
+
+    // Cancelaciones del mes
+    const cancelled = await this.subscriptionRepository.count({
+      where: {
+        cancelledAt: Between(monthStart, now),
+      },
+    });
+
+    const churnRate = startTotal > 0 ? (cancelled / startTotal) * 100 : 0;
+
+    return {
+      total: startTotal,
+      cancelled,
+      churnRate: parseFloat(churnRate.toFixed(2)),
+    };
+  }
+
+  // ============================================
+  // LIFETIME VALUE (LTV) PROMEDIO Y POR USUARIO
+  // ============================================
+  async getLTV(): Promise<{
+    averageLTV: number;
+    perUser: { userId: string; ltv: number }[];
+  }> {
+    const rows = await this.paymentRepository
+      .createQueryBuilder('p')
+      .select('p.userId', 'userId')
+      .addSelect('SUM(p.amount)', 'total')
+      .groupBy('p.userId')
+      .getRawMany();
+
+    const perUser = rows.map((r) => ({
+      userId: r.userId,
+      ltv: parseFloat(r.total) || 0,
+    }));
+
+    const averageLTV =
+      perUser.length > 0
+        ? perUser.reduce((s, u) => s + u.ltv, 0) / perUser.length
+        : 0;
+
+    return { averageLTV: parseFloat(averageLTV.toFixed(2)), perUser };
+  }
+
+  // ============================================
+  // USUARIOS POR PLAN (CONTEO POR PLAN)
+  // ============================================
+  async getUsersByPlan() {
+    const result = await this.subscriptionRepository
+      .createQueryBuilder('s')
+      .select('s.plan', 'plan')
+      .addSelect('COUNT(DISTINCT s.userId)', 'count')
+      .groupBy('s.plan')
+      .getRawMany();
+
+    return result.map((r) => ({
+      plan: r.plan,
+      count: parseInt(r.count, 10),
+    }));
   }
 }

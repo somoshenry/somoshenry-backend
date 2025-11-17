@@ -204,8 +204,8 @@ export class MercadoPagoService {
 
     // Fechas UTC
     const now = DateUtil.nowUTC();
-    const nextDay = DateUtil.addDays(now, 2); // Plan expira en 2 días
-    const nextBillingDate = DateUtil.addDays(now, 1); // Intento de cobro en 1 día
+    const nextMonth = DateUtil.addMonth(now, 1); // Plan válido por 1 mes
+    const nextBillingDate = DateUtil.addDays(nextMonth, -1); // Intento de cobro 1 día antes de acabar el mes
 
     // =============================
     // 4) Crear el registro de pago
@@ -225,7 +225,7 @@ export class MercadoPagoService {
       paymentType: payment_type_id,
 
       periodStart: now,
-      periodEnd: nextDay,
+      periodEnd: nextMonth,
       billingDate: nextBillingDate,
 
       description: `Pago de suscripción - ${purchasedPlan}`,
@@ -249,7 +249,7 @@ export class MercadoPagoService {
 
     subscription.startDate = now;
     subscription.updatedAt = now;
-    subscription.endDate = nextDay;
+    subscription.endDate = nextMonth;
     subscription.nextBillingDate = nextBillingDate;
     subscription.status = SubscriptionStatus.ACTIVE;
 

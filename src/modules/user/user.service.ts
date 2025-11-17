@@ -10,12 +10,21 @@ import { User, UserStatus, UserRole } from './entities/user.entity';
 import randomatic from 'randomatic';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FilterUsersDto } from './dto/filter-users.dto';
+import {
+  Subscription,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '../subscription/entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
+    private notificationService: NotificationsService,
   ) {}
 
   async create(data: Partial<User>): Promise<User> {
@@ -37,8 +46,36 @@ export class UserService {
       }
     }
 
-    const userCreated = this.userRepository.create(data);
-    return await this.userRepository.save(userCreated);
+    // Crear usuario
+    const userCreated = await this.userRepository.save(
+      this.userRepository.create(data),
+    );
+
+    // Solo crear suscripción para usuarios tipo MEMBER
+    if (userCreated.role === UserRole.MEMBER) {
+      let existing = await this.subscriptionRepository.findOne({
+        where: { userId: userCreated.id },
+      });
+
+      if (!existing) {
+        const subscription = this.subscriptionRepository.create({
+          userId: userCreated.id,
+          plan: SubscriptionPlan.BRONCE,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          endDate: null,
+        });
+
+        await this.subscriptionRepository.save(subscription);
+        console.log('🆕 Suscripción creada para usuario ID:', userCreated.id);
+      }
+    }
+    console.log('🆕 Usuario creado →', userCreated.id);
+    await this.notificationService.sendWelcomeNotification(userCreated.email);
+    console.log('📧 Notificación de bienvenida enviada a:', userCreated.email);
+
+    // Devolver usuario final
+    return userCreated;
   }
 
   async findAll(
@@ -59,6 +96,30 @@ export class UserService {
     });
 
     return { data, total };
+  }
+
+  //algo de webrtc
+  async findById(id: string) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return user;
+  }
+
+  async findById_ForWebRTC(id: string) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      select: ['id', 'name', 'lastName', 'profilePicture'],
+    });
+
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    return user;
   }
 
   // async findAllWithFilters(filterDto: FilterUsersDto) {
@@ -144,12 +205,20 @@ export class UserService {
   //   };
   // }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string): Promise<any> {
     const user = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },
     });
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { userId: id },
+    });
     if (!user) throw new NotFoundException('Usuario no encontrado');
-    return user;
+    return {
+      user,
+      plan: subscription?.plan,
+      endDate: subscription?.endDate,
+      nextBilling: subscription?.nextBillingDate,
+    };
   }
 
   async findOneByEmail(email: string): Promise<User> {

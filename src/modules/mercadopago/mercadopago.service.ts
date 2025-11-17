@@ -138,6 +138,25 @@ export class MercadoPagoService {
     console.log(`✅ PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
 
     // =============================
+    // EXTRAER PLAN DESDE EL ITEM
+    // =============================
+    let purchasedPlan: string | null = null;
+    try {
+      // MP pone los ítems en "additional_info.items" --> "paymentDetails.additional_info.items[0].title"
+      const items = (paymentDetails as any)?.additional_info?.items;
+      if (items && items.length > 0) {
+        purchasedPlan = items[0].title; // Ej: "PLATA"
+      }
+    } catch (err) {
+      console.warn('No se pudo leer items desde paymentDetails');
+    }
+    // fallback: BRONCE
+    if (!purchasedPlan) {
+      purchasedPlan = 'BRONCE';
+    }
+    console.log('🛒 Plan adquirido:', purchasedPlan);
+
+    // =============================
     // 1) Obtener userId desde external_reference
     // =============================
     const userId = external_reference;
@@ -209,7 +228,7 @@ export class MercadoPagoService {
       periodEnd: nextDay,
       billingDate: nextBillingDate,
 
-      description: `Pago de suscripción - ${subscription.plan}`,
+      description: `Pago de suscripción - ${purchasedPlan}`,
       paidAt: now,
     });
 
@@ -222,6 +241,12 @@ export class MercadoPagoService {
     // =============================
     // 5) Actualizar la subscripción
     // =============================
+    const validPlans = ['PLATA', 'ORO', 'BRONCE']; // ACTUALIZAR PLAN SI ES PLATA/ORO/BRONCE
+
+    if (validPlans.includes(purchasedPlan)) {
+      subscription.plan = purchasedPlan as any;
+    }
+
     subscription.startDate = now;
     subscription.updatedAt = now;
     subscription.endDate = nextDay;
@@ -229,9 +254,7 @@ export class MercadoPagoService {
 
     await this.subscriptionRepository.save(subscription);
 
-    console.log(
-      `🔄 Subscripción renovada hasta ${nextBillingDate.toISOString()}`,
-    );
+    console.log(`Subscripción actualizada → Plan: ${subscription.plan}`);
   }
 
   private async handleRejectedPayment(paymentDetails: PaymentResponse) {

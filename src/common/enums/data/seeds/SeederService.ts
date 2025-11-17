@@ -92,8 +92,8 @@ export class SeederService {
     ]);
 
     console.log(
-      `✅ Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`,
+      ` Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`,
     );
-    console.log('✅ Mockeo completado.');
+    console.log(' Mockeo completado.');
   }
 }

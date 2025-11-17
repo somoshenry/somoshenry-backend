@@ -73,7 +73,7 @@ export class SubscriptionCron {
 
         this.logger.log(`💳 Renovación exitosa: ${subscription.id}`);
       } catch (error) {
-        this.logger.error(`❌ Error renovando ${subscription.id}:`, error);
+        this.logger.error(` Error renovando ${subscription.id}:`, error);
 
         // TODO: Enviar email notificando fallo de pago
       }

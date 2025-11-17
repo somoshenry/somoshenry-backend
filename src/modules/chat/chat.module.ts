@@ -33,7 +33,7 @@ import { GroupAdminGuard } from './guards/group-admin.guard';
       Conversation,
       ConversationParticipant,
       User,
-      // ❌ YA NO: Message, MessageAttachment (ahora en MongoDB)
+      // YA NO: Message, MessageAttachment (ahora en MongoDB)
     ]),
 
     // MongoDB - Mensajes

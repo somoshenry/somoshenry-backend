@@ -32,15 +32,12 @@ export class WebRTCService {
         maxRetriesPerRequest: 1,
         connectTimeout: 500,
       });
-      this.logger.log('✅ WebRTC Service conectado a Redis');
+      this.logger.log('WebRTC Service conectado a Redis');
     } else {
-      this.logger.warn('⚠️ WebRTC Service sin Redis (modo local)');
+      this.logger.warn('WebRTC Service sin Redis (modo local)');
     }
   }
 
-  // ============================================================
-  // 🔹 AUTO-CREATE ROOM (NECESARIO PARA QUE 2 USERS SE VEAN)
-  // ============================================================
   async ensureRoomExists(
     roomId: string,
     createdBy: string,
@@ -55,7 +52,7 @@ export class WebRTCService {
       };
 
       const newRoom = await this.createRoom(dto, createdBy);
-      this.logger.log(`📌 Sala creada automáticamente: ${roomId}`);
+      this.logger.log(`Sala creada automáticamente: ${roomId}`);
 
       // Override ID for predictable rooms
       newRoom.id = roomId;
@@ -67,9 +64,6 @@ export class WebRTCService {
     }
   }
 
-  // ============================================================
-  //   CRUD DE ROOMS
-  // ============================================================
   async createRoom(dto: CreateRoomDto, createdBy: string): Promise<RoomEntity> {
     const roomId = uuidv4();
 
@@ -90,7 +84,7 @@ export class WebRTCService {
       await this.saveRoomToRedis(room);
     }
 
-    this.logger.log(`🎥 Room creada: ${roomId} - ${dto.name}`);
+    this.logger.log(`Room creada: ${roomId} - ${dto.name}`);
     return room;
   }
 
@@ -136,17 +130,14 @@ export class WebRTCService {
     // Eliminar mensajes de MongoDB
     try {
       await this.roomChatService.deleteRoomMessages(roomId);
-      this.logger.log(`🗑️ Mensajes de chat de room ${roomId} eliminados`);
+      this.logger.log(`🗑 Mensajes de chat de room ${roomId} eliminados`);
     } catch (error) {
       this.logger.error('Error eliminando mensajes de room:', error);
     }
 
-    this.logger.log(`🗑️ Room eliminada: ${roomId}`);
+    this.logger.log(`🗑 Room eliminada: ${roomId}`);
   }
 
-  // ============================================================
-  //   PARTICIPANTES
-  // ============================================================
   async addParticipant(
     roomId: string,
     userId: string,
@@ -154,7 +145,7 @@ export class WebRTCService {
     audio = true,
     video = true,
   ): Promise<Participant> {
-    // 🔥 FIX: si la sala no existe → crearla
+    // si la sala no existe → crearla
     await this.ensureRoomExists(roomId, userId);
 
     const room = await this.getRoom(roomId);
@@ -173,7 +164,7 @@ export class WebRTCService {
 
         if (this.redis) await this.saveRoomToRedis(room);
 
-        this.logger.log(`♻️ Usuario ${userId} reconectado en room ${roomId}`);
+        this.logger.log(`Usuario ${userId} reconectado en room ${roomId}`);
         return existing;
       }
 
@@ -193,7 +184,7 @@ export class WebRTCService {
 
     if (this.redis) await this.saveRoomToRedis(room);
 
-    this.logger.log(`➕ Participante ${userId} se unió a room ${roomId}`);
+    this.logger.log(`Participante ${userId} se unió a room ${roomId}`);
     return participant;
   }
 
@@ -207,7 +198,7 @@ export class WebRTCService {
 
     if (this.redis) await this.saveRoomToRedis(room);
 
-    this.logger.log(`➖ Participante ${userId} salió de room ${roomId}`);
+    this.logger.log(`Participante ${userId} salió de room ${roomId}`);
   }
 
   async getParticipants(roomId: string): Promise<Participant[]> {
@@ -238,9 +229,6 @@ export class WebRTCService {
     return participant;
   }
 
-  // ============================================================
-  //   REDIS
-  // ============================================================
   private async saveRoomToRedis(room: RoomEntity): Promise<void> {
     if (!this.redis) return;
 

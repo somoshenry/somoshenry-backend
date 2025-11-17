@@ -19,9 +19,7 @@ export class PaymentService {
     REFUNDED: 'refunded',
   } as const;
 
-  // ============================================
   // HISTORIAL DE PAGOS DE UN USUARIO
-  // ============================================
   async getUserPayments(userId: string, page: number, limit: number) {
     const skip = (page - 1) * limit;
 
@@ -43,9 +41,7 @@ export class PaymentService {
     };
   }
 
-  // ============================================
   // RECIBO DE PAGO
-  // ============================================
   async getPaymentReceipt(userId: string, paymentId: string) {
     const payment = await this.paymentRepository.findOne({
       where: { id: paymentId, userId },
@@ -76,9 +72,7 @@ export class PaymentService {
     };
   }
 
-  // ============================================
   // ESTADÍSTICAS DE PAGOS DE UN USUARIO
-  // ============================================
   async getUserPaymentStats(userId: string) {
     const payments = await this.paymentRepository.find({
       where: { userId },
@@ -182,13 +176,9 @@ export class PaymentService {
     };
   }
 
-  // ============================================
   // ADMIN
-  // ============================================
 
-  // ============================================
   // ESTADÍSTICAS GENERALES
-  // ============================================
   async getGeneralStats() {
     const now = DateUtil.nowUTC();
     const monthStart = DateUtil.getStartOfMonth();
@@ -249,9 +239,7 @@ export class PaymentService {
     };
   }
 
-  // ============================================
   // INGRESOS POR PERÍODO
-  // ============================================
   async getRevenue(
     period: 'day' | 'week' | 'month' | 'year',
     startDate?: string,
@@ -282,9 +270,7 @@ export class PaymentService {
     }));
   }
 
-  // ============================================
   // PAGOS RECIENTES
-  // ============================================
   async getRecentPayments(page: number, limit: number) {
     const skip = (page - 1) * limit;
 
@@ -306,9 +292,7 @@ export class PaymentService {
     };
   }
 
-  // ============================================
   // PAGOS FALLIDOS
-  // ============================================
   async getFailedPayments() {
     const monthStart = DateUtil.getStartOfMonth();
 

@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager'; // 👈 import type
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class AppService {
@@ -10,7 +10,6 @@ export class AppService {
     await this.cacheManager.set('prueba', 'Funciona Redis!', 10);
     const value =
       (await this.cacheManager.get<string>('prueba')) || 'sin valor';
-    console.log('🧠 Valor guardado en Redis:', value);
     return `Redis está funcionando: ${value}`;
   }
 }

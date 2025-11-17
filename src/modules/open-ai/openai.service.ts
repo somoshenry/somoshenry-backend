@@ -34,7 +34,7 @@ export class OpenAIService {
       const esFlagged = moderacion.results[0].flagged;
       return esFlagged ? 'inapropiado' : 'apropiado';
     } catch (error) {
-      console.error('❌ Error al clasificar texto:', error);
+      console.error(' Error al clasificar texto:', error);
       throw error;
     }
   }
@@ -44,7 +44,7 @@ export class OpenAIService {
       const clasificacion = await this.clasificarTexto(texto);
       return clasificacion === 'inapropiado';
     } catch (error) {
-      console.error('❌ Error al procesar texto (isInappropriate):', error);
+      console.error(' Error al procesar texto (isInappropriate):', error);
       throw error;
     }
   }

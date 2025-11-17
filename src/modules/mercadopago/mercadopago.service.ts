@@ -64,47 +64,45 @@ export class MercadoPagoService {
     if (!resourceId && body.resource) {
       const parts = body.resource.split('/');
       resourceId = parts[parts.length - 1].toString();
-      console.log(`✅ ID extraído de 'resource': ${resourceId}`);
+      console.log(`ID extraído de 'resource': ${resourceId}`);
     }
 
     if (!resourceId) {
       console.warn(
-        '⚠️ No se pudo obtener el ID del recurso. Terminando procesamiento',
+        'No se pudo obtener el ID del recurso. Terminando procesamiento',
       );
       return { success: true, received: true };
     }
-    console.log(
-      `🔔 Webhook recibido. Tema: ${topic}, Recurso ID: ${resourceId}`,
-    );
+    console.log(`Webhook recibido. Tema: ${topic}, Recurso ID: ${resourceId}`);
     if (topic === 'payment') {
       await this.processPaymentNotification(resourceId);
     }
     if (topic === 'merchant_order') {
-      console.log('📦 Procesando ORDEN DE COMERCIO (Merchant Order)');
+      console.log('Procesando ORDEN DE COMERCIO (Merchant Order)');
       const orderDetails =
         await this.percadopagoConnector.getMerchantOrderDetails(resourceId);
 
       if (orderDetails.payments && orderDetails.payments.length > 0) {
         const paymentId = orderDetails.payments[0].id as number;
         const paymentIdString = paymentId.toString();
-        console.log(`✅ Pago asociado encontrado: ${paymentId}`);
+        console.log(`Pago asociado encontrado: ${paymentId}`);
         const paymentDetails =
           await this.percadopagoConnector.getPaymentDetails(paymentIdString);
-        console.log('💰 Detalles del pago obtenidos:', paymentDetails);
+        console.log('Detalles del pago obtenidos:', paymentDetails);
       }
     }
 
     return { success: true, received: true };
   }
   catch(error) {
-    console.error('❌ Error fatal en Webhook:', error);
+    console.error(' Error fatal en Webhook:', error);
     return { success: false, error: 'Internal error', received: true };
   }
 
   private async processPaymentNotification(paymentId: string) {
     const paymentDetails =
       await this.percadopagoConnector.getPaymentDetails(paymentId);
-    console.log('💰 Detalles del pago obtenidos:', paymentDetails);
+    console.log('Detalles del pago obtenidos:', paymentDetails);
     const { status } = paymentDetails;
     if (status === 'approved') {
       await this.handleApprovedPayment(paymentDetails);
@@ -135,11 +133,10 @@ export class MercadoPagoService {
     // }
     // Fin borrar
 
-    console.log(`✅ PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
+    console.log(`PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
 
-    // =============================
     // EXTRAER PLAN DESDE EL ITEM
-    // =============================
+
     let purchasedPlan: string | null = null;
     try {
       // MP pone los ítems en "additional_info.items" --> "paymentDetails.additional_info.items[0].title"
@@ -154,45 +151,42 @@ export class MercadoPagoService {
     if (!purchasedPlan) {
       purchasedPlan = 'BRONCE';
     }
-    console.log('🛒 Plan adquirido:', purchasedPlan);
+    console.log('Plan adquirido:', purchasedPlan);
 
-    // =============================
     // 1) Obtener userId desde external_reference
-    // =============================
+
     const userId = external_reference;
 
     if (!userId) {
-      console.error('❌ No vino external_reference en el pago');
+      console.error('No vino external_reference en el pago');
       return;
     }
 
-    // =============================
     // 2) Obtener al usuario
-    // =============================
+
     const user = await this.userRepository.findOne({
       where: { id: userId },
       // where: { email: payer.email }, // Borrar si se envía external_reference
     });
 
     if (!user) {
-      console.error('❌ No existe el usuario con id:', userId);
+      console.error(' No existe el usuario con id:', userId);
       // console.error(
       //   // Borrar este console.error si se envía external_reference
-      //   '❌ No existe un usuario con el email del pago:',
+      //   ' No existe un usuario con el email del pago:',
       //   payer.email,
       // );
       return;
     }
 
-    // =============================
     // 3) Obtener su subscripción activa
-    // =============================
+
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId: user.id },
     });
 
     if (!subscription) {
-      console.error(`❌ El usuario ${user.id} no tiene subscripción`);
+      console.error(`El usuario ${user.id} no tiene subscripción`);
       return;
     }
     console.log('######################################################');
@@ -200,16 +194,15 @@ export class MercadoPagoService {
     console.log('######################################################');
     console.log('######################################################');
     await this.notificationService.sendPaymentSuccessNotification(user.email);
-    console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
+    console.log(`Notificación de pago exitoso enviada a ${user.email}`);
 
     // Fechas UTC
     const now = DateUtil.nowUTC();
     const nextMonth = DateUtil.addMonth(now, 1); // Plan válido por 1 mes
     const nextBillingDate = DateUtil.addDays(nextMonth, -1); // Intento de cobro 1 día antes de acabar el mes
 
-    // =============================
     // 4) Crear el registro de pago
-    // =============================
+
     const paymentRecord = this.paymentRepository.create({
       userId: user.id,
       subscriptionId: subscription.id,
@@ -238,9 +231,8 @@ export class MercadoPagoService {
 
     console.log('Payment guardado en BD →', paymentRecord.id);
 
-    // =============================
     // 5) Actualizar la subscripción
-    // =============================
+
     const validPlans = ['PLATA', 'ORO', 'BRONCE']; // ACTUALIZAR PLAN SI ES PLATA/ORO/BRONCE
 
     if (validPlans.includes(purchasedPlan)) {
@@ -282,12 +274,11 @@ export class MercadoPagoService {
     // }
     // Fin borrar
 
-    console.error(`❌ PAGO RECHAZADO ID: ${id}. Motivo: ${status_detail}`);
+    console.error(` PAGO RECHAZADO ID: ${id}. Motivo: ${status_detail}`);
 
     const userId = external_reference;
 
-    if (!userId)
-      return console.error('❌ No vino external_reference en Reject');
+    if (!userId) return console.error(' No vino external_reference en Reject');
 
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -295,10 +286,10 @@ export class MercadoPagoService {
     });
 
     if (!user) {
-      console.error('❌ No existe el usuario con id:', userId);
+      console.error(' No existe el usuario con id:', userId);
       // console.error(
       //   // Borrar este console.error si se envía external_reference
-      //   '❌ No existe un usuario con el email del pago:',
+      //   ' No existe un usuario con el email del pago:',
       //   payer.email,
       // );
       return;
@@ -308,13 +299,13 @@ export class MercadoPagoService {
     console.log('######################################################');
     console.log('######################################################');
     await this.notificationService.sendPaymentRejectedNotification(user.email);
-    console.log(`📧 Notificación de pago rechazado enviada a ${user.email}`);
+    console.log(`Notificación de pago rechazado enviada a ${user.email}`);
 
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId: user.id },
     });
     if (!subscription)
-      return console.error(`❌ El usuario ${user.id} no tiene subscripción`);
+      return console.error(`El usuario ${user.id} no tiene subscripción`);
 
     const now = DateUtil.nowUTC();
 
@@ -345,7 +336,7 @@ export class MercadoPagoService {
       subscription.endDate = now;
 
       await this.subscriptionRepository.save(subscription);
-      console.log('❌ Suscripción expirada por rechazo de pago');
+      console.log('Suscripción expirada por rechazo de pago');
     }
   }
 
@@ -371,12 +362,12 @@ export class MercadoPagoService {
     // }
     // Fin borrar
 
-    console.warn(`⚠️ PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
+    console.warn(` PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
 
     const userId = external_reference;
 
     if (!userId)
-      return console.error('❌ No vino external_reference en pendiente');
+      return console.error(' No vino external_reference en pendiente');
 
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -384,10 +375,10 @@ export class MercadoPagoService {
     });
 
     if (!user) {
-      console.error('❌ No existe el usuario con id:', userId);
+      console.error(' No existe el usuario con id:', userId);
       // console.error(
       //   // Borrar este console.error si se envía external_reference
-      //   '❌ No existe un usuario con el email del pago:',
+      //   ' No existe un usuario con el email del pago:',
       //   payer.email,
       // );
       return;
@@ -397,7 +388,7 @@ export class MercadoPagoService {
       where: { userId: user.id },
     });
     if (!subscription)
-      return console.error(`❌ El usuario ${user.id} no tiene subscripción`);
+      return console.error(` El usuario ${user.id} no tiene subscripción`);
 
     const now = DateUtil.nowUTC();
 
@@ -426,6 +417,6 @@ export class MercadoPagoService {
       conflictPaths: ['mercadoPagoId'],
     });
 
-    console.log('🕒 Pago pendiente registrado en BD.');
+    console.log('Pago pendiente registrado en BD.');
   }
 }

@@ -52,7 +52,7 @@ export class MercadopagoConnector {
     try {
       return await this.payment.get({ id: paymentId });
     } catch (error) {
-      console.error('❌ Error obteniendo detalles del pago:', error);
+      console.error(' Error obteniendo detalles del pago:', error);
       throw error;
     }
   }
@@ -61,12 +61,12 @@ export class MercadopagoConnector {
     orderId: string,
   ): Promise<MerchantOrderResponse> {
     try {
-      console.log(`🔍 Obteniendo detalles de la orden para ID: ${orderId}`);
+      console.log(`Obteniendo detalles de la orden para ID: ${orderId}`);
       const order = await this.merchantOrders.get({ merchantOrderId: orderId });
-      console.log('✅ Detalles de la orden obtenidos:', order);
+      console.log('Detalles de la orden obtenidos:', order);
       return order;
     } catch (error) {
-      console.error('❌ Error obteniendo detalles de la orden:', error);
+      console.error('Error obteniendo detalles de la orden:', error);
       throw error;
     }
   }

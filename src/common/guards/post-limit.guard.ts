@@ -43,14 +43,14 @@
 //       throw new UnauthorizedException('Token inválido o expirado');
 //     }
 
-//     // ✅ Cargar usuario en la request (para que otros decorators o guards lo usen)
+//     // Cargar usuario en la request (para que otros decorators o guards lo usen)
 //     (request as any).user = {
 //       id: payload.id,
 //       email: payload.email,
 //       role: payload.role,
 //     };
 
-//     // ✅ Verificar si el usuario puede publicar según su plan
+//     // Verificar si el usuario puede publicar según su plan
 //     const canPost: boolean = await this.subscriptionService.canUserPost(
 //       payload.id,
 //     );

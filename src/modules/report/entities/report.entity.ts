@@ -75,7 +75,7 @@ export class Report {
   @Column({ type: 'enum', enum: ReportStatus, default: ReportStatus.PENDING })
   status: ReportStatus;
 
-  // 🧑‍⚖️ REVIEW
+  // 🧑‍⚖ REVIEW
   @Column({ type: 'uuid', nullable: true })
   reviewedBy?: string | null;
 

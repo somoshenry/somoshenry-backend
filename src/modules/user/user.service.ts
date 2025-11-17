@@ -67,12 +67,12 @@ export class UserService {
         });
 
         await this.subscriptionRepository.save(subscription);
-        console.log('🆕 Suscripción creada para usuario ID:', userCreated.id);
+        console.log('Suscripción creada para usuario ID:', userCreated.id);
       }
     }
-    console.log('🆕 Usuario creado →', userCreated.id);
+    console.log('Usuario creado →', userCreated.id);
     await this.notificationService.sendWelcomeNotification(userCreated.email);
-    console.log('📧 Notificación de bienvenida enviada a:', userCreated.email);
+    console.log('Notificación de bienvenida enviada a:', userCreated.email);
 
     // Devolver usuario final
     return userCreated;

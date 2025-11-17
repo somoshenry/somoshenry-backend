@@ -55,7 +55,7 @@ export class GmailConnector {
       const result = await this.sendEncodedMessage(gmailClient, encoded);
       return result.data;
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error(' Error:', error);
       throw new Error(`Fallo al enviar email: ${error}`);
     }
   }

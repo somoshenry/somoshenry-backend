@@ -44,9 +44,8 @@ export class CohorteAnnouncementGateway
     private readonly memberRepo: Repository<CohorteMember>,
   ) {}
 
-  // ========================
   //  CONEXIÓN / AUTENTICACIÓN
-  // ========================
+
   async handleConnection(client: Socket): Promise<void> {
     try {
       const rawAuth = client.handshake.headers.authorization as
@@ -78,7 +77,7 @@ export class CohorteAnnouncementGateway
 
       client.data.userId = userId;
 
-      this.logger.debug(`🟢 Client conectado: ${client.id} (userId=${userId})`);
+      this.logger.debug(`Client conectado: ${client.id} (userId=${userId})`);
     } catch (error) {
       this.logger.error(
         `Error autenticando socket ${client.id}: ${error.message}`,
@@ -92,17 +91,14 @@ export class CohorteAnnouncementGateway
     if (userId) {
       this.userRooms.delete(userId);
     }
-    this.logger.debug(`🔴 Client desconectado: ${client.id}`);
+    this.logger.debug(`Client desconectado: ${client.id}`);
   }
 
-  // ========================
   //  ROOMS POR COHORTE
-  // ========================
 
-  /**
-   * El front emite cuando el user entra a la vista del cohorte.
-   * payload esperado: { cohorteId: string }
-   */
+  // El front emite cuando el user entra a la vista del cohorte.
+  // payload esperado: { cohorteId: string }
+
   @SubscribeMessage('joinCohorte')
   async joinCohorteRoom(
     @MessageBody() data: { cohorteId: string },
@@ -137,10 +133,9 @@ export class CohorteAnnouncementGateway
     this.logger.debug(`User ${userId} joined cohorte room ${data.cohorteId}`);
   }
 
-  /**
-   * Opcional: el front emite cuando sale de esa vista.
-   * payload esperado: { cohorteId: string }
-   */
+  //  Opcional: el front emite cuando sale de esa vista.
+  //  payload esperado: { cohorteId: string }
+
   @SubscribeMessage('leaveCohorte')
   leaveCohorteRoom(
     @MessageBody() data: { cohorteId: string },
@@ -160,15 +155,13 @@ export class CohorteAnnouncementGateway
     this.logger.debug(`User ${userId} left cohorte room ${data.cohorteId}`);
   }
 
-  // ========================
   //  EMISIÓN DE ANUNCIOS
-  // ========================
-  /** Llamado desde el service cuando se crea un anuncio */
+
   emitAnnouncement(cohorteId: string, announcement: any): void {
     this.server
       .to(cohorteId)
       .emit('cohorte.announcement.created', announcement);
 
-    this.logger.debug(`📢 Sent announcement to room ${cohorteId}`);
+    this.logger.debug(`Sent announcement to room ${cohorteId}`);
   }
 }

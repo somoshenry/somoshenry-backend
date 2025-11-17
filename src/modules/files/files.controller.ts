@@ -105,7 +105,7 @@ export class FilesController {
     return this.fileService.uploadProfilePicture(file, userId);
   }
 
-  // 🖼️ Subir foto de portada
+  // 🖼 Subir foto de portada
   @Put('uploadCoverPicture/:userId')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
@@ -143,7 +143,7 @@ export class FilesController {
     return this.fileService.uploadCoverPicture(file, userId);
   }
 
-  // 🗑️ Eliminar archivo de post
+  // 🗑 Eliminar archivo de post
   @Delete('deletePostFile/:postId')
   @ApiOperation({ summary: 'Eliminar archivo de post' })
   @ApiResponse({ status: 200, description: 'Archivo eliminado correctamente' })
@@ -151,7 +151,7 @@ export class FilesController {
     return this.fileService.deletePostFile(postId);
   }
 
-  // 🗑️ Eliminar foto de perfil
+  // 🗑 Eliminar foto de perfil
   @Delete('deleteUserProfilePicture/:userId')
   @ApiOperation({ summary: 'Eliminar foto de perfil' })
   @ApiResponse({
@@ -162,7 +162,7 @@ export class FilesController {
     return this.fileService.deleteUserProfilePicture(userId);
   }
 
-  // 🗑️ Eliminar foto de portada
+  // 🗑 Eliminar foto de portada
   @Delete('deleteUserCoverPicture/:userId')
   @ApiOperation({ summary: 'Eliminar foto de portada' })
   @ApiResponse({

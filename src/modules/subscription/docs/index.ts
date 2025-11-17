@@ -1,21 +1,28 @@
-// Barrel export - Exporta todos los decoradores de Swagger
+// docs/index.ts
 
 // ============================================
-// MEMBER SUBSCRIPTION ENDPOINTS
+// PAYMENT CONTROLLER DOCS
 // ============================================
 export {
-  ApiGetMySubscription,
-  ApiGetPlans,
-  ApiUpgradePlan,
-  ApiCancelSubscription,
-  ApiReactivateSubscription,
-  ApiGetMyPayments,
+  ApiGetPaymentHistory,
   ApiGetPaymentReceipt,
-  ApiCanPost,
-} from './member-subscription.swagger';
+  ApiGetPaymentStats,
+} from './payment.docs';
 
 // ============================================
-// ADMIN DASHBOARD ENDPOINTS
+// SUBSCRIPTION CONTROLLER DOCS
+// ============================================
+export {
+  ApiGetPlans,
+  ApiGetUserPlan,
+  ApiGetCurrentSubscription,
+  ApiCanPost,
+  ApiCancelSubscription,
+  ApiReactivateSubscription,
+} from './subscription.docs';
+
+// ============================================
+// SUBSCRIPTION ADMIN CONTROLLER DOCS
 // ============================================
 export {
   ApiGetDashboardStats,
@@ -28,9 +35,4 @@ export {
   ApiGetChurnRate,
   ApiGetLTV,
   ApiGetUsersByPlan,
-} from './admin-dashboard.swagger';
-
-// ============================================
-// WEBHOOK ENDPOINTS
-// ============================================
-export { ApiMercadoPagoWebhook } from './payments-webhook.swagger';
+} from './subscription-admin';

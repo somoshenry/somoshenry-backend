@@ -1,6 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
 // import { SubscriptionController } from './controllers/subscription.controller';
 import { SubscriptionService } from './services/subscription.service';
 import { PaymentService } from './services/payments.service';
@@ -18,7 +17,6 @@ import { ScheduleModule } from '@nestjs/schedule';
   imports: [
     TypeOrmModule.forFeature([Subscription, Payment, User]),
     ScheduleModule.forRoot(),
-    ConfigModule,
     UserModule,
     forwardRef(() => PostModule), // Evitar dependencia circular
   ],

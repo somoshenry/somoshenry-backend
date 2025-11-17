@@ -3,7 +3,18 @@ import { AuthProtected } from 'src/modules/auth/decorator/auth-protected.decorat
 import { UserRole } from 'src/modules/user/entities/user.entity';
 import { SubscriptionService } from '../services/subscription.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { ApiTags } from '@nestjs/swagger';
 
+import {
+  ApiGetPlans,
+  ApiGetUserPlan,
+  ApiGetCurrentSubscription,
+  ApiCanPost,
+  ApiCancelSubscription,
+  ApiReactivateSubscription,
+} from '../docs';
+
+@ApiTags('Gestión de subscripciones (User)')
 @Controller('subscription')
 @AuthProtected(UserRole.MEMBER)
 export class SubscriptionController {
@@ -11,12 +22,14 @@ export class SubscriptionController {
 
   // Ver planes disponibles
   @Get('plans')
+  @ApiGetPlans()
   getPlans() {
     return this.subscriptionService.getAvailablePlans();
   }
 
   // Plan actual del usuario
   @Get('userplan')
+  @ApiGetUserPlan()
   async userPlan(@Req() req) {
     const userId = req.user.id;
     return this.subscriptionService.getUserPlan(userId);
@@ -24,6 +37,7 @@ export class SubscriptionController {
 
   // Ver mi suscripción actual
   @Get('current')
+  @ApiGetCurrentSubscription()
   async getCurrent(@Req() req) {
     const userId = req.user.id;
     return this.subscriptionService.getCurrentSubscription(userId);
@@ -31,6 +45,7 @@ export class SubscriptionController {
 
   // Verificar si puedo publicar (límite de posts)
   @Get('can-post')
+  @ApiCanPost()
   async canPost(@CurrentUser('id') userId: string) {
     const canPost = await this.subscriptionService.canUserPost(userId);
     const remaining = await this.subscriptionService.getRemainingPosts(userId);
@@ -43,15 +58,17 @@ export class SubscriptionController {
 
   // Cancelar suscripción
   @Post('cancel')
+  @ApiCancelSubscription()
   async cancelSubscription(
     @CurrentUser('id') userId: string,
-    @Body() body: { reason?: string },
+    @Body() body?: { reason?: string },
   ) {
-    return this.subscriptionService.cancelSubscription(userId, body.reason);
+    return this.subscriptionService.cancelSubscription(userId, body?.reason);
   }
 
   // Reactivar suscripción
   @Post('reactivate')
+  @ApiReactivateSubscription()
   async reactivateSubscription(@CurrentUser('id') userId: string) {
     return this.subscriptionService.reactivateSubscription(userId);
   }

@@ -8,7 +8,6 @@ import {
 import { Repository } from 'typeorm';
 import { DateUtil } from 'src/common/utils/date.util';
 import { PostService } from 'src/modules/post/post.service';
-import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/modules/user/user.service';
 import { UserRole } from 'src/modules/user/entities/user.entity';
 
@@ -17,19 +16,70 @@ export class SubscriptionService {
   constructor(
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
-    private readonly configService: ConfigService,
     private readonly postsService: PostService,
     private readonly userService: UserService,
   ) {}
+
+  // ============================
+  // PLANES INTERNOS
+  // ============================
+  private readonly PLANS = {
+    BRONCE: {
+      name: 'Plan Gratis',
+      price: 0,
+      maxPostsPerMonth: 10,
+      features: [
+        'Máximo 10 posteos mensuales',
+        'Sin prioridad en el muro',
+        'Acceso a la comunidad',
+        'Perfil básico',
+        'Mensajería básica',
+      ],
+    },
+    PLATA: {
+      name: 'Nivel 1',
+      price: 5,
+      currency: 'USD',
+      maxPostsPerMonth: 50,
+      features: [
+        'Hasta 50 publicaciones al mes',
+        'Prioridad media en el muro',
+        'Acceso a eventos exclusivos',
+        'Perfil destacado',
+        'Soporte prioritario',
+        'Sin anuncios',
+      ],
+    },
+    ORO: {
+      name: 'Nivel 2',
+      price: 10,
+      currency: 'USD',
+      maxPostsPerMonth: -1, // Ilimitado
+      features: [
+        'Publicaciones ilimitadas',
+        'Máxima prioridad en el muro',
+        'Acceso VIP a todos los eventos',
+        'Perfil premium destacado',
+        'Soporte 24/7 prioritario',
+        'Insignia exclusiva',
+        'Acceso anticipado a nuevas funciones',
+        'Análisis de engagement',
+      ],
+    },
+  };
+
+  // Obtener config de un plan
+  private getPlanConfig(plan: SubscriptionPlan) {
+    return this.PLANS[plan];
+  }
 
   // ============================================
   // PLANES DISPONIBLES
   // ============================================
   getAvailablePlans() {
-    const plans = this.configService.get('mercadopago.plans');
-    return Object.keys(plans).map((key) => ({
+    return Object.entries(this.PLANS).map(([key, value]) => ({
       id: key,
-      ...plans[key],
+      ...value,
     }));
   }
 
@@ -65,6 +115,8 @@ export class SubscriptionService {
     // Obtener usuario y verificar rol (admin/teacher sin límites)
     const user = await this.userService.findOne(userId);
     if (!user) return false;
+
+    // Admin / Teacher pueden publicar siempre
     if (user.role === UserRole.ADMIN || user.role === UserRole.TEACHER)
       return true;
 
@@ -93,8 +145,8 @@ export class SubscriptionService {
       return true;
     }
 
-    const planConfig = this.configService.get(`mercadopago.plans.${plan}`);
-    const maxPosts = planConfig.maxPostsPerMonth;
+    const config = this.getPlanConfig(subscription.plan);
+    const maxPosts = config.maxPostsPerMonth;
 
     if (maxPosts === -1) {
       return true; // Ilimitado
@@ -127,15 +179,12 @@ export class SubscriptionService {
 
     if (!subscription) return 0;
 
-    const planConfig = this.configService.get(
-      `mercadopago.plans.${subscription.plan}`,
-    );
-    const maxPosts = planConfig.maxPostsPerMonth;
+    const config = this.getPlanConfig(subscription.plan);
 
-    if (maxPosts === -1) return -1; // Ilimitado
+    if (config.maxPostsPerMonth === -1) return -1; // Ilimitado
 
     const used = await this.countUserPostsThisMonth(userId);
-    return Math.max(0, maxPosts - used);
+    return Math.max(0, config.maxPostsPerMonth - used);
   }
 
   // ============================================

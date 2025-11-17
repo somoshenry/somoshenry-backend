@@ -12,6 +12,7 @@ import { UserModule } from '../user/user.module';
 import { SubscriptionController } from './controllers/subscription.controller';
 import { PaymentController } from './controllers/payment.controller';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SubscriptionAdminController } from './controllers/subscription-admin.controller';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { ScheduleModule } from '@nestjs/schedule';
   controllers: [
     SubscriptionController,
     PaymentController,
-    // SubscriptionAdminController,
+    SubscriptionAdminController,
   ],
   providers: [SubscriptionService, PaymentService],
   exports: [SubscriptionService, PaymentService],

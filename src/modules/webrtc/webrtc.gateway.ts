@@ -16,6 +16,10 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { WebRTCService } from './webrtc.service';
 import { RoomChatService } from './room-chat.service';
+import { IceServerManagerService } from './services/ice-server-manager.service';
+import { SignalingStateMachineService } from './services/signaling-state-machine.service';
+import { PeerConnectionTrackerService } from './services/peer-connection-tracker.service';
+import { IceCandidateBufferService } from './services/ice-candidate-buffer.service';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { WebRTCSignalDto } from './dto/webrtc-signal.dto';
 import { IceCandidateDto } from './dto/ice-candidate.dto';
@@ -33,6 +37,12 @@ interface UserSocketData {
 @WebSocketGateway({
   cors: { origin: '*' },
   namespace: '/webrtc',
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  maxHttpBufferSize: 1e6,
 })
 export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -47,6 +57,10 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly roomChatService: RoomChatService,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
+    private readonly iceServerManager: IceServerManagerService,
+    private readonly signalingStateMachine: SignalingStateMachineService,
+    private readonly peerConnectionTracker: PeerConnectionTrackerService,
+    private readonly iceCandidateBuffer: IceCandidateBufferService,
   ) {}
 
   // AUTENTICACIÓN SOCKET
@@ -91,6 +105,10 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (roomId && userId) {
       try {
+        // Cleanup state machine and tracker for this user in this room
+        this.peerConnectionTracker.cleanupStaleConnections();
+        this.iceCandidateBuffer.cleanupStaleBuffers();
+
         await this.webrtcService.removeParticipant(roomId, userId);
 
         this.server.to(roomId).emit('userLeft', { userId, roomId });
@@ -103,10 +121,10 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.socketToUser.delete(client.id);
     this.socketToRoom.delete(client.id);
 
-    this.logger.log(`🔴 Usuario ${userId} desconectado`);
+    this.logger.log(`Usuario ${userId} desconectado`);
   }
 
-  // 🟢 JOIN ROOM (datos completos para el front)
+  // JOIN ROOM (datos completos para el front)
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
@@ -198,7 +216,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // 👋 LEAVE ROOM
+  // LEAVE ROOM
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
@@ -253,6 +271,37 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client.data as UserSocketData).userId;
     if (!userId) throw new UnauthorizedException();
 
+    // Record offer in state machine to detect duplicates
+    this.signalingStateMachine.recordOfferSent(
+      dto.roomId,
+      userId,
+      dto.targetUserId,
+      dto.sequence ?? 0,
+    );
+
+    // Check if this is a duplicate offer by checking recent timestamp
+    const existingContext = this.signalingStateMachine.getContext(
+      dto.roomId,
+      userId,
+      dto.targetUserId,
+    );
+    if (
+      existingContext?.lastOfferTimestamp &&
+      Date.now() - existingContext.lastOfferTimestamp < 1000
+    ) {
+      this.logger.warn(
+        `Duplicate offer detected: ${userId} -> ${dto.targetUserId}, sequence ${dto.sequence}`,
+      );
+      client.emit('offerAck', {
+        success: false,
+        reason: 'duplicate_offer',
+        sequence: dto.sequence,
+      });
+      return;
+    }
+
+    const peerKey = `${dto.roomId}:${userId}:${dto.targetUserId}`;
+
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -260,8 +309,11 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         fromUserId: userId,
         sdp: dto.sdp as RTCSessionDescriptionInit,
         roomId: dto.roomId,
+        sequence: dto.sequence,
+        messageId: dto.messageId,
       });
       this.logger.log(`📤 Offer: ${userId} -> ${dto.targetUserId}`);
+      client.emit('offerAck', { success: true, sequence: dto.sequence });
     } else {
       client.emit('error', { message: 'Usuario objetivo no conectado' });
     }
@@ -275,6 +327,37 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client.data as UserSocketData).userId;
     if (!userId) throw new UnauthorizedException();
 
+    // Record answer in state machine to detect duplicates
+    this.signalingStateMachine.recordAnswerSent(
+      dto.roomId,
+      userId,
+      dto.targetUserId,
+      dto.sequence ?? 0,
+    );
+
+    // Check if this is a duplicate answer
+    const existingContext = this.signalingStateMachine.getContext(
+      dto.roomId,
+      userId,
+      dto.targetUserId,
+    );
+    if (
+      existingContext?.lastAnswerTimestamp &&
+      Date.now() - existingContext.lastAnswerTimestamp < 1000
+    ) {
+      this.logger.warn(
+        `Duplicate answer detected: ${userId} -> ${dto.targetUserId}, sequence ${dto.sequence}`,
+      );
+      client.emit('answerAck', {
+        success: false,
+        reason: 'duplicate_answer',
+        sequence: dto.sequence,
+      });
+      return;
+    }
+
+    const peerKey = `${dto.roomId}:${userId}:${dto.targetUserId}`;
+
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -282,8 +365,11 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         fromUserId: userId,
         sdp: dto.sdp as RTCSessionDescriptionInit,
         roomId: dto.roomId,
+        sequence: dto.sequence,
+        messageId: dto.messageId,
       });
       this.logger.log(`📥 Answer: ${userId} -> ${dto.targetUserId}`);
+      client.emit('answerAck', { success: true, sequence: dto.sequence });
     } else {
       client.emit('error', { message: 'Usuario objetivo no conectado' });
     }
@@ -297,6 +383,37 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client.data as UserSocketData).userId;
     if (!userId) throw new UnauthorizedException();
 
+    // Buffer and check for duplicate candidates
+    const hasDuplicate = this.iceCandidateBuffer.hasDuplicate(
+      dto.roomId,
+      userId,
+      dto.targetUserId,
+      dto.candidate,
+    );
+
+    if (hasDuplicate) {
+      this.logger.debug(
+        `Duplicate ICE candidate detected: ${userId} -> ${dto.targetUserId}`,
+      );
+      return;
+    }
+
+    // Buffer the candidate
+    this.iceCandidateBuffer.bufferCandidate(
+      dto.roomId,
+      userId,
+      dto.targetUserId,
+      dto.candidate,
+    );
+
+    // Track ICE candidate reception
+    this.peerConnectionTracker.updateIceConnectionState(
+      dto.roomId,
+      userId,
+      dto.targetUserId,
+      'checking',
+    );
+
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -304,9 +421,99 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         fromUserId: userId,
         candidate: dto.candidate as RTCIceCandidateInit,
         roomId: dto.roomId,
+        sequence: dto.sequence,
+        messageId: dto.messageId,
       });
       this.logger.log(`🧊 ICE: ${userId} -> ${dto.targetUserId}`);
+      this.iceCandidateBuffer.markAsApplied(
+        dto.roomId,
+        userId,
+        dto.targetUserId,
+        dto.candidate,
+      );
     }
+  }
+
+  // CONNECTION STATE TRACKING
+  @SubscribeMessage('connectionStateUpdate')
+  handleConnectionStateUpdate(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    payload: {
+      roomId: string;
+      targetUserId: string;
+      connectionState?: string;
+      iceConnectionState?: string;
+      iceGatheringState?: string;
+    },
+  ): void {
+    const userId = (client.data as UserSocketData).userId;
+    if (!userId) throw new UnauthorizedException();
+
+    // Update connection states in tracker
+    if (payload.connectionState) {
+      this.peerConnectionTracker.updateConnectionState(
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+        payload.connectionState as any,
+      );
+    }
+
+    if (payload.iceConnectionState) {
+      this.peerConnectionTracker.updateIceConnectionState(
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+        payload.iceConnectionState as any,
+      );
+    }
+
+    if (payload.iceGatheringState) {
+      this.peerConnectionTracker.updateIceGatheringState(
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+        payload.iceGatheringState as any,
+      );
+    }
+
+    // Check for stale connections and failures
+    if (payload.connectionState === 'failed') {
+      this.peerConnectionTracker.recordFailure(
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+      );
+      const canRestart = this.peerConnectionTracker.canRestart(
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+      );
+
+      if (canRestart) {
+        this.logger.log(
+          `🔄 ICE restart recommended for ${userId} <-> ${payload.targetUserId}`,
+        );
+        this.server.to(client.id).emit('iceRestartRequired', {
+          targetUserId: payload.targetUserId,
+          roomId: payload.roomId,
+        });
+      } else {
+        this.logger.warn(
+          `❌ ICE restart max attempts reached for ${userId} <-> ${payload.targetUserId}`,
+        );
+        this.server.to(client.id).emit('connectionFailed', {
+          targetUserId: payload.targetUserId,
+          roomId: payload.roomId,
+          reason: 'max_restart_attempts',
+        });
+      }
+    }
+
+    this.logger.debug(
+      `📊 Connection state updated: ${payload.roomId}:${userId}:${payload.targetUserId} -> ${payload.connectionState}`,
+    );
   }
 
   // 🎛 MEDIA CONTROLS
@@ -382,7 +589,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // 💬 CHAT
+  // CHAT
   @SubscribeMessage('joinChatRoom')
   async handleJoinChatRoom(
     @ConnectedSocket() client: Socket,

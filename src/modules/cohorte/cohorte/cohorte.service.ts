@@ -11,7 +11,7 @@ import { CohorteMember } from './entities/cohorte-member.entity';
 import { CreateCohorteDto } from './dto/create-cohorte.dto';
 import { UpdateCohorteDto } from './dto/update-cohorte.dto';
 import { User } from '../../user/entities/user.entity';
-import { CohorteRoleEnum } from './enums/cohorte.enums';
+import { CohorteRoleEnum, MemberStatusEnum } from './enums/cohorte.enums';
 
 @Injectable()
 export class CohorteService {
@@ -98,5 +98,88 @@ export class CohorteService {
 
     if (!member) throw new NotFoundException('Miembro no encontrado');
     await this.memberRepo.remove(member);
+  }
+
+  // ============================================
+  // OBTENER MIS COHORTES (COHORTES DONDE ESTOY INSCRITO)
+  // ============================================
+  async getMyCohortes(userId: string) {
+    // Buscar en la tabla intermedia cohorte_members
+    const members = await this.memberRepo.find({
+      where: {
+        userId,
+        // status: MemberStatusEnum.ACTIVE, // Solo cohortes activos
+      },
+      relations: ['cohorte'], // Traer info del cohorte
+      order: { joinedAt: 'DESC' }, // Más recientes primero
+    });
+
+    // Mapear para devolver info útil
+    return members.map((member) => ({
+      // Info del cohorte
+      cohorte: {
+        id: member.cohorte.id,
+        name: member.cohorte.name,
+        description: member.cohorte.description,
+        startDate: member.cohorte.startDate,
+        endDate: member.cohorte.endDate,
+        status: member.cohorte.status,
+        schedule: member.cohorte.schedule,
+        modality: member.cohorte.modality,
+      },
+      // Info de mi membresía
+      myRole: member.role, // TEACHER, STUDENT, TA
+      myStatus: member.status,
+      joinedAt: member.joinedAt,
+      // Si soy estudiante - usando operador ternario
+      ...(member.role === 'STUDENT' && {
+        attendance: member.attendance,
+        finalGrade: member.finalGrade,
+      }),
+    }));
+  }
+
+  // ============================================
+  // OBTENER COHORTES DONDE SOY PROFESOR
+  // ============================================
+  async getMyCohorteAsTeacher(userId: string) {
+    const members = await this.memberRepo.find({
+      where: {
+        userId,
+        role: CohorteRoleEnum.TEACHER,
+        status: MemberStatusEnum.ACTIVE,
+      },
+      relations: ['cohorte'],
+      order: { joinedAt: 'DESC' },
+    });
+
+    return members.map((member) => ({
+      cohorte: member.cohorte,
+      myRole: member.role,
+      joinedAt: member.joinedAt,
+    }));
+  }
+
+  // ============================================
+  // OBTENER COHORTES DONDE SOY ESTUDIANTE
+  // ============================================
+  async getMyCohortesAsStudent(userId: string) {
+    const members = await this.memberRepo.find({
+      where: {
+        userId,
+        role: CohorteRoleEnum.STUDENT,
+        status: MemberStatusEnum.ACTIVE,
+      },
+      relations: ['cohorte'],
+      order: { joinedAt: 'DESC' },
+    });
+
+    return members.map((member) => ({
+      cohorte: member.cohorte,
+      myRole: member.role,
+      joinedAt: member.joinedAt,
+      attendance: member.attendance,
+      finalGrade: member.finalGrade,
+    }));
   }
 }

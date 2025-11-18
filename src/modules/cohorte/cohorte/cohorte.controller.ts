@@ -19,6 +19,12 @@ import { RolesGuard } from '../../auth/guard/roles.guard';
 import { CohorteRoleEnum } from './enums/cohorte.enums';
 
 import { CohorteDocs } from '../docs/cohorte.docs';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import {
+  ApiGetMyCohortes,
+  ApiGetMyCohorteAsTeacher,
+  ApiGetMyCohortesAsStudent,
+} from '../docs/cohorte.docs';
 
 @CohorteDocs.tag()
 @CohorteDocs.auth()
@@ -109,5 +115,32 @@ export class CohorteController {
     @Param('userId') userId: string,
   ) {
     return this.cohorteService.removeMember(cohorteId, userId);
+  }
+
+  // ============================================
+  // MIS COHORTES (ACTIVAS E INACTIVAS)
+  // ============================================
+  @Get('me')
+  @ApiGetMyCohortes()
+  async getMyCohortes(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohortes(userId);
+  }
+
+  // ============================================
+  // MIS COHORTES COMO PROFESOR (OPCIONAL)
+  // ============================================
+  @Get('me/teaching')
+  @ApiGetMyCohorteAsTeacher()
+  async getMyCohorteAsTeacher(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohorteAsTeacher(userId);
+  }
+
+  // ============================================
+  // MIS COHORTES COMO ESTUDIANTE (OPCIONAL)
+  // ============================================
+  @Get('me/studying')
+  @ApiGetMyCohortesAsStudent()
+  async getMyCohortesAsStudent(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohortesAsStudent(userId);
   }
 }

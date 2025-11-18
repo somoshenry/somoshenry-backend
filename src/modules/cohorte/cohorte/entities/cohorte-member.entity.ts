@@ -22,8 +22,8 @@ export class CohorteMember {
   @JoinColumn({ name: 'cohorteId' })
   cohorte: Cohorte;
 
-  @Column({ name: 'user_id', type: 'uuid', unique: true })
-  userId: string;
+  // @Column({ name: 'user_id', type: 'uuid', unique: true })
+  // userId: string;
 
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })

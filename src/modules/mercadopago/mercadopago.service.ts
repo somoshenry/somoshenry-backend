@@ -176,17 +176,24 @@ export class MercadoPagoService {
       console.error(`❌ El usuario ${user.id} no tiene subscripción`);
       return;
     }
-    console.log('######################################################');
-    console.log('######################################################');
-    console.log('######################################################');
-    console.log('######################################################');
-    await this.notificationService.sendPaymentSuccessNotification(user.email);
-    console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
 
     // Fechas UTC
     const now = DateUtil.nowUTC();
     const nextDay = DateUtil.addDays(now, 2); // Plan expira en 2 días
     const nextBillingDate = DateUtil.addDays(now, 1); // Intento de cobro en 1 día
+
+    const paymentExists = await this.paymentRepository.findOne({
+      where: { mercadoPagoId: id?.toString() },
+    });
+
+    if (!paymentExists) {
+      console.log('######################################################');
+      console.log('######################################################');
+      console.log('######################################################');
+      console.log('######################################################');
+      await this.notificationService.sendPaymentSuccessNotification(user.email);
+      console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
+    }
 
     // =============================
     // 4) Crear el registro de pago

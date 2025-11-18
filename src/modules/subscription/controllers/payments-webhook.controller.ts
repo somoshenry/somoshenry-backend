@@ -30,7 +30,7 @@
 //     @Body() body: any,
 //     @Headers('x-signature') signature: string,
 //   ) {
-//     console.log('📥 Webhook recibido:', JSON.stringify(body, null, 2));
+//     console.log('Webhook recibido:', JSON.stringify(body, null, 2));
 
 //     // Validar firma (opcional pero recomendado)
 //     // this.validateSignature(body, signature);

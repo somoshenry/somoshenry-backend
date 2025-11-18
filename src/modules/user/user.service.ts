@@ -67,12 +67,12 @@ export class UserService {
         });
 
         await this.subscriptionRepository.save(subscription);
-        console.log('🆕 Suscripción creada para usuario ID:', userCreated.id);
+        console.log('Suscripción creada para usuario ID:', userCreated.id);
       }
     }
-    console.log('🆕 Usuario creado →', userCreated.id);
+    console.log('Usuario creado →', userCreated.id);
     await this.notificationService.sendWelcomeNotification(userCreated.email);
-    console.log('📧 Notificación de bienvenida enviada a:', userCreated.email);
+    console.log('Notificación de bienvenida enviada a:', userCreated.email);
 
     // Devolver usuario final
     return userCreated;
@@ -239,6 +239,9 @@ export class UserService {
       Object.entries(data).filter(([_, v]) => v !== undefined),
     );
     Object.assign(user, validData);
+    if (data.status && data.status === UserStatus.BANNED) {
+      await this.notificationService.sendUserBannedNotification(user.email);
+    }
     return await this.userRepository.save(user);
   }
 

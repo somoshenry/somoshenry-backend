@@ -30,9 +30,8 @@
 //     private readonly userService: UserService,
 //   ) {}
 
-//   // ============================================
 //   // CREAR SUBSCRIPCIÓN (desde el frontend)
-//   // ============================================
+
 //   async createSubscription(userId: string, plan: SubscriptionPlan) {
 //     const planConfig = this.configService.get(`mercadopago.plans.${plan}`);
 //     console.log('Plan config:', planConfig);
@@ -78,9 +77,8 @@
 //     };
 //   }
 
-//   // ============================================
 //   // CREAR PREFERENCIA EN MERCADO PAGO
-//   // ============================================
+
 //   private async createMercadoPagoPreference(
 //     userId: string,
 //     subscriptionId: string,
@@ -137,16 +135,15 @@
 //     return response.data;
 //   }
 
-//   // ============================================
 //   // PROCESAR NOTIFICACIÓN DE PAGO (WEBHOOK)
-//   // ============================================
+
 //   async processPaymentNotification(mercadoPagoPaymentId: string) {
-//     console.log('🔍 Procesando pago:', mercadoPagoPaymentId);
+//     console.log('Procesando pago:', mercadoPagoPaymentId);
 
 //     // Obtener información del pago desde Mercado Pago
 //     const paymentInfo = await this.getMercadoPagoPayment(mercadoPagoPaymentId);
 
-//     console.log('📄 Info del pago:', JSON.stringify(paymentInfo, null, 2));
+//     console.log('Info del pago:', JSON.stringify(paymentInfo, null, 2));
 
 //     const subscriptionId = paymentInfo.external_reference;
 //     const status = paymentInfo.status; // 'approved', 'pending', 'rejected', etc.
@@ -157,7 +154,7 @@
 //     });
 
 //     if (!subscription) {
-//       console.error('❌ Subscription no encontrada:', subscriptionId);
+//       console.error('Subscription no encontrada:', subscriptionId);
 //       return;
 //     }
 
@@ -207,12 +204,12 @@
 
 //       await this.subscriptionRepository.save(subscription);
 
-//       console.log('✅ Subscription actualizada a:', subscription.plan);
+//       console.log('Subscription actualizada a:', subscription.plan);
 //     }
 
 //     await this.paymentRepository.save(payment);
 
-//     console.log('💾 Payment guardado:', payment.id);
+//     console.log('Payment guardado:', payment.id);
 
 //     return payment;
 //   }

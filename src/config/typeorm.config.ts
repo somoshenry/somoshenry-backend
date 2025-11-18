@@ -6,7 +6,7 @@ export default registerAs('typeorm', () => {
   const isRender = !!process.env.DATABASE_URL;
 
   if (isRender) {
-    console.log('🟢 Conectando a base de datos Render...');
+    console.log('Conectando a base de datos Render...');
     return {
       type: 'postgres',
       url: process.env.DATABASE_URL,
@@ -17,7 +17,7 @@ export default registerAs('typeorm', () => {
     };
   }
 
-  console.log('🧩 Conectando a base de datos local...');
+  console.log('Conectando a base de datos local...');
   return {
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -27,7 +27,7 @@ export default registerAs('typeorm', () => {
     database: process.env.DB_NAME || 'somoshenry',
     autoLoadEntities: true,
     synchronize: true,
-    // ssl: { rejectUnauthorized: false },
+    ssl: { rejectUnauthorized: true },
     timezone: 'UTC', // Base de datos en UTC
   };
 });

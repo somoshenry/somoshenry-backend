@@ -26,13 +26,13 @@ export class CohorteService {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  // 📘 Crear cohorte
+  //  Crear cohorte
   async create(dto: CreateCohorteDto): Promise<Cohorte> {
     const cohorte = this.cohorteRepo.create(dto);
     return this.cohorteRepo.save(cohorte);
   }
 
-  // 📗 Obtener todas las cohortes
+  //  Obtener todas las cohortes
   async findAll(): Promise<Cohorte[]> {
     return this.cohorteRepo.find({
       relations: ['members', 'members.user', 'classes'],
@@ -40,7 +40,7 @@ export class CohorteService {
     });
   }
 
-  // 📙 Obtener cohorte por ID
+  //  Obtener cohorte por ID
   async findOne(id: string): Promise<Cohorte> {
     const cohorte = await this.cohorteRepo.findOne({
       where: { id },
@@ -51,20 +51,20 @@ export class CohorteService {
     return cohorte;
   }
 
-  // ✏️ Actualizar cohorte
+  //  Actualizar cohorte
   async update(id: string, dto: UpdateCohorteDto): Promise<Cohorte> {
     const cohorte = await this.findOne(id);
     Object.assign(cohorte, dto);
     return this.cohorteRepo.save(cohorte);
   }
 
-  // ❌ Eliminar cohorte
+  //  Eliminar cohorte
   async remove(id: string): Promise<void> {
     const cohorte = await this.findOne(id);
     await this.cohorteRepo.remove(cohorte);
   }
 
-  // 👥 Agregar miembro a cohorte
+  //  Agregar miembro a cohorte
   async addMember(
     cohorteId: string,
     userId: string,
@@ -90,7 +90,7 @@ export class CohorteService {
     return this.memberRepo.save(member);
   }
 
-  // 🗑️ Remover miembro
+  //  Remover miembro
   async removeMember(cohorteId: string, userId: string): Promise<void> {
     const member = await this.memberRepo.findOne({
       where: { cohorte: { id: cohorteId }, user: { id: userId } },

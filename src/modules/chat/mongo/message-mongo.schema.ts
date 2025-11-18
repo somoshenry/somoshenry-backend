@@ -23,7 +23,7 @@ export class MessageMongo {
   @Prop({ type: Object, required: false })
   attachments?: Record<string, unknown>;
 
-  // 🔥 NUEVOS CAMPOS para marcar como leído
+  // marcar como leído
   @Prop({ default: false })
   isRead: boolean;
 

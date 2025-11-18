@@ -1,98 +1,276 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# SomosHenry Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST para la red social educativa SomosHenry. Sistema completo de gestión de usuarios, publicaciones, comentarios, chat en tiempo real y notificaciones.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tabla de Contenidos
 
-## Description
+- [Tecnologías](#tecnologías)
+- [Requisitos Previos](#requisitos-previos)
+- [Instalación](#instalación)
+- [Configuración](#configuración)
+- [Ejecución](#ejecución)
+- [Estructura del Proyecto](#estructura-del-proyecto)
+- [Documentación API](#documentación-api)
+- [Endpoints Principales](#endpoints-principales)
+- [Testing](#testing)
+- [Scripts Disponibles](#scripts-disponibles)
+- [Despliegue](#despliegue)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Tecnologías
 
-## Project setup
+| Categoría      | Tecnología             |
+| -------------- | ---------------------- |
+| Framework      | NestJS 11.x            |
+| ORM            | TypeORM 0.3.x          |
+| Base de Datos  | PostgreSQL             |
+| Autenticación  | JWT + Google OAuth 2.0 |
+| WebSockets     | Socket.io              |
+| Almacenamiento | Cloudinary             |
+| Pagos          | MercadoPago API        |
+| Documentación  | Swagger/OpenAPI        |
 
-```bash
-$ npm install
-```
+## Requisitos Previos
 
-## Compile and run the project
+- **Node.js** 18 o superior
+- **npm** o **yarn**
+- **PostgreSQL** 14 o superior
+- Cuenta en **Cloudinary** para almacenamiento de archivos
+- Credenciales de **Google OAuth** (opcional, para login social)
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+## Instalación
 
 ```bash
-# unit tests
-$ npm run test
+# Clonar el repositorio
+git clone https://github.com/somoshenry/somoshenry-backend.git
+cd somoshenry-backend
 
-# e2e tests
-$ npm run test:e2e
+# Instalar dependencias
+npm install
 
-# test coverage
-$ npm run test:cov
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con las credenciales correspondientes
+
+# Crear base de datos
+createdb somoshenry
 ```
 
-## Deployment
+## Configuración
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Variables de Entorno
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Crear un archivo `.env` basado en `.env.example` y completar:
+
+**Base de Datos:**
+
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `DATABASE_URL` (para producción en Render)
+
+**Autenticación:**
+
+- `JWT_SECRET` - Generar con:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+- `JWT_EXPIRES_IN` (por defecto: 7d)
 
-## Resources
+**Servicios Externos:**
 
-Check out a few resources that may come in handy when working with NestJS:
+- Cloudinary: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+- Google OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`
+- Gmail API: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`
+- MercadoPago: `MERCADOPAGO_ACCESS_TOKEN`
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**URLs:**
 
-## Support
+- `FRONTEND_URL` - URL del frontend
+- `BACKEND_URL` - URL del backend
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Ver `.env.example` para la lista completa.
 
-## Stay in touch
+## Ejecución
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+# Desarrollo con hot-reload
+npm run start:dev
 
-## License
+# Producción
+npm run build
+npm run start:prod
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Cargar datos de prueba en la base de datos
+npm run seed
+```
+
+## Estructura del Proyecto
+
+```
+src/
+├── modules/
+│   ├── auth/              # Autenticación JWT y Google OAuth
+│   ├── user/              # Gestión de usuarios y perfiles
+│   ├── post/              # Publicaciones, likes y dislikes
+│   ├── comment/           # Comentarios y respuestas anidadas
+│   ├── follow/            # Sistema de seguimiento entre usuarios
+│   ├── chat/              # Mensajería en tiempo real (WebSocket)
+│   ├── notifications/     # Notificaciones push en tiempo real
+│   ├── files/             # Carga de imágenes y videos a Cloudinary
+│   ├── report/            # Sistema de reportes de contenido
+│   ├── dashboard/         # Panel administrativo y estadísticas
+│   ├── gmail/             # Envío de emails con Gmail API
+│   └── mercadopago/       # Integración de pagos
+├── common/
+│   ├── interceptors/      # Interceptores globales (audit, eventos)
+│   ├── guards/            # Guards de autorización y roles
+│   ├── events/            # Sistema de eventos de dominio
+│   └── utils/             # Utilidades y helpers compartidos
+├── config/                # Configuraciones (TypeORM, Cloudinary, etc.)
+└── main.ts               # Punto de entrada de la aplicación
+```
+
+## Documentación API
+
+La documentación interactiva de la API está disponible con Swagger:
+
+- **Desarrollo:** [http://localhost:3000/docs](http://localhost:3000/docs)
+- **Producción:** `https://your-domain.com/docs`
+
+## Endpoints Principales
+
+### Autenticación
+
+| Método | Endpoint                | Descripción            | Auth |
+| ------ | ----------------------- | ---------------------- | ---- |
+| POST   | `/auth/register`        | Registro de usuarios   | No   |
+| POST   | `/auth/login`           | Login con credenciales | No   |
+| GET    | `/auth/google`          | Login con Google OAuth | No   |
+| POST   | `/auth/update-password` | Actualizar contraseña  | No   |
+
+### Usuarios
+
+| Método | Endpoint     | Descripción                    | Auth |
+| ------ | ------------ | ------------------------------ | ---- |
+| GET    | `/users/me`  | Perfil del usuario autenticado | Sí   |
+| PATCH  | `/users/me`  | Actualizar perfil propio       | Sí   |
+| GET    | `/users`     | Lista de usuarios con filtros  | Sí   |
+| GET    | `/users/:id` | Obtener usuario por ID         | Sí   |
+
+### Publicaciones
+
+| Método | Endpoint             | Descripción                    | Auth |
+| ------ | -------------------- | ------------------------------ | ---- |
+| POST   | `/posts`             | Crear publicación              | Sí   |
+| GET    | `/posts`             | Feed con filtros y paginación  | Sí   |
+| GET    | `/posts/:id`         | Obtener publicación específica | No   |
+| PATCH  | `/posts/:id`         | Actualizar publicación         | Sí   |
+| DELETE | `/posts/:id`         | Eliminar publicación           | Sí   |
+| POST   | `/posts/:id/like`    | Dar like                       | Sí   |
+| DELETE | `/posts/:id/unlike`  | Quitar like                    | Sí   |
+| POST   | `/posts/:id/dislike` | Dar dislike                    | Sí   |
+
+### Comentarios
+
+| Método | Endpoint                    | Descripción                         | Auth |
+| ------ | --------------------------- | ----------------------------------- | ---- |
+| POST   | `/comment/post/:postId`     | Comentar en un post                 | Sí   |
+| POST   | `/comment/:commentId/reply` | Responder a un comentario           | Sí   |
+| GET    | `/post/:postId/comments`    | Obtener comentarios de un post      | No   |
+| POST   | `/comment/:id/like`         | Dar like a un comentario            | Sí   |
+| GET    | `/comment/:id/thread`       | Obtener hilo completo de respuestas | No   |
+
+### Seguimientos
+
+| Método | Endpoint                         | Descripción         | Auth |
+| ------ | -------------------------------- | ------------------- | ---- |
+| POST   | `/follows/:idSeguido`            | Seguir a un usuario | Sí   |
+| DELETE | `/follows/unfollow/:idSeguido`   | Dejar de seguir     | Sí   |
+| GET    | `/follows/seguidores/:idUsuario` | Obtener seguidores  | No   |
+| GET    | `/follows/siguiendo/:idUsuario`  | Obtener seguidos    | No   |
+
+### Chat
+
+| Método | Endpoint                           | Descripción                 | Auth |
+| ------ | ---------------------------------- | --------------------------- | ---- |
+| POST   | `/chat/conversations`              | Abrir conversación          | Sí   |
+| GET    | `/chat/conversations`              | Listar conversaciones       | Sí   |
+| GET    | `/chat/conversations/:id/messages` | Obtener mensajes            | Sí   |
+| POST   | `/chat/messages`                   | Enviar mensaje de texto     | Sí   |
+| POST   | `/chat/messages/files`             | Enviar mensaje con archivos | Sí   |
+
+### Notificaciones
+
+| Método | Endpoint                  | Descripción                        | Auth |
+| ------ | ------------------------- | ---------------------------------- | ---- |
+| GET    | `/notifications`          | Obtener notificaciones del usuario | Sí   |
+| PATCH  | `/notifications/:id/read` | Marcar como leída                  | Sí   |
+| PATCH  | `/notifications/read-all` | Marcar todas como leídas           | Sí   |
+| DELETE | `/notifications/:id`      | Eliminar notificación              | Sí   |
+
+### Archivos
+
+| Método | Endpoint                              | Descripción              | Auth |
+| ------ | ------------------------------------- | ------------------------ | ---- |
+| PUT    | `/files/uploadPostFile/:postId`       | Subir archivo a un post  | Sí   |
+| PUT    | `/files/uploadProfilePicture/:userId` | Subir foto de perfil     | Sí   |
+| PUT    | `/files/uploadCoverPicture/:userId`   | Subir foto de portada    | Sí   |
+| DELETE | `/files/deletePostFile/:postId`       | Eliminar archivo de post | Sí   |
+
+## Testing
+
+```bash
+# Tests unitarios
+npm run test
+
+# Tests end-to-end
+npm run test:e2e
+
+# Cobertura de código
+npm run test:cov
+
+# Tests en modo watch
+npm run test:watch
+```
+
+## Scripts Disponibles
+
+| Script                | Descripción                        |
+| --------------------- | ---------------------------------- |
+| `npm run start`       | Iniciar en modo producción         |
+| `npm run start:dev`   | Iniciar en desarrollo (watch mode) |
+| `npm run start:debug` | Iniciar en modo debug              |
+| `npm run build`       | Compilar para producción           |
+| `npm run format`      | Formatear código con Prettier      |
+| `npm run lint`        | Ejecutar ESLint y autofix          |
+| `npm run test`        | Ejecutar tests                     |
+| `npm run seed`        | Cargar datos de prueba en la BD    |
+
+## Despliegue
+
+El proyecto está configurado para desplegarse en **Render**:
+
+1. Las variables de entorno se configuran en el panel de Render
+2. `typeorm.config.ts` detecta automáticamente el entorno de producción
+3. La variable `DATABASE_URL` se genera automáticamente en Render
+4. Swagger estará disponible en `/docs`
+
+### Configuración en Render
+
+- **Build Command:** `npm install && npm run build`
+- **Start Command:** `npm run start:prod`
+- Agregar todas las variables de `.env.example` en Environment
+
+---
+
+## Licencia
+
+MIT
+
+## Autores
+
+Equipo de desarrollo SomosHenry - Proyecto Final Henry Bootcamp 2025
+
+---
+
+**Documentación generada:** Noviembre 2025

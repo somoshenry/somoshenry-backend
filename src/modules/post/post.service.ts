@@ -402,7 +402,7 @@ export class PostService {
       post.isInappropriate = true;
       await this.postRepository.save(post);
       console.log(
-        `⚠️ Auto-flag aplicado al post ${postId} (ratio ${(ratio * 100).toFixed(2)}%)`,
+        `Auto-flag aplicado al post ${postId} (ratio ${(ratio * 100).toFixed(2)}%)`,
       );
     }
   }

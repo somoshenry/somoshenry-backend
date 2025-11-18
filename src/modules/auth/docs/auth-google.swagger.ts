@@ -9,7 +9,7 @@ export const SwaggerGoogleDocs = {
       description:
         'Endpoint para iniciar el flujo de autenticación OAuth de Google. **Redirige** al usuario al sitio web de Google para ingresar sus credenciales.',
     }),
-    // ⚠️ La clave es indicar el código de estado 302
+    //La clave es indicar el código de estado 302
     ApiResponse({
       status: 302, // Código 302: Found (Redirección temporal)
       description:
@@ -28,7 +28,7 @@ export const SwaggerGoogleDocs = {
         'Endpoint invocado por Google tras la autenticación. Siempre resulta en una redirección (302) al frontend.',
     }),
 
-    // ⬇️ Documentación UNIFICADA del código 302
+    //Documentación UNIFICADA del código 302
     ApiResponse({
       status: 302,
       description:

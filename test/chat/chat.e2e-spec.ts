@@ -82,7 +82,7 @@ describe('CHAT E2E FULL SYSTEM', () => {
   // ---------------------------------
   it('Send message (Mongo)', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/chat/messages`)
+      .post('/chat/messages')
       .set('Authorization', `Bearer ${token}`)
       .send({
         conversationId,

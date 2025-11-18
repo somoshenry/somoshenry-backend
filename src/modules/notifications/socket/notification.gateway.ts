@@ -36,7 +36,7 @@ export class NotificationGateway
     )?.[0];
     if (userId) {
       this.activeUsers.delete(userId);
-      this.logger.log(`❌ Usuario desconectado: ${userId}`);
+      this.logger.log(` Usuario desconectado: ${userId}`);
     }
   }
 

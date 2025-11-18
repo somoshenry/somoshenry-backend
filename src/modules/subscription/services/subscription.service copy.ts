@@ -30,9 +30,8 @@
 //     private readonly userService: UserService,
 //   ) {}
 
-//   // ============================================
 //   // CREAR SUBSCRIPCIÓN (desde el frontend)
-//   // ============================================
+
 //   async createSubscription(userId: string, plan: SubscriptionPlan) {
 //     const planConfig = this.configService.get(`mercadopago.plans.${plan}`);
 //     console.log('Plan config:', planConfig);
@@ -78,9 +77,8 @@
 //     };
 //   }
 
-//   // ============================================
 //   // CREAR PREFERENCIA EN MERCADO PAGO
-//   // ============================================
+
 //   private async createMercadoPagoPreference(
 //     userId: string,
 //     subscriptionId: string,
@@ -137,9 +135,8 @@
 //     return response.data;
 //   }
 
-//   // ============================================
 //   // PROCESAR NOTIFICACIÓN DE PAGO (WEBHOOK)
-//   // ============================================
+
 //   async processPaymentNotification(mercadoPagoPaymentId: string) {
 //     console.log('Procesando pago:', mercadoPagoPaymentId);
 

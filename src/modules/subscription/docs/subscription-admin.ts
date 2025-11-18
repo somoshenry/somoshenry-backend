@@ -55,16 +55,17 @@ export function ApiGetRevenue() {
       name: 'startDate',
       required: false,
       type: String,
-      description:
-        'Fecha inicial (formato ISO 8601, por defecto: hace 12 meses)',
-      example: '2024-01-01',
+      // description: 'Fecha inicial (formato ISO 8601, por defecto: hace 12 meses)',
+      description: 'Fecha inicial (formato UTC, por defecto: hace 12 meses)',
+      example: '2024-01-01T00:00:00.000Z', // '2024-01-01'
     }),
     ApiQuery({
       name: 'endDate',
       required: false,
       type: String,
-      description: 'Fecha final (formato ISO 8601, por defecto: hoy)',
-      example: '2025-11-17',
+      // description: 'Fecha final (formato ISO 8601, por defecto: hoy)',
+      description: 'Fecha final (formato UTC, por defecto: hoy)',
+      example: '2025-11-17T23:59:59.999Z', // '2025-11-17'
     }),
     ApiResponse({
       status: 200,

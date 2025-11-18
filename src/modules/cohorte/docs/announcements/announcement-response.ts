@@ -1,5 +1,33 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class AnnouncementAuthorDto {
+  @ApiProperty({
+    description: 'Identificador del usuario',
+    example: '550e8400-e29b-41d4-a716-446655440002',
+    format: 'uuid',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'Nombre completo del autor',
+    example: 'Juan Pérez',
+  })
+  fullName: string;
+
+  @ApiProperty({
+    description: 'Correo electrónico del autor',
+    example: 'juan.perez@example.com',
+  })
+  email: string;
+
+  @ApiProperty({
+    description: 'Rol del usuario',
+    enum: ['ADMIN', 'TEACHER', 'MEMBER'],
+    example: 'TEACHER',
+  })
+  role: string;
+}
+
 export class AnnouncementResponseDto {
   @ApiProperty({
     description: 'Identificador único del anuncio',
@@ -11,6 +39,7 @@ export class AnnouncementResponseDto {
   @ApiProperty({
     description: 'Título del anuncio',
     example: 'Recordatorio importante',
+    maxLength: 200,
   })
   title: string;
 
@@ -28,17 +57,16 @@ export class AnnouncementResponseDto {
   cohorteId: string;
 
   @ApiProperty({
-    description: 'ID del usuario que creó el anuncio',
-    example: '550e8400-e29b-41d4-a716-446655440002',
-    format: 'uuid',
+    description: 'Información del autor que creó el anuncio',
+    type: AnnouncementAuthorDto,
   })
-  createdBy: string;
+  author: AnnouncementAuthorDto;
 
   @ApiProperty({
     description: 'Indicador si el anuncio está fijado',
     example: false,
   })
-  isPinned: boolean;
+  pinned: boolean;
 
   @ApiProperty({
     description: 'Fecha de creación',

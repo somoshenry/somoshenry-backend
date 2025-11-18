@@ -17,9 +17,8 @@ import {
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
-  // ============================================
   // HISTORIAL DE PAGOS
-  // ============================================
+
   @Get('history')
   @ApiGetPaymentHistory()
   async getPaymentHistory(
@@ -35,9 +34,8 @@ export class PaymentController {
     );
   }
 
-  // ============================================
   // RECIBO DE PAGO
-  // ============================================
+
   @Get('receipt/:paymentId')
   @ApiGetPaymentReceipt()
   async getPaymentReceipt(
@@ -47,9 +45,8 @@ export class PaymentController {
     return this.paymentService.getPaymentReceipt(userId, paymentId);
   }
 
-  // ============================================
   // ESTADÍSTICAS (si tienes este método)
-  // ============================================
+
   @Get('stats')
   @ApiGetPaymentStats()
   async getPaymentStats(@CurrentUser('id') userId: string) {

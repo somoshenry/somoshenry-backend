@@ -11,15 +11,13 @@ import {
 } from '@nestjs/swagger';
 
 export const CohorteClassDocs = {
-  // ================================================================
   // GLOBAL
-  // ================================================================
+
   tag: () => ApiTags('Cohorte Classes'),
   auth: () => ApiBearerAuth(),
 
-  // ================================================================
   // CREATE CLASS
-  // ================================================================
+
   create: {
     summary: () =>
       ApiOperation({ summary: 'Crear una clase (Admin o Teacher)' }),
@@ -28,27 +26,24 @@ export const CohorteClassDocs = {
     badRequest: () => ApiBadRequestResponse({ description: 'Datos inválidos' }),
   },
 
-  // ================================================================
   // FIND ALL CLASSES
-  // ================================================================
+
   findAll: {
     summary: () =>
       ApiOperation({ summary: 'Listar todas las clases del sistema' }),
     ok: () => ApiOkResponse({ description: 'Clases obtenidas correctamente' }),
   },
 
-  // ================================================================
   // FIND ONE CLASS
-  // ================================================================
+
   findOne: {
     summary: () => ApiOperation({ summary: 'Obtener clase por ID' }),
     ok: () => ApiOkResponse({ description: 'Clase encontrada correctamente' }),
     notFound: () => ApiNotFoundResponse({ description: 'Clase no encontrada' }),
   },
 
-  // ================================================================
   // UPDATE CLASS
-  // ================================================================
+
   update: {
     summary: () =>
       ApiOperation({ summary: 'Actualizar clase (Admin o Teacher)' }),
@@ -57,9 +52,8 @@ export const CohorteClassDocs = {
     notFound: () => ApiNotFoundResponse({ description: 'Clase no encontrada' }),
   },
 
-  // ================================================================
   // REMOVE CLASS
-  // ================================================================
+
   remove: {
     summary: () => ApiOperation({ summary: 'Eliminar clase (solo Admin)' }),
     noContent: () =>
@@ -67,9 +61,8 @@ export const CohorteClassDocs = {
     notFound: () => ApiNotFoundResponse({ description: 'Clase no encontrada' }),
   },
 
-  // ================================================================
   // ATTENDANCE (MARK, GET CLASS, GET STUDENT)
-  // ================================================================
+
   attendance: {
     // MARCAR ASISTENCIA MASIVA
     markSummary: () =>

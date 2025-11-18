@@ -23,9 +23,8 @@ export class SubscriptionService {
     private readonly userService: UserService,
   ) {}
 
-  // ============================
   // PLANES INTERNOS
-  // ============================
+
   private readonly PLANS = {
     BRONCE: {
       name: 'Plan Gratis',
@@ -76,9 +75,8 @@ export class SubscriptionService {
     return this.PLANS[plan];
   }
 
-  // ============================================
   // PLANES DISPONIBLES
-  // ============================================
+
   getAvailablePlans() {
     return Object.entries(this.PLANS).map(([key, value]) => ({
       id: key,
@@ -86,9 +84,8 @@ export class SubscriptionService {
     }));
   }
 
-  // ============================================
   // OBTENER PLAN ACTUAL DEL USUARIO
-  // ============================================
+
   async getUserPlan(userId: string): Promise<SubscriptionPlan> {
     const sub = await this.subscriptionRepository.findOne({
       where: { userId },

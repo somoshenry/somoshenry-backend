@@ -107,7 +107,7 @@ export class CohorteService {
     // Buscar en la tabla intermedia cohorte_members
     const members = await this.memberRepo.find({
       where: {
-        userId,
+        user: { id: userId },
         // status: MemberStatusEnum.ACTIVE, // Solo cohortes activos
       },
       relations: ['cohorte'], // Traer info del cohorte
@@ -145,7 +145,7 @@ export class CohorteService {
   async getMyCohorteAsTeacher(userId: string) {
     const members = await this.memberRepo.find({
       where: {
-        userId,
+        user: { id: userId },
         role: CohorteRoleEnum.TEACHER,
         status: MemberStatusEnum.ACTIVE,
       },
@@ -166,7 +166,7 @@ export class CohorteService {
   async getMyCohortesAsStudent(userId: string) {
     const members = await this.memberRepo.find({
       where: {
-        userId,
+        user: { id: userId },
         role: CohorteRoleEnum.STUDENT,
         status: MemberStatusEnum.ACTIVE,
       },

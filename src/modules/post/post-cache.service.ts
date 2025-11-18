@@ -173,9 +173,7 @@ export class PostCacheService {
         const keys = await redis?.keys(`${this.FEED_CACHE_PREFIX}*`);
         if (keys && keys.length > 0) {
           await this.redisService.del(...keys);
-          this.logger.log(
-            ` Invalidado caché de feed (${keys.length} claves)`,
-          );
+          this.logger.log(` Invalidado caché de feed (${keys.length} claves)`);
           return true;
         }
       } catch (error) {

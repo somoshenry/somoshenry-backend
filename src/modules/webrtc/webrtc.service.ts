@@ -109,7 +109,7 @@ export class WebRTCService {
       const rooms = await Promise.all(
         roomIds.map((id) => this.loadRoomFromRedis(id)),
       );
-      return rooms.filter((room) => room !== null) as RoomEntity[];
+      return rooms.filter((room) => room !== null);
     }
 
     return Array.from(this.rooms.values()).filter((room) => room.isActive);

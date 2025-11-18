@@ -7,7 +7,7 @@ import { CreateCohorteClassDto } from './dto/create-cohorte-class.dto';
 import { UpdateCohorteClassDto } from './dto/update-cohorte-class.dto';
 import { Cohorte } from '../cohorte/entities/cohorte.entity';
 import { User } from '../../user/entities/user.entity';
-import { AttendanceService } from './attendance.service'; // ✅ AGREGAR si lo usas
+import { AttendanceService } from './attendance.service'; // AGREGAR si lo usas
 
 @Injectable()
 export class CohorteClassService {
@@ -20,14 +20,14 @@ export class CohorteClassService {
     private readonly cohorteRepo: Repository<Cohorte>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    // ✅ AGREGAR si usas attendanceService
+    // AGREGAR si usas attendanceService
     // private readonly attendanceService: AttendanceService,
   ) {}
 
   async create(dto: CreateCohorteClassDto): Promise<CohorteClass> {
     const cohorte = await this.cohorteRepo.findOne({
       where: { id: dto.cohorteId },
-      relations: ['members'], // ✅ Cargar miembros para generar asistencia
+      relations: ['members'], // Cargar miembros para generar asistencia
     });
     if (!cohorte) throw new NotFoundException('Cohorte no encontrada');
 
@@ -40,7 +40,7 @@ export class CohorteClassService {
       teacher = foundTeacher;
     }
 
-    // ✅ CORREGIR: Solo usar propiedades que existen en la entidad
+    // CORREGIR: Solo usar propiedades que existen en la entidad
     const newClass = this.classRepo.create({
       cohorte,
       name: dto.name,
@@ -53,14 +53,14 @@ export class CohorteClassService {
       recordingUrl: dto.recordingUrl,
       materialsUrl: dto.materialsUrl,
       status: dto.status,
-      // ✅ Si agregaste startDate y endDate a la entidad, descomenta:
+      // Si agregaste startDate y endDate a la entidad, descomenta:
       // startDate: dto.startDate,
       // endDate: dto.endDate,
     });
 
     const saved = await this.classRepo.save(newClass);
 
-    // ✅ Si usas attendanceService, descomenta:
+    // Si usas attendanceService, descomenta:
     // await this.attendanceService.generateForClass(saved.id, cohorte.id);
 
     return saved;

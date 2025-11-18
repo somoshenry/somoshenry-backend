@@ -31,7 +31,7 @@ export class AttendanceService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
-  /** Crear lista automática (STAND_UP + HANDS_ON) para todos los STUDENT del cohorte */
+  // Crear lista automática (STAND_UP + HANDS_ON) para todos los STUDENT del cohorte
   async generateForClass(classId: string, cohorteId: string): Promise<void> {
     const klass = await this.classRepo.findOne({
       where: { id: classId },
@@ -139,7 +139,7 @@ export class AttendanceService {
     await this.recalculateCohortePercentages(klass.cohorte.id);
   }
 
-  /** Obtener asistencia de la clase (ambos tipos) */
+  // Obtener asistencia de la clase (ambos tipos)
   getClassAttendance(classId: string) {
     return this.attendanceRepo.find({
       where: { classSession: { id: classId } },
@@ -148,7 +148,7 @@ export class AttendanceService {
     });
   }
 
-  /** Obtener asistencia de un alumno en una cohorte */
+  // Obtener asistencia de un alumno en una cohorte
   getStudentAttendance(cohorteId: string, studentId: string) {
     return this.attendanceRepo.find({
       where: {
@@ -160,7 +160,7 @@ export class AttendanceService {
     });
   }
 
-  /** Recalcular y guardar porcentaje en CohorteMember.attendance */
+  //  Recalcular y guardar porcentaje en CohorteMember.attendance
   async recalculateCohortePercentages(cohorteId: string): Promise<void> {
     const members = await this.memberRepo.find({
       where: { cohorte: { id: cohorteId }, role: CohorteRoleEnum.STUDENT },

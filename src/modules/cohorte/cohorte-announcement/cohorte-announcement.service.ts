@@ -41,7 +41,7 @@ export class CohorteAnnouncementService {
     if (!authorMember)
       throw new ForbiddenException('No perteneces a esta cohorte');
 
-    // ✅ AGREGAR: Obtener el usuario completo
+    // Obtener el usuario completo
     const requestingUser = await this.userRepo.findOne({
       where: { id: userId },
     });
@@ -50,7 +50,7 @@ export class CohorteAnnouncementService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    // ✅ Verificar permisos
+    // Verificar permisos
     if (
       requestingUser.role !== UserRole.ADMIN &&
       authorMember.role !== CohorteRoleEnum.TEACHER
@@ -58,20 +58,20 @@ export class CohorteAnnouncementService {
       throw new ForbiddenException('No autorizado');
     }
 
-    // ✅ author es requestingUser
+    // author es requestingUser
     const author = requestingUser;
 
     const newAnnouncement = this.announcementRepo.create({
       title: dto.title,
       content: dto.content,
       cohorte,
-      author: author, // ✅ Ya no es null
+      author: author, // Ya no es null
     });
 
     const saved: CohorteAnnouncement =
       await this.announcementRepo.save(newAnnouncement);
 
-    // 🔔 emitir anuncio en tiempo real
+    // emitir anuncio en tiempo real
     this.gateway.emitAnnouncement(cohorte.id, {
       id: saved.id,
       cohorteId: cohorte.id,
@@ -79,12 +79,12 @@ export class CohorteAnnouncementService {
       content: saved.content,
       author: {
         id: author.id,
-        // ✅ CORREGIR: User tiene 'name' y 'lastName'
+        // User tiene 'name' y 'lastName'
         name:
           author.name && author.lastName
             ? `${author.name} ${author.lastName}`
             : author.name || author.username || 'Usuario',
-        // ✅ CORREGIR: User tiene 'profilePicture'
+        // User tiene 'profilePicture'
         profileImage: author.profilePicture || null,
       },
       createdAt: saved.createdAt,

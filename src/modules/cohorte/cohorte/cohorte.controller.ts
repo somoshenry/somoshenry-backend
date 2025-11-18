@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  applyDecorators,
 } from '@nestjs/common';
 import { CohorteService } from './cohorte.service';
 import { CreateCohorteDto } from './dto/create-cohorte.dto';
@@ -17,8 +18,13 @@ import { UserRole } from '../../user/entities/user.entity';
 import { RolesGuard } from '../../auth/guard/roles.guard';
 import { CohorteRoleEnum } from './enums/cohorte.enums';
 
-// ⬅️ IMPORTAMOS TUS DOCS
 import { CohorteDocs } from '../docs/cohorte.docs';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import {
+  ApiGetMyCohortes,
+  ApiGetMyCohorteAsTeacher,
+  ApiGetMyCohortesAsStudent,
+} from '../docs/cohorte.docs';
 
 @CohorteDocs.tag()
 @CohorteDocs.auth()
@@ -27,22 +33,17 @@ import { CohorteDocs } from '../docs/cohorte.docs';
 export class CohorteController {
   constructor(private readonly cohorteService: CohorteService) {}
 
-  // =============================
-  //        CREATE
-  // =============================
   @Post()
   @AuthProtected()
   @Roles(UserRole.ADMIN)
   @CohorteDocs.create.summary()
+  @CohorteDocs.create.body()
   @CohorteDocs.create.created()
   @CohorteDocs.create.badRequest()
   create(@Body() dto: CreateCohorteDto) {
     return this.cohorteService.create(dto);
   }
 
-  // =============================
-  //        FIND ALL
-  // =============================
   @Get()
   @AuthProtected()
   @CohorteDocs.findAll.summary()
@@ -51,25 +52,22 @@ export class CohorteController {
     return this.cohorteService.findAll();
   }
 
-  // =============================
-  //        FIND ONE
-  // =============================
   @Get(':id')
   @AuthProtected()
   @CohorteDocs.findOne.summary()
+  @CohorteDocs.findOne.param()
   @CohorteDocs.findOne.ok()
   @CohorteDocs.findOne.notFound()
   findOne(@Param('id') id: string) {
     return this.cohorteService.findOne(id);
   }
 
-  // =============================
-  //        UPDATE
-  // =============================
   @Patch(':id')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
   @CohorteDocs.update.summary()
+  @CohorteDocs.update.param()
+  @CohorteDocs.update.body()
   @CohorteDocs.update.ok()
   @CohorteDocs.update.badRequest()
   @CohorteDocs.update.notFound()
@@ -77,28 +75,26 @@ export class CohorteController {
     return this.cohorteService.update(id, dto);
   }
 
-  // =============================
-  //        DELETE
-  // =============================
   @Delete(':id')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
   @CohorteDocs.remove.summary()
+  @CohorteDocs.remove.param()
   @CohorteDocs.remove.noContent()
   @CohorteDocs.remove.notFound()
   remove(@Param('id') id: string) {
     return this.cohorteService.remove(id);
   }
 
-  // =============================
-  //     ADD MEMBER
-  // =============================
   @Post(':id/members/:userId')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
   @CohorteDocs.members.addSummary()
+  @applyDecorators(...CohorteDocs.members.addParam())
+  @CohorteDocs.members.addBody()
   @CohorteDocs.members.created()
-  @CohorteDocs.members.notFound()
+  @CohorteDocs.members.memberAlreadyExists()
+  @CohorteDocs.members.memberNotFound()
   addMember(
     @Param('id') cohorteId: string,
     @Param('userId') userId: string,
@@ -107,19 +103,44 @@ export class CohorteController {
     return this.cohorteService.addMember(cohorteId, userId, role);
   }
 
-  // =============================
-  //     REMOVE MEMBER
-  // =============================
   @Delete(':id/members/:userId')
   @AuthProtected()
   @Roles(UserRole.ADMIN)
   @CohorteDocs.members.removeSummary()
+  @applyDecorators(...CohorteDocs.members.removeParam())
   @CohorteDocs.members.noContent()
-  @CohorteDocs.members.notFound()
+  @CohorteDocs.members.memberRemoveNotFound()
   removeMember(
     @Param('id') cohorteId: string,
     @Param('userId') userId: string,
   ) {
     return this.cohorteService.removeMember(cohorteId, userId);
+  }
+
+  // ============================================
+  // MIS COHORTES (ACTIVAS E INACTIVAS)
+  // ============================================
+  @Get('me')
+  @ApiGetMyCohortes()
+  async getMyCohortes(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohortes(userId);
+  }
+
+  // ============================================
+  // MIS COHORTES COMO PROFESOR (OPCIONAL)
+  // ============================================
+  @Get('me/teaching')
+  @ApiGetMyCohorteAsTeacher()
+  async getMyCohorteAsTeacher(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohorteAsTeacher(userId);
+  }
+
+  // ============================================
+  // MIS COHORTES COMO ESTUDIANTE (OPCIONAL)
+  // ============================================
+  @Get('me/studying')
+  @ApiGetMyCohortesAsStudent()
+  async getMyCohortesAsStudent(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohortesAsStudent(userId);
   }
 }

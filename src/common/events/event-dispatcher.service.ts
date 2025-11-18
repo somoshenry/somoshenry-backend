@@ -14,7 +14,7 @@ export class EventDispatcherService {
 
   dispatch(event: DomainEvent): void {
     if (!event?.name) {
-      this.logger.warn('⚠️ Event sin nombre recibido');
+      this.logger.warn(' Event sin nombre recibido');
       return;
     }
 

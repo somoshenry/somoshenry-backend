@@ -11,7 +11,7 @@ import { CohorteMember } from './entities/cohorte-member.entity';
 import { CreateCohorteDto } from './dto/create-cohorte.dto';
 import { UpdateCohorteDto } from './dto/update-cohorte.dto';
 import { User } from '../../user/entities/user.entity';
-import { CohorteRoleEnum } from './enums/cohorte.enums';
+import { CohorteRoleEnum, MemberStatusEnum } from './enums/cohorte.enums';
 
 @Injectable()
 export class CohorteService {
@@ -26,13 +26,13 @@ export class CohorteService {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  // 📘 Crear cohorte
+  //  Crear cohorte
   async create(dto: CreateCohorteDto): Promise<Cohorte> {
     const cohorte = this.cohorteRepo.create(dto);
     return this.cohorteRepo.save(cohorte);
   }
 
-  // 📗 Obtener todas las cohortes
+  //  Obtener todas las cohortes
   async findAll(): Promise<Cohorte[]> {
     return this.cohorteRepo.find({
       relations: ['members', 'members.user', 'classes'],
@@ -40,7 +40,7 @@ export class CohorteService {
     });
   }
 
-  // 📙 Obtener cohorte por ID
+  //  Obtener cohorte por ID
   async findOne(id: string): Promise<Cohorte> {
     const cohorte = await this.cohorteRepo.findOne({
       where: { id },
@@ -51,20 +51,20 @@ export class CohorteService {
     return cohorte;
   }
 
-  // ✏️ Actualizar cohorte
+  //  Actualizar cohorte
   async update(id: string, dto: UpdateCohorteDto): Promise<Cohorte> {
     const cohorte = await this.findOne(id);
     Object.assign(cohorte, dto);
     return this.cohorteRepo.save(cohorte);
   }
 
-  // ❌ Eliminar cohorte
+  //  Eliminar cohorte
   async remove(id: string): Promise<void> {
     const cohorte = await this.findOne(id);
     await this.cohorteRepo.remove(cohorte);
   }
 
-  // 👥 Agregar miembro a cohorte
+  //  Agregar miembro a cohorte
   async addMember(
     cohorteId: string,
     userId: string,
@@ -90,7 +90,7 @@ export class CohorteService {
     return this.memberRepo.save(member);
   }
 
-  // 🗑️ Remover miembro
+  //  Remover miembro
   async removeMember(cohorteId: string, userId: string): Promise<void> {
     const member = await this.memberRepo.findOne({
       where: { cohorte: { id: cohorteId }, user: { id: userId } },
@@ -98,5 +98,88 @@ export class CohorteService {
 
     if (!member) throw new NotFoundException('Miembro no encontrado');
     await this.memberRepo.remove(member);
+  }
+
+  // ============================================
+  // OBTENER MIS COHORTES (COHORTES DONDE ESTOY INSCRITO)
+  // ============================================
+  async getMyCohortes(userId: string) {
+    // Buscar en la tabla intermedia cohorte_members
+    const members = await this.memberRepo.find({
+      where: {
+        user: { id: userId },
+        // status: MemberStatusEnum.ACTIVE, // Solo cohortes activos
+      },
+      relations: ['cohorte'], // Traer info del cohorte
+      order: { joinedAt: 'DESC' }, // Más recientes primero
+    });
+
+    // Mapear para devolver info útil
+    return members.map((member) => ({
+      // Info del cohorte
+      cohorte: {
+        id: member.cohorte.id,
+        name: member.cohorte.name,
+        description: member.cohorte.description,
+        startDate: member.cohorte.startDate,
+        endDate: member.cohorte.endDate,
+        status: member.cohorte.status,
+        schedule: member.cohorte.schedule,
+        modality: member.cohorte.modality,
+      },
+      // Info de mi membresía
+      myRole: member.role, // TEACHER, STUDENT, TA
+      myStatus: member.status,
+      joinedAt: member.joinedAt,
+      // Si soy estudiante - usando operador ternario
+      ...(member.role === 'STUDENT' && {
+        attendance: member.attendance,
+        finalGrade: member.finalGrade,
+      }),
+    }));
+  }
+
+  // ============================================
+  // OBTENER COHORTES DONDE SOY PROFESOR
+  // ============================================
+  async getMyCohorteAsTeacher(userId: string) {
+    const members = await this.memberRepo.find({
+      where: {
+        user: { id: userId },
+        role: CohorteRoleEnum.TEACHER,
+        status: MemberStatusEnum.ACTIVE,
+      },
+      relations: ['cohorte'],
+      order: { joinedAt: 'DESC' },
+    });
+
+    return members.map((member) => ({
+      cohorte: member.cohorte,
+      myRole: member.role,
+      joinedAt: member.joinedAt,
+    }));
+  }
+
+  // ============================================
+  // OBTENER COHORTES DONDE SOY ESTUDIANTE
+  // ============================================
+  async getMyCohortesAsStudent(userId: string) {
+    const members = await this.memberRepo.find({
+      where: {
+        user: { id: userId },
+        role: CohorteRoleEnum.STUDENT,
+        status: MemberStatusEnum.ACTIVE,
+      },
+      relations: ['cohorte'],
+      order: { joinedAt: 'DESC' },
+    });
+
+    return members.map((member) => ({
+      cohorte: member.cohorte,
+      myRole: member.role,
+      joinedAt: member.joinedAt,
+      attendance: member.attendance,
+      finalGrade: member.finalGrade,
+    }));
   }
 }

@@ -59,6 +59,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((error) => {
-  console.error('❌ Error during application bootstrap:', error);
+  console.error(' Error during application bootstrap:', error);
   process.exit(1);
 });

@@ -17,7 +17,7 @@ export function SendGroupMessageDocs() {
         texto: {
           summary: 'Mensaje de texto',
           value: {
-            content: 'Hola grupo 👋',
+            content: 'Hola grupo ',
             type: 'TEXT',
           },
         },

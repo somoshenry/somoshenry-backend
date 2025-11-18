@@ -7,14 +7,15 @@ import {
   DeleteDateColumn,
   Index,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Follow } from '../../follow/entities/follow.entity';
 import { Post } from '../../post/entities/post.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Notification } from '../../notifications/socket/entities/notification.entity';
-// import { Subscription } from 'src/modules/subscription/entities/subscription.entity';
-// import { Payment } from 'src/modules/subscription/entities/payment.entity';
+import { Subscription } from 'src/modules/subscription/entities/subscription.entity';
+import { Payment } from 'src/modules/subscription/entities/payment.entity';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -103,11 +104,11 @@ export class User {
   @OneToMany(() => Notification, (notification) => notification.sender)
   sentNotifications: Notification[];
 
-  // // Relación con las suscripciones del usuario
-  // @OneToMany(() => Subscription, (subscription) => subscription.user)
-  // subscriptions: Subscription[];
+  @OneToOne(() => Subscription, (subscription) => subscription.user)
+  subscription: Subscription;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: Date | null;
 
-  // // Relación con los pagos del usuario
-  // @OneToMany(() => Payment, (payment) => payment.user)
-  // payments: Payment[];
+  @OneToMany(() => Payment, (payment) => payment.user)
+  payments: Payment[];
 }

@@ -1,6 +1,27 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ClassStatusEnum } from '../../cohorte/enums/cohorte.enums';
 
+export class ClassTeacherDto {
+  @ApiProperty({
+    description: 'ID del profesor',
+    example: '550e8400-e29b-41d4-a716-446655440002',
+    format: 'uuid',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'Nombre completo del profesor',
+    example: 'María García',
+  })
+  fullName: string;
+
+  @ApiProperty({
+    description: 'Correo electrónico del profesor',
+    example: 'maria.garcia@example.com',
+  })
+  email: string;
+}
+
 export class ClassResponseDto {
   @ApiProperty({
     description: 'ID único de la clase',
@@ -19,6 +40,7 @@ export class ClassResponseDto {
   @ApiProperty({
     description: 'Nombre de la clase',
     example: 'Introducción a TypeScript',
+    maxLength: 200,
   })
   name: string;
 
@@ -54,12 +76,11 @@ export class ClassResponseDto {
   duration?: number;
 
   @ApiProperty({
-    description: 'ID del profesor',
-    example: '550e8400-e29b-41d4-a716-446655440002',
-    format: 'uuid',
+    description: 'Información del profesor asignado',
+    type: ClassTeacherDto,
     nullable: true,
   })
-  teacherId?: string;
+  teacher?: ClassTeacherDto;
 
   @ApiProperty({
     description: 'URL de la reunión',
@@ -122,11 +143,24 @@ export class AttendanceRecordDto {
   studentId: string;
 
   @ApiProperty({
+    description: 'Nombre del estudiante',
+    example: 'Carlos López',
+  })
+  studentName: string;
+
+  @ApiProperty({
     description: 'Estado de asistencia',
     enum: ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'],
     example: 'PRESENT',
   })
   status: string;
+
+  @ApiProperty({
+    description: 'Notas adicionales sobre la asistencia',
+    example: 'Llegó 15 minutos tarde',
+    nullable: true,
+  })
+  notes?: string;
 }
 
 export class ClassAttendanceResponseDto {
@@ -138,7 +172,28 @@ export class ClassAttendanceResponseDto {
   classId: string;
 
   @ApiProperty({
-    description: 'Registros de asistencia',
+    description: 'Nombre de la clase',
+    example: 'Introducción a TypeScript',
+  })
+  className: string;
+
+  @ApiProperty({
+    description: 'Fecha de la clase',
+    example: '2025-02-15T14:00:00Z',
+    type: 'string',
+    format: 'date-time',
+  })
+  scheduledDate: Date;
+
+  @ApiProperty({
+    description: 'Cantidad total de registros de asistencia',
+    example: 25,
+    type: 'integer',
+  })
+  totalRecords: number;
+
+  @ApiProperty({
+    description: 'Registros de asistencia individuales',
     type: [AttendanceRecordDto],
   })
   attendance: AttendanceRecordDto[];
@@ -151,6 +206,12 @@ export class StudentAttendanceResponseDto {
     format: 'uuid',
   })
   studentId: string;
+
+  @ApiProperty({
+    description: 'Nombre del estudiante',
+    example: 'Carlos López',
+  })
+  studentName: string;
 
   @ApiProperty({
     description: 'ID de la cohorte',
@@ -172,6 +233,27 @@ export class StudentAttendanceResponseDto {
     type: 'integer',
   })
   classesAttended: number;
+
+  @ApiProperty({
+    description: 'Total de clases tardío',
+    example: 3,
+    type: 'integer',
+  })
+  classesLate: number;
+
+  @ApiProperty({
+    description: 'Total de clases ausente',
+    example: 2,
+    type: 'integer',
+  })
+  classesAbsent: number;
+
+  @ApiProperty({
+    description: 'Total de clases excusado',
+    example: 1,
+    type: 'integer',
+  })
+  classesExcused: number;
 
   @ApiProperty({
     description: 'Total de clases programadas',

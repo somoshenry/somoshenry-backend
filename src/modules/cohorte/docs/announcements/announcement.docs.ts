@@ -9,6 +9,7 @@ import {
   ApiBearerAuth,
   ApiTags,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { AnnouncementResponseDto } from './announcement-response';
 import { CreateAnnouncementRequestDto } from './announcement-request';
@@ -23,6 +24,15 @@ export const AnnouncementDocs = {
         summary: 'Crear anuncio en la cohorte',
         description:
           'Crea un nuevo anuncio visible para todos los miembros de la cohorte. Solo administradores y profesores pueden crear anuncios.',
+        operationId: 'createAnnouncement',
+      }),
+    param: () =>
+      ApiParam({
+        name: 'id',
+        type: 'string',
+        format: 'uuid',
+        description: 'ID de la cohorte',
+        example: '550e8400-e29b-41d4-a716-446655440000',
       }),
     body: () => ApiBody({ type: CreateAnnouncementRequestDto }),
     created: () =>
@@ -51,6 +61,7 @@ export const AnnouncementDocs = {
           example: {
             statusCode: 403,
             message: 'Forbidden',
+            error: 'Insufficient permissions',
           },
         },
       }),
@@ -61,7 +72,16 @@ export const AnnouncementDocs = {
       ApiOperation({
         summary: 'Obtener todos los anuncios de una cohorte',
         description:
-          'Retorna la lista de anuncios ordenados por fecha de creación descendente.',
+          'Retorna la lista de anuncios ordenados por pinned primero, luego por fecha de creación descendente.',
+        operationId: 'getCohorteAnnouncements',
+      }),
+    param: () =>
+      ApiParam({
+        name: 'id',
+        type: 'string',
+        format: 'uuid',
+        description: 'ID de la cohorte',
+        example: '550e8400-e29b-41d4-a716-446655440000',
       }),
     ok: () =>
       ApiOkResponse({
@@ -87,6 +107,15 @@ export const AnnouncementDocs = {
         summary: 'Eliminar un anuncio',
         description:
           'Elimina un anuncio. Solo el creador o un administrador puede eliminar anuncios.',
+        operationId: 'removeAnnouncement',
+      }),
+    param: () =>
+      ApiParam({
+        name: 'id',
+        type: 'string',
+        format: 'uuid',
+        description: 'ID del anuncio',
+        example: '550e8400-e29b-41d4-a716-446655440000',
       }),
     noContent: () =>
       ApiNoContentResponse({
@@ -99,6 +128,7 @@ export const AnnouncementDocs = {
           example: {
             statusCode: 403,
             message: 'Forbidden',
+            error: 'Only the creator or admin can delete',
           },
         },
       }),
@@ -118,13 +148,22 @@ export const AnnouncementDocs = {
   pin: {
     summary: () =>
       ApiOperation({
-        summary: 'Fijar/Desfijar un anuncio',
+        summary: 'Fijar o desfijar un anuncio',
         description:
           'Fija un anuncio al principio de la lista o lo desfiaja. Solo profesores y administradores pueden hacer esto.',
+        operationId: 'togglePinAnnouncement',
+      }),
+    param: () =>
+      ApiParam({
+        name: 'id',
+        type: 'string',
+        format: 'uuid',
+        description: 'ID del anuncio',
+        example: '550e8400-e29b-41d4-a716-446655440000',
       }),
     ok: () =>
       ApiOkResponse({
-        description: 'Anuncio fijado/desfijado exitosamente',
+        description: 'Anuncio fijado o desfijado exitosamente',
         type: AnnouncementResponseDto,
       }),
     forbidden: () =>
@@ -134,6 +173,7 @@ export const AnnouncementDocs = {
           example: {
             statusCode: 403,
             message: 'Forbidden',
+            error: 'Only teacher and admin can pin',
           },
         },
       }),

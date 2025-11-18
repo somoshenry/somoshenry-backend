@@ -28,8 +28,7 @@ interface JwtPayload {
   namespace: '/cohorte-announcement',
 })
 export class CohorteAnnouncementGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -48,9 +47,7 @@ export class CohorteAnnouncementGateway
 
   async handleConnection(client: Socket): Promise<void> {
     try {
-      const rawAuth = client.handshake.headers.authorization as
-        | string
-        | undefined;
+      const rawAuth = client.handshake.headers.authorization;
 
       const tokenFromHeader =
         rawAuth && rawAuth.startsWith('Bearer ')

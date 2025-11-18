@@ -141,7 +141,7 @@ export class ChatService {
 
     // Crear nueva conversación
     const conversation = this.conversationRepo.create({
-      participants: [user as User, peer as User],
+      participants: [user as User, peer],
     });
     const saved = await this.conversationRepo.save(conversation);
 

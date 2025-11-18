@@ -8,9 +8,11 @@ import {
   UseGuards,
   Request,
   Query,
+  Inject,
 } from '@nestjs/common';
 import { WebRTCService } from './webrtc.service';
 import { RoomChatService } from './room-chat.service';
+import { IceServerManagerService } from './services/ice-server-manager.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 
@@ -20,6 +22,7 @@ export class WebRTCController {
   constructor(
     private readonly webrtcService: WebRTCService,
     private readonly roomChatService: RoomChatService,
+    private readonly iceServerManager: IceServerManagerService,
   ) {}
 
   @Post('rooms')
@@ -107,16 +110,9 @@ export class WebRTCController {
   }
 
   @Get('ice-servers')
-  getIceServers() {
-    return {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-      ],
-    };
+  async getIceServers() {
+    const iceServersConfig = await this.iceServerManager.getIceServersConfig();
+    return iceServersConfig;
   }
 
   @Get('rooms/:id/chat')

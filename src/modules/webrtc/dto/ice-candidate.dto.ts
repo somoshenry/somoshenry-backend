@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class IceCandidateDto {
   @IsString()
@@ -11,4 +11,12 @@ export class IceCandidateDto {
 
   @IsNotEmpty()
   candidate!: any;
+
+  @IsNumber()
+  @IsOptional()
+  sequence?: number;
+
+  @IsString()
+  @IsOptional()
+  messageId?: string;
 }

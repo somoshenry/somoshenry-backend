@@ -6,8 +6,11 @@ import { WebRTCService } from './webrtc.service';
 import { WebRTCController } from './webrtc.controller';
 import { UserModule } from '../user/user.module';
 import { RoomChatService } from './room-chat.service';
+import { IceServerManagerService } from './services/ice-server-manager.service';
+import { SignalingStateMachineService } from './services/signaling-state-machine.service';
+import { PeerConnectionTrackerService } from './services/peer-connection-tracker.service';
+import { IceCandidateBufferService } from './services/ice-candidate-buffer.service';
 
-// MongoDB schema para chat de rooms
 const RoomChatMessageSchema = {
   roomId: String,
   userId: String,
@@ -30,7 +33,22 @@ const RoomChatMessageSchema = {
     ]),
   ],
   controllers: [WebRTCController],
-  providers: [WebRTCService, RoomChatService, WebRTCGateway],
-  exports: [WebRTCService, RoomChatService],
+  providers: [
+    WebRTCService,
+    RoomChatService,
+    WebRTCGateway,
+    IceServerManagerService,
+    SignalingStateMachineService,
+    PeerConnectionTrackerService,
+    IceCandidateBufferService,
+  ],
+  exports: [
+    WebRTCService,
+    RoomChatService,
+    IceServerManagerService,
+    SignalingStateMachineService,
+    PeerConnectionTrackerService,
+    IceCandidateBufferService,
+  ],
 })
 export class WebRTCModule {}

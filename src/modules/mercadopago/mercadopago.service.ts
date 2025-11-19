@@ -159,6 +159,23 @@ export class MercadoPagoService {
       const paymentRepo = manager.getRepository(Payment);
       const subscriptionRepo = manager.getRepository(Subscription);
 
+      const paymentExisting = await paymentRepo.findOne({
+        where: { mercadoPagoId: id?.toString() },
+      });
+
+      if (!paymentExisting) {
+        console.log('################################################');
+        console.log('################################################');
+        console.log('################################################');
+        console.log('################################################');
+        console.log('################################################');
+        console.log('Enviando notificación de pago exitoso al usuario');
+        await this.notificationService.sendPaymentSuccessNotification(
+          user.email,
+        );
+        console.log('Notificación enviada');
+      }
+
       const paymentRecord = paymentRepo.create({
         userId: user.id,
         subscriptionId: subscription.id,

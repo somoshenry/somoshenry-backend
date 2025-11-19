@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class WebRTCSignalDto {
   @IsString()
@@ -11,4 +11,12 @@ export class WebRTCSignalDto {
 
   @IsNotEmpty()
   sdp!: any;
+
+  @IsNumber()
+  @IsOptional()
+  sequence?: number;
+
+  @IsString()
+  @IsOptional()
+  messageId?: string;
 }

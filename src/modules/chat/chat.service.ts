@@ -35,6 +35,10 @@ import { ChatGateway } from './chat.gateway';
 // MONGODB (única fuente de verdad para mensajes)
 import { MessageMongoService } from './mongo/message-mongo.service';
 import { MessageMongoResponse } from './mongo/message-mongo.service';
+// REDIS STREAMS
+import { ChatStreamService } from './chat-stream.service';
+// REDIS UNREAD COUNTER
+import { RedisUnreadCounterService } from '../../common/services/redis-unread-counter.service';
 
 @Injectable()
 export class ChatService {
@@ -50,6 +54,12 @@ export class ChatService {
 
     // MongoDB service (única fuente para mensajes)
     private readonly messageMongoService: MessageMongoService,
+
+    // Redis Streams service (fast history retrieval)
+    private readonly chatStreamService: ChatStreamService,
+
+    // Redis unread counter service
+    private readonly redisUnreadCounterService: RedisUnreadCounterService,
 
     private readonly filesRepository: FilesRepository,
     private readonly eventEmitter: EventEmitter2,
@@ -216,10 +226,44 @@ export class ChatService {
     }>(cacheKey);
 
     if (cached) {
-      console.log('Mensajes desde Redis');
+      console.log('Mensajes desde Redis cache');
       return cached;
     }
 
+    try {
+      // Try Redis Streams first for fast retrieval
+      console.log('Intentando cargar mensajes desde Redis Streams...');
+      const streamResult = await this.chatStreamService.getMessagesPaginated(
+        conversationId,
+        page,
+        limit,
+      );
+
+      if (
+        streamResult &&
+        streamResult.entries &&
+        streamResult.entries.length > 0
+      ) {
+        console.log('Mensajes desde Redis Streams');
+        const messages = streamResult.entries.map((entry) => entry.data);
+        const response = {
+          data: messages,
+          meta: {
+            total: messages.length,
+            page,
+            limit,
+            totalPages: 1,
+            hasMore: streamResult.hasMore,
+          },
+        };
+        await this.cacheManager.set(cacheKey, response, 30);
+        return response;
+      }
+    } catch (error) {
+      console.warn('Error reading from Redis Streams:', error);
+    }
+
+    // Fallback to MongoDB (canonical source)
     console.log('Consultando mensajes desde MongoDB...');
 
     const total = await this.messageMongoService.countMessages(conversationId);
@@ -266,7 +310,7 @@ export class ChatService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    // Guardar en MongoDB
+    // Guardar en MongoDB (canonical source)
     const saved = await this.messageMongoService.createMessage({
       conversationId: dto.conversationId,
       senderId,
@@ -275,9 +319,36 @@ export class ChatService {
       attachments: dto.mediaUrl ? { mediaUrl: dto.mediaUrl } : undefined,
     });
 
+    // Dual-write to Redis Streams (fire-and-forget)
+    this.chatStreamService
+      .addMessage(dto.conversationId, {
+        id: saved.id,
+        senderId,
+        conversationId: dto.conversationId,
+        content: saved.content,
+        type: saved.type || 'TEXT',
+        createdAt: (saved.createdAt instanceof Date
+          ? saved.createdAt.toISOString()
+          : String(saved.createdAt)) as string,
+        attachments: saved.attachments,
+      })
+      .catch((err) =>
+        console.warn('Failed to write message to Redis Streams:', err),
+      );
+
     // Actualizar timestamp de conversación
     conversation.updatedAt = new Date();
     await this.conversationRepo.save(conversation);
+
+    // Increment unread counter for receiver (fire-and-forget)
+    const receiver = conversation.participants.find((p) => p.id !== senderId);
+    if (receiver) {
+      this.redisUnreadCounterService
+        .increment(receiver.id, dto.conversationId)
+        .catch((err) =>
+          console.warn('Failed to increment unread counter:', err),
+        );
+    }
 
     // Limpiar cache
     await this.cacheManager.del(`chat:messages:${dto.conversationId}`);
@@ -286,7 +357,6 @@ export class ChatService {
     }
 
     // Emitir evento interno
-    const receiver = conversation.participants.find((p) => p.id !== senderId);
     if (receiver) {
       this.eventEmitter.emit('message.created', {
         senderId,
@@ -300,7 +370,9 @@ export class ChatService {
     }
 
     // Emitir por WebSocket
-    this.chatGateway.emitNewMessage(saved);
+    this.chatGateway.emitNewMessage(
+      saved as unknown as Record<string, unknown>,
+    );
 
     return saved;
   }
@@ -312,6 +384,14 @@ export class ChatService {
       const updated = await this.messageMongoService.markAsRead(messageId);
       if (updated) {
         console.log('Mensaje marcado como leído');
+
+        // Decrement unread counter (fire-and-forget)
+        this.redisUnreadCounterService
+          .decrement(updated.senderId, updated.conversationId)
+          .catch((err) =>
+            console.warn('Failed to decrement unread counter:', err),
+          );
+
         return updated;
       }
     } catch (error) {
@@ -432,7 +512,9 @@ export class ChatService {
       });
     }
 
-    this.chatGateway.emitNewMessage(saved);
+    this.chatGateway.emitNewMessage(
+      saved as unknown as Record<string, unknown>,
+    );
 
     return saved;
   }
@@ -515,7 +597,7 @@ export class ChatService {
 
     if (!isMember) throw new BadRequestException('No perteneces a este grupo');
 
-    // Guardar en MongoDB
+    // Guardar en MongoDB (canonical source)
     const saved = await this.messageMongoService.createMessage({
       conversationId: groupId,
       senderId: sender.id,
@@ -523,9 +605,44 @@ export class ChatService {
       type,
     });
 
+    // Dual-write to Redis Streams (fire-and-forget)
+    this.chatStreamService
+      .addMessage(groupId, {
+        id: saved.id,
+        senderId: sender.id,
+        conversationId: groupId,
+        content: saved.content,
+        type: saved.type || 'TEXT',
+        createdAt: (saved.createdAt instanceof Date
+          ? saved.createdAt.toISOString()
+          : String(saved.createdAt)) as string,
+      })
+      .catch((err) =>
+        console.warn('Failed to write message to Redis Streams:', err),
+      );
+
     // Actualizar conversación
     conversation.updatedAt = new Date();
     await this.conversationRepo.save(conversation);
+
+    // Increment unread counter for all group members except sender (fire-and-forget)
+    const otherMembers = conversation.participants.filter(
+      (p) => p.id !== senderId,
+    );
+    if (otherMembers.length > 0) {
+      this.redisUnreadCounterService
+        .batchIncrement(
+          otherMembers.map((m) => ({
+            userId: m.id,
+            conversationId: groupId,
+            delta: 1,
+          })),
+          'group',
+        )
+        .catch((err) =>
+          console.warn('Failed to increment group unread counters:', err),
+        );
+    }
 
     // Limpiar cache
     await this.cacheManager.del(`chat:messages:${groupId}`);
@@ -551,7 +668,9 @@ export class ChatService {
       },
     });
 
-    this.chatGateway.emitNewMessage(saved);
+    this.chatGateway.emitNewMessage(
+      saved as unknown as Record<string, unknown>,
+    );
 
     return saved;
   }

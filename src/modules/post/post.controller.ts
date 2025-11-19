@@ -29,6 +29,7 @@ import { GetReportedPostsDocs } from './docs/get-reported-posts.swagger';
 import { FilterPostsDto } from './dto/filter-posts.dto';
 import { CurrentUser } from '../auth/decorator/current-user.decorator';
 import { EmitEvent } from 'src/common/events/decorators/emit-event.decorator';
+import { RedisRateLimitGuard } from '../../common/guards/redis-rate-limit.guard';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -37,6 +38,7 @@ export class PostController {
 
   @HttpPost()
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
+  @UseGuards(RedisRateLimitGuard)
   @CreatePostDocs()
   create(
     @Body() createPostDto: CreatePostDto,

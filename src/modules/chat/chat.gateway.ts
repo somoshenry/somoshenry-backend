@@ -19,10 +19,11 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
+import { ChatPubSubService } from './chat-pubsub.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { Message, MessageType } from './entities/message.entity';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
-import Redis from 'ioredis';
+import { RedisService } from '../../common/services/redis.service';
 import { createAdapter } from '@socket.io/redis-adapter';
 
 interface JwtPayload {
@@ -57,17 +58,17 @@ export class ChatGateway
   private readonly logger = new Logger(ChatGateway.name);
   private readonly onlineUsers = new Map<string, string>();
 
-  private redisPub!: Redis;
-  private redisSub!: Redis;
-  private redis!: Redis;
   private readonly ONLINE_SET = 'chat:onlineUsers';
-  private readonly TYPING_SET = 'chat:typingUsers';
+
+  private isRedisEnabled = false;
 
   constructor(
     @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
     private readonly eventDispatcher: EventDispatcherService,
+    private readonly redisService: RedisService,
+    private readonly chatPubSubService: ChatPubSubService,
   ) {}
 
   // INIT + REDIS
@@ -75,32 +76,22 @@ export class ChatGateway
   afterInit(server: Server): void {
     this.server = server;
 
-    const redisUrl = process.env.REDIS_URL;
+    const redisPub = this.redisService.getRedisPub();
+    const redisSub = this.redisService.getRedisSub();
 
     // LOCAL → SIN REDIS
-    if (!redisUrl) {
+    if (!redisPub || !redisSub) {
       this.logger.warn('Redis desactivado (modo local)');
       this.registerEventListeners();
       return;
     }
 
-    //PRODUCCIÓN → CON REDIS
-    this.redisPub = new Redis(redisUrl, {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 500,
-    });
-
-    this.redisSub = new Redis(redisUrl, {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 500,
-    });
-
-    this.redis = this.redisPub;
-
-    this.server.adapter(createAdapter(this.redisPub, this.redisSub));
+    // PRODUCCIÓN → CON REDIS
+    this.isRedisEnabled = true;
+    this.server.adapter(createAdapter(redisPub, redisSub));
 
     this.registerEventListeners();
-    this.logger.log('ChatGateway listo con Redis + Socket.IO');
+    this.logger.log('ChatGateway listo con Redis Pub/Sub + Socket.IO');
   }
 
   // CONEXIÓN / DESCONEXIÓN
@@ -127,8 +118,11 @@ export class ChatGateway
 
       // Guardar en memoria local y Redis
       this.onlineUsers.set(userId, client.id);
-      if (this.redis) {
-        await this.redis.sadd(this.ONLINE_SET, userId);
+      if (this.isRedisEnabled) {
+        const redis = this.redisService.getRedis();
+        if (redis) {
+          await redis.sadd(this.ONLINE_SET, userId);
+        }
       }
 
       await this.broadcastOnlineUsers();
@@ -149,8 +143,11 @@ export class ChatGateway
 
     // Eliminar de memoria local y Redis
     this.onlineUsers.delete(userId);
-    if (this.redis) {
-      await this.redis.srem(this.ONLINE_SET, userId);
+    if (this.isRedisEnabled) {
+      const redis = this.redisService.getRedis();
+      if (redis) {
+        await redis.srem(this.ONLINE_SET, userId);
+      }
     }
 
     await this.broadcastOnlineUsers();
@@ -182,7 +179,36 @@ export class ChatGateway
     }
 
     await client.join(conversationId);
+
+    if (this.isRedisEnabled) {
+      void this.setupDMChannelListener(conversationId);
+    }
+
     client.emit('joinedConversation', { conversationId });
+  }
+
+  private async setupDMChannelListener(conversationId: string): Promise<void> {
+    if (this.chatPubSubService.isDMSubscribed(conversationId)) {
+      return;
+    }
+
+    try {
+      await this.chatPubSubService.subscribeToDirectMessage(
+        conversationId,
+        (payload) => {
+          const messagePayload = payload as Record<string, unknown>;
+          const message = messagePayload.message;
+          if (message) {
+            this.server.to(conversationId).emit('messageReceived', message);
+          }
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error subscribing to DM channel ${conversationId}:`,
+        error,
+      );
+    }
   }
 
   @SubscribeMessage('sendMessage')
@@ -200,7 +226,17 @@ export class ChatGateway
     try {
       const message = await this.chatService.sendMessage(userId, dto);
 
-      this.server.to(dto.conversationId).emit('messageReceived', message);
+      if (this.isRedisEnabled) {
+        await this.chatPubSubService.publishDirectMessage(dto.conversationId, {
+          type: 'message.sent',
+          conversationId: dto.conversationId,
+          senderId: userId,
+          message,
+        });
+      } else {
+        this.server.to(dto.conversationId).emit('messageReceived', message);
+      }
+
       client.emit('messageDelivered', message);
     } catch (error) {
       this.logger.error('Error al enviar mensaje', error);
@@ -249,10 +285,38 @@ export class ChatGateway
 
     await client.join(groupId);
 
+    if (this.isRedisEnabled) {
+      void this.setupGroupChannelListener(groupId);
+    }
+
     this.server.to(groupId).emit('systemMessage', {
       content: 'Un usuario se unió al grupo',
       groupId,
     });
+  }
+
+  private async setupGroupChannelListener(groupId: string): Promise<void> {
+    if (this.chatPubSubService.isGroupSubscribed(groupId)) {
+      return;
+    }
+
+    try {
+      await this.chatPubSubService.subscribeToGroupMessages(
+        groupId,
+        (payload) => {
+          const messagePayload = payload as Record<string, unknown>;
+          const message = messagePayload.message;
+          if (message) {
+            this.server.to(groupId).emit('messageReceived', message);
+          }
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error subscribing to group channel ${groupId}:`,
+        error,
+      );
+    }
   }
 
   @SubscribeMessage('leaveGroup')
@@ -295,7 +359,17 @@ export class ChatGateway
       content,
       type ?? MessageType.TEXT,
     );
-    this.server.to(groupId).emit('messageReceived', message);
+
+    if (this.isRedisEnabled) {
+      await this.chatPubSubService.publishGroupMessage(groupId, {
+        type: 'message.sent',
+        groupId,
+        senderId,
+        message,
+      });
+    } else {
+      this.server.to(groupId).emit('messageReceived', message);
+    }
   }
 
   // EVENTOS DE DOMINIO (EventDispatcher)
@@ -382,10 +456,18 @@ export class ChatGateway
 
   // MÉTODO AUXILIAR PÚBLICO
 
-  emitNewMessage(message: Record<string, any>): void {
-    const conversationId = message.conversationId;
+  emitNewMessage(message: Record<string, unknown>): void {
+    const conversationId = message.conversationId as string;
     if (!conversationId) return;
 
-    this.server.to(conversationId).emit('newMessage', message);
+    if (this.isRedisEnabled) {
+      void this.chatPubSubService.publishDirectMessage(conversationId, {
+        type: 'message.sent',
+        conversationId,
+        message,
+      });
+    } else {
+      this.server.to(conversationId).emit('newMessage', message);
+    }
   }
 }

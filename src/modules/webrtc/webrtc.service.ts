@@ -28,13 +28,36 @@ export class WebRTCService {
     const redisUrl = process.env.REDIS_URL;
 
     if (redisUrl) {
-      this.redis = new Redis(redisUrl, {
-        maxRetriesPerRequest: 1,
-        connectTimeout: 500,
-      });
-      this.logger.log('WebRTC Service conectado a Redis');
+      try {
+        this.redis = new Redis(redisUrl, {
+          maxRetriesPerRequest: 1,
+          connectTimeout: 500,
+          retryStrategy: (times) => {
+            // Exponential backoff: 100ms, 200ms, 400ms, max 5s
+            const delay = Math.min(times * 100, 5000);
+            return delay;
+          },
+          enableReadyCheck: false,
+          enableOfflineQueue: false,
+        });
+
+        this.redis.on('error', (err) => {
+          this.logger.error('Redis connection error:', err);
+        });
+
+        this.redis.on('connect', () => {
+          this.logger.log('Redis conectado exitosamente');
+        });
+
+        this.logger.log('WebRTC Service inicializando conexión a Redis');
+      } catch (err) {
+        this.logger.error('Error inicializando Redis:', err);
+        this.redis = null;
+      }
     } else {
-      this.logger.warn('WebRTC Service sin Redis (modo local)');
+      this.logger.warn(
+        'REDIS_URL no configurado - modo local (sin persistencia)',
+      );
     }
   }
 
@@ -232,41 +255,66 @@ export class WebRTCService {
   private async saveRoomToRedis(room: RoomEntity): Promise<void> {
     if (!this.redis) return;
 
-    const roomData = {
-      id: room.id,
-      name: room.name,
-      description: room.description || '',
-      createdBy: room.createdBy,
-      maxParticipants: room.maxParticipants,
-      createdAt: room.createdAt.toISOString(),
-      isActive: room.isActive,
-      participants: JSON.stringify(Array.from(room.participants.entries())),
-    };
+    try {
+      const roomData = {
+        id: room.id,
+        name: room.name,
+        description: room.description || '',
+        createdBy: room.createdBy,
+        maxParticipants: room.maxParticipants,
+        createdAt: room.createdAt.toISOString(),
+        isActive: room.isActive,
+        participants: JSON.stringify(Array.from(room.participants.entries())),
+      };
 
-    await this.redis.sadd(this.REDIS_ROOMS_KEY, room.id);
-    await this.redis.hmset(`${this.REDIS_ROOM_PREFIX}${room.id}`, roomData);
-    await this.redis.expire(`${this.REDIS_ROOM_PREFIX}${room.id}`, 86400);
+      await Promise.all([
+        this.redis.sadd(this.REDIS_ROOMS_KEY, room.id),
+        this.redis.hmset(`${this.REDIS_ROOM_PREFIX}${room.id}`, roomData),
+        this.redis.expire(`${this.REDIS_ROOM_PREFIX}${room.id}`, 86400),
+      ]);
+    } catch (error) {
+      // Log but don't throw - Redis es opcional
+      this.logger.warn(`Error guardando room en Redis: ${room.id}`, error);
+    }
   }
 
   private async loadRoomFromRedis(roomId: string): Promise<RoomEntity | null> {
     if (!this.redis) return null;
 
-    const data = await this.redis.hgetall(`${this.REDIS_ROOM_PREFIX}${roomId}`);
-    if (!data || !data.id) return null;
+    try {
+      const data = await this.redis.hgetall(
+        `${this.REDIS_ROOM_PREFIX}${roomId}`,
+      );
+      if (!data || !data.id) {
+        return null;
+      }
 
-    const participants = new Map<string, Participant>(
-      JSON.parse(data.participants || '[]'),
-    );
+      let participants: Map<string, Participant>;
+      try {
+        participants = new Map<string, Participant>(
+          JSON.parse(data.participants || '[]'),
+        );
+      } catch (parseError) {
+        this.logger.warn(
+          `Error parseando participantes de Redis para room ${roomId}`,
+        );
+        participants = new Map();
+      }
 
-    return new RoomEntity({
-      id: data.id,
-      name: data.name,
-      description: data.description,
-      createdBy: data.createdBy,
-      maxParticipants: parseInt(data.maxParticipants, 10),
-      createdAt: new Date(data.createdAt),
-      isActive: data.isActive === 'true',
-      participants,
-    });
+      return new RoomEntity({
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        createdBy: data.createdBy,
+        maxParticipants: parseInt(data.maxParticipants, 10),
+        createdAt: new Date(data.createdAt),
+        isActive: data.isActive === 'true',
+        participants,
+      });
+    } catch (error) {
+      // Log pero no throw - Redis es opcional
+      this.logger.warn(`Error cargando room desde Redis: ${roomId}`, error);
+      return null;
+    }
   }
 }

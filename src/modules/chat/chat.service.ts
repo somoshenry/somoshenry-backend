@@ -73,8 +73,6 @@ export class ChatService {
       return cached;
     }
 
-    console.log('Consultando conversaciones y mensajes desde MongoDB...');
-
     // Traer conversaciones (solo metadata, sin mensajes de PostgreSQL)
     const conversations = await this.conversationRepo
       .createQueryBuilder('c')
@@ -107,7 +105,6 @@ export class ChatService {
     );
 
     await this.cacheManager.set(cacheKey, conversationsWithMessages, 30);
-    console.log('Conversaciones cacheadas con mensajes de MongoDB');
 
     return conversationsWithMessages;
   }

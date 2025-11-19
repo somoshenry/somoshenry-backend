@@ -11,6 +11,7 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -43,6 +44,7 @@ interface UserSocketData {
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   maxHttpBufferSize: 1e6,
+  transports: ['websocket', 'polling'],
 })
 export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -132,13 +134,36 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): Promise<void> {
     const userId = (client.data as UserSocketData).userId;
 
-    if (!userId) throw new UnauthorizedException('Usuario no autenticado');
+    if (!userId) {
+      this.logger.error('joinRoom: Usuario no autenticado');
+      client.emit('error', {
+        code: 'UNAUTHORIZED',
+        message: 'Usuario no autenticado',
+      });
+      return;
+    }
+
+    if (!dto.roomId) {
+      this.logger.error('joinRoom: roomId es requerido');
+      client.emit('error', {
+        code: 'BAD_REQUEST',
+        message: 'roomId es requerido',
+      });
+      return;
+    }
 
     try {
-      // Validar que la sala exista (se crea por HTTP en el controller)
-      await this.webrtcService.getRoom(dto.roomId);
+      this.logger.debug(
+        `joinRoom: Usuario ${userId} intentando entrar a ${dto.roomId}`,
+      );
 
-      // 1) Agregar participante a la sala
+      // Validar que la sala exista
+      const room = await this.webrtcService.getRoom(dto.roomId);
+      this.logger.debug(
+        `joinRoom: Sala existe. Participantes actuales: ${room.participants.size}/${room.maxParticipants}`,
+      );
+
+      // Agregar participante a la sala
       const participant = await this.webrtcService.addParticipant(
         dto.roomId,
         userId,
@@ -147,12 +172,12 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         dto.video ?? true,
       );
 
+      // Unir socket a la room de Socket.IO
       await client.join(dto.roomId);
       this.socketToRoom.set(client.id, dto.roomId);
 
-      // 2) Datos del usuario desde DB
+      // Obtener datos del usuario
       const user = await this.userService.findById(userId);
-
       const fullName = `${user.name ?? ''} ${user.lastName ?? ''}`.trim();
       const avatar = user.profilePicture ?? null;
       const username = user.username ?? user.email ?? (fullName || 'Usuario');
@@ -165,36 +190,59 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         avatar,
       };
 
-      // 3) Participantes actuales con nombres / username / avatar
+      // Obtener lista de participantes actuales
       const participants = await this.webrtcService.getParticipants(dto.roomId);
-
-      const participantsWithNames = await Promise.all(
-        participants.map(async (p) => {
-          const u = await this.userService.findById(p.userId);
-          const full = `${u.name ?? ''} ${u.lastName ?? ''}`.trim();
-          const uUsername = u.username ?? u.email ?? (full || 'Usuario');
-
-          return {
-            userId: u.id,
-            name: u.name ?? null,
-            lastName: u.lastName ?? null,
-            username: uUsername,
-            avatar: u.profilePicture ?? null,
-            audio: p.audio,
-            video: p.video,
-            screen: p.screen,
-          };
-        }),
+      this.logger.debug(
+        `joinRoom: Obtenidos ${participants.length} participantes`,
       );
 
-      // 4) Emitir "joinedRoom" al que entra
+      const participantsWithNames = await Promise.all(
+        participants
+          .filter((p) => p.userId !== userId) // No incluir al usuario actual
+          .map(async (p) => {
+            try {
+              const u = await this.userService.findById(p.userId);
+              const full = `${u.name ?? ''} ${u.lastName ?? ''}`.trim();
+              const uUsername = u.username ?? u.email ?? (full || 'Usuario');
+
+              return {
+                userId: u.id,
+                name: u.name ?? null,
+                lastName: u.lastName ?? null,
+                username: uUsername,
+                avatar: u.profilePicture ?? null,
+                audio: p.audio,
+                video: p.video,
+                screen: p.screen,
+              };
+            } catch (err) {
+              this.logger.warn(
+                `joinRoom: Error obteniendo datos de usuario ${p.userId}`,
+                err,
+              );
+              return {
+                userId: p.userId,
+                name: null,
+                lastName: null,
+                username: `Usuario ${p.userId.substring(0, 8)}`,
+                avatar: null,
+                audio: p.audio,
+                video: p.video,
+                screen: p.screen,
+              };
+            }
+          }),
+      );
+
+      // Emitir "joinedRoom" al usuario que entra
       client.emit('joinedRoom', {
         roomId: dto.roomId,
         user: currentUser,
         participants: participantsWithNames,
+        totalParticipants: participants.length,
       });
 
-      // 5) Emitir "userJoined" al resto
+      // Emitir "userJoined" a los demás
       client.to(dto.roomId).emit('userJoined', {
         userId: user.id,
         name: user.name ?? null,
@@ -206,12 +254,26 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         screen: participant.screen,
       });
 
-      this.logger.log(`🎥 Usuario ${userId} se unió a room ${dto.roomId}`);
+      this.logger.log(
+        `✅ Usuario ${userId} se unió a room ${dto.roomId} (${participants.length}/${room.maxParticipants} participantes)`,
+      );
     } catch (error) {
-      this.logger.error('Error al unirse a room', error);
+      this.logger.error(`❌ Error en joinRoom para usuario ${userId}:`, error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Error desconocido al unirse a la sala';
+      const errorCode =
+        error instanceof BadRequestException
+          ? 'BAD_REQUEST'
+          : error instanceof NotFoundException
+            ? 'NOT_FOUND'
+            : 'INTERNAL_ERROR';
+
       client.emit('error', {
-        message:
-          error instanceof Error ? error.message : 'Error al unirse a la sala',
+        code: errorCode,
+        message: errorMessage,
+        timestamp: new Date().toISOString(),
       });
     }
   }
@@ -269,42 +331,46 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: WebRTCSignalDto,
   ): void {
     const userId = (client.data as UserSocketData).userId;
-    if (!userId) throw new UnauthorizedException();
 
-    // Record offer in state machine to detect duplicates
-    this.signalingStateMachine.recordOfferSent(
-      dto.roomId,
-      userId,
-      dto.targetUserId,
-      dto.sequence ?? 0,
-    );
+    if (!userId) {
+      this.logger.warn('offer: Usuario no autenticado');
+      client.emit('error', { code: 'UNAUTHORIZED', message: 'No autenticado' });
+      return;
+    }
 
-    // Check if this is a duplicate offer by checking recent timestamp
-    const existingContext = this.signalingStateMachine.getContext(
-      dto.roomId,
-      userId,
-      dto.targetUserId,
-    );
-    if (
-      existingContext?.lastOfferTimestamp &&
-      Date.now() - existingContext.lastOfferTimestamp < 1000
-    ) {
-      this.logger.warn(
-        `Duplicate offer detected: ${userId} -> ${dto.targetUserId}, sequence ${dto.sequence}`,
-      );
-      client.emit('offerAck', {
-        success: false,
-        reason: 'duplicate_offer',
-        sequence: dto.sequence,
+    if (!dto || !dto.roomId || !dto.targetUserId || !dto.sdp) {
+      this.logger.warn('offer: Datos incompletos en DTO');
+      client.emit('error', {
+        code: 'BAD_REQUEST',
+        message: 'Datos incompletos',
       });
       return;
     }
 
-    const peerKey = `${dto.roomId}:${userId}:${dto.targetUserId}`;
+    try {
+      // Validar que el usuario destino exista
+      const targetSocket = this.getUserSocket(dto.targetUserId);
+      if (!targetSocket) {
+        this.logger.warn(
+          `offer: Usuario destino ${dto.targetUserId} no conectado`,
+        );
+        client.emit('error', {
+          code: 'NOT_FOUND',
+          message: 'Usuario objetivo no disponible',
+          targetUserId: dto.targetUserId,
+        });
+        return;
+      }
 
-    const targetSocket = this.getUserSocket(dto.targetUserId);
+      // Registrar offer en state machine
+      this.signalingStateMachine.recordOfferSent(
+        dto.roomId,
+        userId,
+        dto.targetUserId,
+        dto.sequence ?? 0,
+      );
 
-    if (targetSocket) {
+      // Enviar offer al usuario destino
       this.server.to(targetSocket).emit('offer', {
         fromUserId: userId,
         sdp: dto.sdp as RTCSessionDescriptionInit,
@@ -312,10 +378,21 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sequence: dto.sequence,
         messageId: dto.messageId,
       });
-      this.logger.log(`📤 Offer: ${userId} -> ${dto.targetUserId}`);
+
+      this.logger.debug(
+        `📤 Offer: ${userId} → ${dto.targetUserId} (seq: ${dto.sequence})`,
+      );
+
       client.emit('offerAck', { success: true, sequence: dto.sequence });
-    } else {
-      client.emit('error', { message: 'Usuario objetivo no conectado' });
+    } catch (error) {
+      this.logger.error(
+        `Error en handleOffer: ${userId} → ${dto.targetUserId}`,
+        error,
+      );
+      client.emit('error', {
+        code: 'INTERNAL_ERROR',
+        message: 'Error procesando offer',
+      });
     }
   }
 
@@ -325,42 +402,45 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: WebRTCSignalDto,
   ): void {
     const userId = (client.data as UserSocketData).userId;
-    if (!userId) throw new UnauthorizedException();
 
-    // Record answer in state machine to detect duplicates
-    this.signalingStateMachine.recordAnswerSent(
-      dto.roomId,
-      userId,
-      dto.targetUserId,
-      dto.sequence ?? 0,
-    );
+    if (!userId) {
+      this.logger.warn('answer: Usuario no autenticado');
+      client.emit('error', { code: 'UNAUTHORIZED', message: 'No autenticado' });
+      return;
+    }
 
-    // Check if this is a duplicate answer
-    const existingContext = this.signalingStateMachine.getContext(
-      dto.roomId,
-      userId,
-      dto.targetUserId,
-    );
-    if (
-      existingContext?.lastAnswerTimestamp &&
-      Date.now() - existingContext.lastAnswerTimestamp < 1000
-    ) {
-      this.logger.warn(
-        `Duplicate answer detected: ${userId} -> ${dto.targetUserId}, sequence ${dto.sequence}`,
-      );
-      client.emit('answerAck', {
-        success: false,
-        reason: 'duplicate_answer',
-        sequence: dto.sequence,
+    if (!dto || !dto.roomId || !dto.targetUserId || !dto.sdp) {
+      this.logger.warn('answer: Datos incompletos en DTO');
+      client.emit('error', {
+        code: 'BAD_REQUEST',
+        message: 'Datos incompletos',
       });
       return;
     }
 
-    const peerKey = `${dto.roomId}:${userId}:${dto.targetUserId}`;
+    try {
+      // Validar que el usuario destino exista
+      const targetSocket = this.getUserSocket(dto.targetUserId);
+      if (!targetSocket) {
+        this.logger.warn(
+          `answer: Usuario destino ${dto.targetUserId} no conectado`,
+        );
+        client.emit('error', {
+          code: 'NOT_FOUND',
+          message: 'Usuario objetivo no disponible',
+        });
+        return;
+      }
 
-    const targetSocket = this.getUserSocket(dto.targetUserId);
+      // Registrar answer en state machine
+      this.signalingStateMachine.recordAnswerSent(
+        dto.roomId,
+        userId,
+        dto.targetUserId,
+        dto.sequence ?? 0,
+      );
 
-    if (targetSocket) {
+      // Enviar answer al usuario destino
       this.server.to(targetSocket).emit('answer', {
         fromUserId: userId,
         sdp: dto.sdp as RTCSessionDescriptionInit,
@@ -368,10 +448,21 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sequence: dto.sequence,
         messageId: dto.messageId,
       });
-      this.logger.log(`📥 Answer: ${userId} -> ${dto.targetUserId}`);
+
+      this.logger.debug(
+        `📥 Answer: ${userId} → ${dto.targetUserId} (seq: ${dto.sequence})`,
+      );
+
       client.emit('answerAck', { success: true, sequence: dto.sequence });
-    } else {
-      client.emit('error', { message: 'Usuario objetivo no conectado' });
+    } catch (error) {
+      this.logger.error(
+        `Error en handleAnswer: ${userId} → ${dto.targetUserId}`,
+        error,
+      );
+      client.emit('error', {
+        code: 'INTERNAL_ERROR',
+        message: 'Error procesando answer',
+      });
     }
   }
 
@@ -381,42 +472,56 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: IceCandidateDto,
   ): void {
     const userId = (client.data as UserSocketData).userId;
-    if (!userId) throw new UnauthorizedException();
 
-    // Buffer and check for duplicate candidates
-    const hasDuplicate = this.iceCandidateBuffer.hasDuplicate(
-      dto.roomId,
-      userId,
-      dto.targetUserId,
-      dto.candidate,
-    );
-
-    if (hasDuplicate) {
-      this.logger.debug(
-        `Duplicate ICE candidate detected: ${userId} -> ${dto.targetUserId}`,
-      );
+    if (!userId) {
+      this.logger.warn('iceCandidate: Usuario no autenticado');
       return;
     }
 
-    // Buffer the candidate
-    this.iceCandidateBuffer.bufferCandidate(
-      dto.roomId,
-      userId,
-      dto.targetUserId,
-      dto.candidate,
-    );
+    if (!dto || !dto.roomId || !dto.targetUserId || !dto.candidate) {
+      this.logger.warn('iceCandidate: Datos incompletos');
+      return;
+    }
 
-    // Track ICE candidate reception
-    this.peerConnectionTracker.updateIceConnectionState(
-      dto.roomId,
-      userId,
-      dto.targetUserId,
-      'checking',
-    );
+    try {
+      // Verificar duplicados
+      const hasDuplicate = this.iceCandidateBuffer.hasDuplicate(
+        dto.roomId,
+        userId,
+        dto.targetUserId,
+        dto.candidate,
+      );
 
-    const targetSocket = this.getUserSocket(dto.targetUserId);
+      if (hasDuplicate) {
+        this.logger.debug(`🔁 ICE duplicado: ${userId} → ${dto.targetUserId}`);
+        return;
+      }
 
-    if (targetSocket) {
+      // Bufferizar el candidate y obtener su número de secuencia
+      const candidateSequence = this.iceCandidateBuffer.bufferCandidate(
+        dto.roomId,
+        userId,
+        dto.targetUserId,
+        dto.candidate,
+      );
+
+      // Actualizar estado de conexión ICE
+      this.peerConnectionTracker.updateIceConnectionState(
+        dto.roomId,
+        userId,
+        dto.targetUserId,
+        'checking',
+      );
+
+      // Enviar a usuario destino
+      const targetSocket = this.getUserSocket(dto.targetUserId);
+      if (!targetSocket) {
+        this.logger.debug(
+          `iceCandidate: Usuario destino ${dto.targetUserId} no conectado`,
+        );
+        return;
+      }
+
       this.server.to(targetSocket).emit('iceCandidate', {
         fromUserId: userId,
         candidate: dto.candidate as RTCIceCandidateInit,
@@ -424,13 +529,22 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sequence: dto.sequence,
         messageId: dto.messageId,
       });
-      this.logger.log(`🧊 ICE: ${userId} -> ${dto.targetUserId}`);
+
+      this.logger.debug(`🧊 ICE: ${userId} → ${dto.targetUserId}`);
+
+      // Marcar como aplicado
       this.iceCandidateBuffer.markAsApplied(
         dto.roomId,
         userId,
         dto.targetUserId,
-        dto.candidate,
+        [candidateSequence],
       );
+    } catch (error) {
+      this.logger.error(
+        `Error en handleIceCandidate: ${userId} → ${dto.targetUserId}`,
+        error,
+      );
+      // No emitir error al cliente, silenciar fallos de ICE candidates
     }
   }
 

@@ -16,6 +16,8 @@ import { Comment } from '../../comment/entities/comment.entity';
 import { Notification } from '../../notifications/socket/entities/notification.entity';
 import { Subscription } from 'src/modules/subscription/entities/subscription.entity';
 import { Payment } from 'src/modules/subscription/entities/payment.entity';
+import { CohorteMember } from 'src/modules/cohorte/cohorte/entities/cohorte-member.entity';
+import { CohorteMaterial } from 'src/modules/cohorte/cohorte/entities/cohorte-material.entity';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -111,4 +113,13 @@ export class User {
 
   @OneToMany(() => Payment, (payment) => payment.user)
   payments: Payment[];
+
+  @OneToMany(() => CohorteMember, (member) => member.user)
+  cohorteMembers: CohorteMember[];
+
+  @OneToMany(
+    () => CohorteMaterial,
+    (cohorteMaterial) => cohorteMaterial.uploader,
+  )
+  cohorteMaterial: CohorteMaterial[];
 }

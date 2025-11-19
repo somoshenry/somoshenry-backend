@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -104,6 +105,12 @@ export class CohorteService {
   // OBTENER MIS COHORTES (COHORTES DONDE ESTOY INSCRITO)
   // ============================================
   async getMyCohortes(userId: string) {
+    // Verificar que el usuario existe
+    const userExists = await this.userRepo.exists({ where: { id: userId } });
+    if (!userExists) {
+      throw new UnauthorizedException('Usuario no válido');
+    }
+
     // Buscar en la tabla intermedia cohorte_members
     const members = await this.memberRepo.find({
       where: {
@@ -143,6 +150,12 @@ export class CohorteService {
   // OBTENER COHORTES DONDE SOY PROFESOR
   // ============================================
   async getMyCohorteAsTeacher(userId: string) {
+    // Verificar que el usuario existe
+    const userExists = await this.userRepo.exists({ where: { id: userId } });
+    if (!userExists) {
+      throw new UnauthorizedException('Usuario no válido');
+    }
+
     const members = await this.memberRepo.find({
       where: {
         user: { id: userId },
@@ -164,6 +177,12 @@ export class CohorteService {
   // OBTENER COHORTES DONDE SOY ESTUDIANTE
   // ============================================
   async getMyCohortesAsStudent(userId: string) {
+    // Verificar que el usuario existe
+    const userExists = await this.userRepo.exists({ where: { id: userId } });
+    if (!userExists) {
+      throw new UnauthorizedException('Usuario no válido');
+    }
+
     const members = await this.memberRepo.find({
       where: {
         user: { id: userId },

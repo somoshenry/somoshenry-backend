@@ -6,6 +6,7 @@ import { paymentSuccessTemplate } from './dto/payment-success-template.dto';
 import { paymentRejectedTemplate } from './dto/payment-rejected-template.dto';
 import { postDisabledTemplate } from './dto/post-desabled-template.dto';
 import { userBannedTemplate } from './dto/user-banned-template.dto';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 @Injectable()
 export class NotificationsService {
@@ -16,7 +17,7 @@ export class NotificationsService {
    * @param to - Email del destinatario
    */
   async sendWelcomeNotification(to: string) {
-    console.log('Sending welcome email to:', to);
+    DevLogger.log('Sending welcome email to:', to);
     const gmailDataDto = this.mapToGmailDataDto(
       to,
       'Bienvenido a Somos Henry',
@@ -30,7 +31,7 @@ export class NotificationsService {
    * @param to - Email del destinatario
    */
   async sendPaymentSuccessNotification(to: string) {
-    console.log('Sending payment success email to:', to);
+    DevLogger.log('Sending payment success email to:', to);
     const gmailDataDto = this.mapToGmailDataDto(
       to,
       'Pago procesado exitosamente',
@@ -44,7 +45,7 @@ export class NotificationsService {
    * @param to - Email del destinatario
    */
   async sendPaymentRejectedNotification(to: string) {
-    console.log('Sending payment rejected email to:', to);
+    DevLogger.log('Sending payment rejected email to:', to);
     const gmailDataDto = this.mapToGmailDataDto(
       to,
       'Tu pago no pudo ser procesado',
@@ -58,7 +59,7 @@ export class NotificationsService {
    * @param to - Email del destinatario
    */
   async sendPostDisabledNotification(to: string) {
-    console.log('Sending post disabled email to:', to);
+    DevLogger.log('Sending post disabled email to:', to);
     const gmailDataDto = this.mapToGmailDataDto(
       to,
       'Tu publicación ha sido deshabilitada',
@@ -72,7 +73,7 @@ export class NotificationsService {
    * @param to - Email del destinatario
    */
   async sendUserBannedNotification(to: string) {
-    console.log('Sending user banned email to:', to);
+    DevLogger.log('Sending user banned email to:', to);
     const gmailDataDto = this.mapToGmailDataDto(
       to,
       'Tu cuenta ha sido suspendida',

@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,6 +14,8 @@ import { CreateCohorteDto } from './dto/create-cohorte.dto';
 import { UpdateCohorteDto } from './dto/update-cohorte.dto';
 import { User } from '../../user/entities/user.entity';
 import { CohorteRoleEnum, MemberStatusEnum } from './enums/cohorte.enums';
+import { NotificationService } from '../../notifications/socket/notification.service';
+import { NotificationType } from '../../notifications/socket/entities/notification.entity';
 
 @Injectable()
 export class CohorteService {
@@ -24,6 +28,9 @@ export class CohorteService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    @Inject(forwardRef(() => NotificationService))
+    private readonly notificationService: NotificationService,
   ) {}
 
   //  Crear cohorte
@@ -87,7 +94,30 @@ export class CohorteService {
       role,
     });
 
-    return this.memberRepo.save(member);
+    const saved = await this.memberRepo.save(member);
+
+    const teacherMember = await this.memberRepo.findOne({
+      where: {
+        cohorte: { id: cohorteId },
+        role: CohorteRoleEnum.TEACHER,
+      },
+      relations: ['user'],
+    });
+
+    const senderId = teacherMember?.user?.id || userId;
+
+    await this.notificationService.create({
+      receiverId: userId,
+      senderId,
+      type: NotificationType.COHORTE_INVITATION,
+      metadata: {
+        cohorteId: cohorte.id,
+        cohorteName: cohorte.name,
+        role,
+      },
+    });
+
+    return saved;
   }
 
   //  Remover miembro

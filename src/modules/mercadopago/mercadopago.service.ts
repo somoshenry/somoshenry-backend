@@ -1,3 +1,4 @@
+/* eslint-disable @stylistic/quotes */
 import { Injectable } from '@nestjs/common';
 import { MercadopagoMapper } from './mercadopago.mapper';
 import { RequestPreferenceDto } from './dto/request.preference.dto';
@@ -80,34 +81,45 @@ export class MercadoPagoService {
         DevLogger.log(`ID extraído de 'resource': ${resourceId}`);
       }
 
-      if (!resourceId) {
-        console.warn(
-          'No se pudo obtener el ID del recurso. Terminando procesamiento',
-        );
-        return { success: true, received: true };
-      }
-
       DevLogger.log(
         `Webhook recibido. Tema: ${topic}, Recurso ID: ${resourceId}`,
       );
 
-      if (topic === 'payment') {
-        await this.processPaymentNotification(resourceId);
-      }
-
-      if (topic === 'merchant_order') {
+      // ✅ PROCESAR MERCHANT ORDER (tiene prioridad)
+      if (topic === 'merchant_order' && resourceId) {
         DevLogger.log('Procesando ORDEN DE COMERCIO (Merchant Order)');
         const orderDetails =
           await this.percadopagoConnector.getMerchantOrderDetails(resourceId);
 
+        DevLogger.log('Detalles de la orden obtenidos:', orderDetails);
+
         if (orderDetails.payments && orderDetails.payments.length > 0) {
           const paymentId = orderDetails.payments[0].id as number;
           const paymentIdString = paymentId.toString();
-          DevLogger.log(`Pago asociado encontrado: ${paymentId}`);
-          const paymentDetails =
-            await this.percadopagoConnector.getPaymentDetails(paymentIdString);
-          DevLogger.log('Detalles del pago obtenidos:', paymentDetails);
+          DevLogger.log(`✅ Pago asociado encontrado: ${paymentId}`);
+
+          // ✅ PROCESAR EL PAGO AQUÍ
+          await this.processPaymentNotification(paymentIdString);
+        } else {
+          DevLogger.log(
+            '⚠️ Orden sin pagos asociados (posiblemente abandonada)',
+          );
         }
+
+        return { success: true, received: true };
+      }
+
+      // ✅ PROCESAR PAYMENT (solo si tiene ID válido)
+      if (topic === 'payment') {
+        if (!resourceId || resourceId === 'null') {
+          DevLogger.log(
+            '⚠️ Webhook de payment sin ID válido (pago no iniciado)',
+          );
+          return { success: true, received: true };
+        }
+
+        await this.processPaymentNotification(resourceId);
+        return { success: true, received: true };
       }
 
       return { success: true, received: true };
@@ -121,12 +133,17 @@ export class MercadoPagoService {
     const paymentDetails =
       await this.percadopagoConnector.getPaymentDetails(paymentId);
     DevLogger.log('Detalles del pago obtenidos:', paymentDetails);
+
     const { status } = paymentDetails;
+    DevLogger.log(`📊 Status del pago: ${status}`);
+
     if (status === 'approved') {
       await this.handleApprovedPayment(paymentDetails);
     } else if (status === 'rejected') {
+      DevLogger.log('🚨 Entrando a handleRejectedPayment');
       await this.handleRejectedPayment(paymentDetails);
     } else if (status === 'pending') {
+      DevLogger.log('⏳ Entrando a handlePendingPayment');
       await this.handlePendingPayment(paymentDetails);
     }
   }
@@ -293,7 +310,7 @@ export class MercadoPagoService {
       external_reference,
     } = paymentDetails;
 
-    console.warn(`PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
+    DevLogger.log(`PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
 
     const userContext = await this.getUserAndSubscription(external_reference);
     if (!userContext) {

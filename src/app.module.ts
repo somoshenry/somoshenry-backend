@@ -39,7 +39,6 @@ import { OpenAIModule } from './modules/open-ai/openai.module';
 import { MongooseModule } from '@nestjs/mongoose';
 // WebRTC
 import { WebRTCModule } from './modules/webrtc/webrtc.module';
-import mercadopagoConfig from './config/mercadopago.config';
 
 @Module({
   imports: [

@@ -121,6 +121,8 @@ export class CohorteController {
   // MIS COHORTES (ACTIVAS E INACTIVAS)
   // ============================================
   @Get('me')
+  @AuthProtected()
+  @Roles(UserRole.ADMIN, UserRole.MEMBER, UserRole.TEACHER)
   @ApiGetMyCohortes()
   async getMyCohortes(@CurrentUser('id') userId: string) {
     return this.cohorteService.getMyCohortes(userId);
@@ -130,6 +132,8 @@ export class CohorteController {
   // MIS COHORTES COMO PROFESOR (OPCIONAL)
   // ============================================
   @Get('me/teaching')
+  @AuthProtected()
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @ApiGetMyCohorteAsTeacher()
   async getMyCohorteAsTeacher(@CurrentUser('id') userId: string) {
     return this.cohorteService.getMyCohorteAsTeacher(userId);
@@ -139,6 +143,8 @@ export class CohorteController {
   // MIS COHORTES COMO ESTUDIANTE (OPCIONAL)
   // ============================================
   @Get('me/studying')
+  @AuthProtected()
+  @Roles(UserRole.ADMIN, UserRole.MEMBER)
   @ApiGetMyCohortesAsStudent()
   async getMyCohortesAsStudent(@CurrentUser('id') userId: string) {
     return this.cohorteService.getMyCohortesAsStudent(userId);

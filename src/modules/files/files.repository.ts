@@ -22,7 +22,7 @@ export class FilesRepository {
     resourceType: string,
   ): Promise<{ result: string }> {
     try {
-      const type = resourceType ?? 'image'; // valor por defecto si la variable que le precede es null o undefined
+      const type = resourceType ?? 'raw'; // valor por defecto si la variable que le precede es null o undefined
       const result = await cloudinary.uploader.destroy(publicId, {
         resource_type: type,
       });

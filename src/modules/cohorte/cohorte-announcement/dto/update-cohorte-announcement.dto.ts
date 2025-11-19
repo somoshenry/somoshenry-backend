@@ -20,5 +20,6 @@ export class UpdateCohorteAnnouncementDto extends PartialType(
   content?: string;
 
   @IsOptional()
-  cohorteId?: never;
+  @IsString()
+  cohorteId?: string;
 }

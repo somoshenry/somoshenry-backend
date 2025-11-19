@@ -122,11 +122,11 @@ export class MercadoPagoService {
     console.log('Detalles del pago obtenidos:', paymentDetails);
     const { status } = paymentDetails;
     if (status === 'approved') {
-      //await this.handleApprovedPayment(paymentDetails);
+      await this.handleApprovedPayment(paymentDetails);
     } else if (status === 'rejected') {
-      // await this.handleRejectedPayment(paymentDetails);
+      await this.handleRejectedPayment(paymentDetails);
     } else if (status === 'pending') {
-      //await this.handlePendingPayment(paymentDetails);
+      await this.handlePendingPayment(paymentDetails);
     }
   }
 

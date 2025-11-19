@@ -32,27 +32,64 @@ export class IceServerManagerService {
     const turnUrl = process.env.TURN_URL;
     const turnUsername = process.env.TURN_USERNAME;
     const turnPassword = process.env.TURN_PASSWORD;
+    const turnProtocol = process.env.TURN_PROTOCOL || 'udp'; // udp, tcp, tls
 
     const iceServers: RTCIceServer[] = this.STUN_SERVERS.map((url) => ({
       urls: url,
     }));
 
+    // Agregar servidor TURN si está configurado
     if (turnUrl && turnUsername && turnPassword) {
+      // Soportar múltiples URLs de TURN separadas por coma
+      const turnUrls = turnUrl.split(',').map((url) => {
+        let formattedUrl = url.trim();
+        // Asegurar que tenga el protocolo correcto
+        if (
+          !formattedUrl.startsWith('turn:') &&
+          !formattedUrl.startsWith('turns:')
+        ) {
+          const protocol = turnProtocol === 'tls' ? 'turns' : 'turn';
+          formattedUrl = `${protocol}:${formattedUrl}`;
+        }
+        return formattedUrl;
+      });
+
       iceServers.push({
-        urls: turnUrl,
+        urls: turnUrls,
         username: turnUsername,
         credential: turnPassword,
         credentialType: 'password',
       });
-      this.logger.log(`TURN server configured: ${turnUrl}`);
+
+      this.logger.log(
+        `✅ TURN server configurado: ${turnUrls.join(', ')} (${turnProtocol.toUpperCase()})`,
+      );
     } else {
-      this.logger.warn('TURN server not configured. Fallback to STUN only.');
+      this.logger.warn(
+        '⚠️  TURN no configurado. Usarán solo servidores STUN públicos (limitado detrás de firewalls)',
+      );
     }
 
     this.cachedIceServers = {
       iceServers,
       timestamp: Date.now(),
     };
+
+    this.logger.debug(
+      `🧊 ICE Servers inicializados: ${iceServers.length} servidores (${this.getServerTypes(iceServers).join(', ')})`,
+    );
+  }
+
+  private getServerTypes(servers: RTCIceServer[]): string[] {
+    const types = new Set<string>();
+    for (const server of servers) {
+      const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+      for (const url of urls) {
+        if (url.startsWith('turn')) types.add('TURN');
+        if (url.startsWith('stun')) types.add('STUN');
+      }
+    }
+    return Array.from(types);
   }
 
   getIceServers(): RTCIceServer[] {

@@ -55,10 +55,10 @@ export class CohorteMaterial {
   uploader: User;
 
   // Información del archivo
-  @Column({ name: 'file_name', length: 255 })
+  @Column({ name: 'file_name', length: 255, nullable: true })
   fileName: string;
 
-  @Column({ name: 'file_url', length: 1000 })
+  @Column({ name: 'file_url', length: 1000, nullable: true })
   fileUrl: string;
 
   @Column({

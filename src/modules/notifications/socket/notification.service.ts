@@ -1,17 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification, NotificationType } from './entities/notification.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
+import { Notification } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
-import { NotificationGateway } from './notification.gateway';
 
 @Injectable()
 export class NotificationService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepo: Repository<Notification>,
-    private readonly notificationGateway: NotificationGateway,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createDto: CreateNotificationDto): Promise<Notification> {
@@ -19,13 +19,9 @@ export class NotificationService {
       ...createDto,
       isRead: false,
     });
-    const saved = await this.notificationRepo.save(notification);
 
-    this.notificationGateway.emitToUser(
-      saved.receiverId,
-      'notification:new',
-      saved,
-    );
+    const saved = await this.notificationRepo.save(notification);
+    this.eventEmitter.emit('notification.created', saved);
 
     return saved;
   }
@@ -42,7 +38,10 @@ export class NotificationService {
     const notification = await this.notificationRepo.findOne({
       where: { id, receiverId: userId },
     });
-    if (!notification) throw new NotFoundException('Notification not found');
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
 
     notification.isRead = true;
     return this.notificationRepo.save(notification);
@@ -59,7 +58,11 @@ export class NotificationService {
     const notification = await this.notificationRepo.findOne({
       where: { id, receiverId: userId },
     });
-    if (!notification) throw new NotFoundException('Notification not found');
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
+
     await this.notificationRepo.remove(notification);
   }
 }

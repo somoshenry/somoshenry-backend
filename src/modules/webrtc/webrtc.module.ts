@@ -10,6 +10,9 @@ import { IceServerManagerService } from './services/ice-server-manager.service';
 import { SignalingStateMachineService } from './services/signaling-state-machine.service';
 import { PeerConnectionTrackerService } from './services/peer-connection-tracker.service';
 import { IceCandidateBufferService } from './services/ice-candidate-buffer.service';
+import { EnhancedRedisModule } from '../../common/services/enhanced-redis.module';
+import { RateLimitModule } from '../../common/services/rate-limit.module';
+import { RedisMetricsModule } from '../../common/services/redis-metrics.module';
 
 const RoomChatMessageSchema = {
   roomId: String,
@@ -31,6 +34,9 @@ const RoomChatMessageSchema = {
     MongooseModule.forFeature([
       { name: 'RoomChatMessage', schema: RoomChatMessageSchema },
     ]),
+    EnhancedRedisModule,
+    RateLimitModule,
+    RedisMetricsModule,
   ],
   controllers: [WebRTCController],
   providers: [

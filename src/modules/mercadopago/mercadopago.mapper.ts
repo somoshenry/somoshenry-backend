@@ -27,7 +27,7 @@ function buildBackUrls(frontUrl: string) {
   const backUrls: BackUrls = {
     // Cambia el nombre del archivo en el servidor y usa solo la barra (/).
     success: `${frontUrl}/redirect?status=success`,
-    pending: `${frontUrl}/redirect?status==pending`,
+    pending: `${frontUrl}/redirect?status=pending`,
     failure: `${frontUrl}/redirect?status=failure`,
   };
   return backUrls;

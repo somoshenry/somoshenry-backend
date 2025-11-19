@@ -14,6 +14,7 @@ import { NotificationModule } from '../notifications/socket/notification.module'
 import { AuthModule } from '../auth/auth.module';
 import { OpenAIModule } from '../open-ai/openai.module';
 import { ReportModule } from '../report/report.module';
+import { CommonModule } from '../../common/common.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ReportModule } from '../report/report.module';
     NotificationModule,
     OpenAIModule,
     forwardRef(() => ReportModule),
+    CommonModule,
   ],
   controllers: [PostController],
   providers: [PostService],

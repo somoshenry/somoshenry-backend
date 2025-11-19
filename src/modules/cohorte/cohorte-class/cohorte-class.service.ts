@@ -70,6 +70,22 @@ export class CohorteClassService {
     return this.classRepo.find({ relations: ['cohorte', 'teacher'] });
   }
 
+  async findAllbyCohort(cohorteId: string): Promise<CohorteClass[]> {
+    const classes = await this.classRepo.find({
+      where: { cohorte: { id: cohorteId } },
+      relations: ['cohorte', 'teacher'],
+      order: { createdAt: 'DESC' },
+    });
+    // Verificar longitud del array
+    if (classes.length === 0) {
+      throw new NotFoundException(
+        `No se encontraron clases para la cohorte ${cohorteId}`,
+      );
+    }
+
+    return classes;
+  }
+
   async findOne(id: string): Promise<CohorteClass> {
     const klass = await this.classRepo.findOne({
       where: { id },

@@ -180,9 +180,15 @@ export class FilesController {
   @Put('uploadCohortMaterialFile/:cohortMaterialId')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
-    summary: 'Subir archivo de cohorte',
+    summary: 'Sube un documento, imagen o video asociado a una cohorte. ',
     description:
-      'Sube un documento, imagen o video asociado a una cohorte. Se valida tamaño y tipo de archivo.',
+      'Solo debes enviar el archivo binario **(máximo 20 MB)**.\n\n' +
+      '⚠️ **IMPORTANTE: Los siguientes campos se extraen automáticamente y se llenan en cohorte-materials:**\n\n' +
+      '- `fileName` - nombre del archivo\n' +
+      '- `fileUrl` - URL de Cloudinary\n' +
+      '- `fileType` - PDF, IMAGE, VIDEO, etc.\n' +
+      '- `mimeType` - tipo MIME (application/pdf, image/png, etc.)\n' +
+      '- `fileSize` - tamaño en bytes',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -192,11 +198,17 @@ export class FilesController {
         file: {
           type: 'string',
           format: 'binary',
+          description:
+            'Archivo a subir. Los metadatos (nombre, tipo, tamaño, URL, mimeType) se extraen automáticamente.',
         },
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Archivo subido exitosamente' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Archivo subido exitosamente. Metadatos extraídos automáticamente.',
+  })
   uploadCohortMaterialFile(
     @UploadedFile(
       new ParseFilePipe({

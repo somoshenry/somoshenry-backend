@@ -30,7 +30,7 @@ export class RateLimitService {
 
     if (window.count > limit) {
       this.logger.warn(
-        `⚠️  Rate limit exceeded for user ${userId}: ${window.count}/${limit}`,
+        `Rate limit exceeded for user ${userId}: ${window.count}/${limit}`,
       );
       throw new RateLimitExceededException(limit, this.WINDOW_SIZE);
     }

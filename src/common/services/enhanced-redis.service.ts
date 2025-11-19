@@ -106,7 +106,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
       this.healthState.lastCheck = Date.now();
 
       if (this.metrics.fallbackActive) {
-        this.logger.log('✅ Redis recovered from fallback mode');
+        this.logger.log('Redis recovered from fallback mode');
         this.metrics.fallbackActive = false;
       }
 
@@ -122,7 +122,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
       ) {
         this.healthState.healthy = false;
         this.metrics.fallbackActive = true;
-        this.logger.error('⚠️  Fallback mode ENABLED - Using local cache');
+        this.logger.error('Fallback mode ENABLED - Using local cache');
       }
     }
   }

@@ -29,7 +29,7 @@ export class NotificationGateway
     const userId = client.handshake.query.userId as string;
     if (userId) {
       this.activeUsers.set(userId, client.id);
-      this.logger.log(`🔌 Usuario conectado: ${userId}`);
+      this.logger.log(`Usuario conectado: ${userId}`);
 
       try {
         const unreadNotifications =
@@ -56,7 +56,7 @@ export class NotificationGateway
     )?.[0];
     if (userId) {
       this.activeUsers.delete(userId);
-      this.logger.log(`👋 Usuario desconectado: ${userId}`);
+      this.logger.log(`Usuario desconectado: ${userId}`);
     }
   }
 
@@ -64,7 +64,7 @@ export class NotificationGateway
     const socketId = this.activeUsers.get(userId);
     if (socketId) {
       this.server.to(socketId).emit(event, payload);
-      this.logger.log(`📨 Notificación enviada a ${userId}: ${event}`);
+      this.logger.log(`Notificación enviada a ${userId}: ${event}`);
     }
   }
 }

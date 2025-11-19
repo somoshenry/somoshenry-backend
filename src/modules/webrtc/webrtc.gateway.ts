@@ -280,7 +280,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `✅ Usuario ${userId} se unió a room ${dto.roomId} (${participants.length}/${room.maxParticipants} participantes)`,
       );
     } catch (error) {
-      this.logger.error(`❌ Error en joinRoom para usuario ${userId}:`, error);
+      this.logger.error(`Error en joinRoom para usuario ${userId}:`, error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -336,7 +336,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Confirmar al cliente que salió exitosamente
       client.emit('leftRoom', { roomId, success: true });
 
-      this.logger.log(`👋 Usuario ${userId} salió de room ${roomId}`);
+      this.logger.log(`Usuario ${userId} salió de room ${roomId}`);
     } catch (error) {
       this.logger.error(`Error al salir de room ${roomId}:`, error);
       client.emit('error', {
@@ -424,7 +424,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       this.logger.debug(
-        `📤 Offer: ${userId} → ${dto.targetUserId} (seq: ${dto.sequence})`,
+        `Offer: ${userId} → ${dto.targetUserId} (seq: ${dto.sequence})`,
       );
 
       client.emit('offerAck', { success: true, sequence: dto.sequence });
@@ -568,7 +568,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       if (hasDuplicate) {
-        this.logger.debug(`🔁 ICE duplicado: ${userId} → ${dto.targetUserId}`);
+        this.logger.debug(`ICE duplicado: ${userId} → ${dto.targetUserId}`);
         return;
       }
 
@@ -605,7 +605,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         messageId: dto.messageId,
       });
 
-      this.logger.debug(`🧊 ICE: ${userId} → ${dto.targetUserId}`);
+      this.logger.debug(`ICE: ${userId} → ${dto.targetUserId}`);
 
       // Marcar como aplicado
       this.iceCandidateBuffer.markAsApplied(
@@ -682,7 +682,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (canRestart) {
         this.logger.log(
-          `🔄 ICE restart recommended for ${userId} <-> ${payload.targetUserId}`,
+          `ICE restart recommended for ${userId} <-> ${payload.targetUserId}`,
         );
         this.server.to(client.id).emit('iceRestartRequired', {
           targetUserId: payload.targetUserId,
@@ -690,7 +690,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       } else {
         this.logger.warn(
-          `❌ ICE restart max attempts reached for ${userId} <-> ${payload.targetUserId}`,
+          `ICE restart max attempts reached for ${userId} <-> ${payload.targetUserId}`,
         );
         this.server.to(client.id).emit('connectionFailed', {
           targetUserId: payload.targetUserId,

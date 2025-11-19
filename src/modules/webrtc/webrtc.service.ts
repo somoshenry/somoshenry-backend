@@ -50,7 +50,7 @@ export class WebRTCService {
         'room',
       );
 
-      this.logger.log(`🆕 Sala creada automáticamente: ${roomId}`);
+      this.logger.log(`Sala creada automáticamente: ${roomId}`);
       return newRoom;
     }
   }
@@ -77,7 +77,7 @@ export class WebRTCService {
     );
     await this.redis.lpush(this.REDIS_ROOMS_KEY, roomId);
 
-    this.logger.log(`✅ Room creada: ${roomId} - ${dto.name}`);
+    this.logger.log(`Room creada: ${roomId} - ${dto.name}`);
     return room;
   }
 
@@ -126,12 +126,12 @@ export class WebRTCService {
 
     try {
       await this.roomChatService.deleteRoomMessages(roomId);
-      this.logger.log(`🗑️  Mensajes de chat de room ${roomId} eliminados`);
+      this.logger.log(`Mensajes de chat de room ${roomId} eliminados`);
     } catch (error) {
       this.logger.error('Error eliminando mensajes de room:', error);
     }
 
-    this.logger.log(`🗑️  Room eliminada: ${roomId}`);
+    this.logger.log(`Room eliminada: ${roomId}`);
   }
 
   async addParticipant(
@@ -159,7 +159,7 @@ export class WebRTCService {
           room,
           'room',
         );
-        this.logger.log(`ℹ️  Usuario ${userId} reconectado en room ${roomId}`);
+        this.logger.log(`Usuario ${userId} reconectado en room ${roomId}`);
         return existing;
       }
 
@@ -182,7 +182,7 @@ export class WebRTCService {
       'room',
     );
 
-    this.logger.log(`✅ Participante ${userId} se unió a room ${roomId}`);
+    this.logger.log(`Participante ${userId} se unió a room ${roomId}`);
     return participant;
   }
 
@@ -199,7 +199,7 @@ export class WebRTCService {
         },
         5 * 60 * 1000,
       );
-      this.logger.log(`🕐 Room ${roomId} será eliminada en 5 minutos (vacía)`);
+      this.logger.log(`Room ${roomId} será eliminada en 5 minutos (vacía)`);
     }
 
     await this.redis.setWithDynamicTTL(
@@ -207,7 +207,7 @@ export class WebRTCService {
       room,
       'room',
     );
-    this.logger.log(`👋 Participante ${userId} salió de room ${roomId}`);
+    this.logger.log(`Participante ${userId} salió de room ${roomId}`);
   }
 
   async getParticipants(roomId: string): Promise<Participant[]> {

@@ -21,6 +21,8 @@ import { IceServerManagerService } from './services/ice-server-manager.service';
 import { SignalingStateMachineService } from './services/signaling-state-machine.service';
 import { PeerConnectionTrackerService } from './services/peer-connection-tracker.service';
 import { IceCandidateBufferService } from './services/ice-candidate-buffer.service';
+import { RateLimitService } from '../../common/services/rate-limit.service';
+import { RateLimitExceededException } from '../../common/exceptions/redis.exceptions';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { WebRTCSignalDto } from './dto/webrtc-signal.dto';
 import { IceCandidateDto } from './dto/ice-candidate.dto';
@@ -53,6 +55,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(WebRTCGateway.name);
   private readonly socketToRoom = new Map<string, string>();
   private readonly socketToUser = new Map<string, string>();
+  private readonly userToSocket = new Map<string, string>();
 
   constructor(
     private readonly webrtcService: WebRTCService,
@@ -63,7 +66,10 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly signalingStateMachine: SignalingStateMachineService,
     private readonly peerConnectionTracker: PeerConnectionTrackerService,
     private readonly iceCandidateBuffer: IceCandidateBufferService,
-  ) {}
+    private readonly rateLimitService: RateLimitService,
+  ) {
+    setInterval(() => this.rateLimitService.cleanupExpiredWindows(), 60000);
+  }
 
   // AUTENTICACIÓN SOCKET
   async handleConnection(client: Socket): Promise<void> {
@@ -90,6 +96,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       (client.data as UserSocketData).userId = userId;
       this.socketToUser.set(client.id, userId);
+      this.userToSocket.set(userId, client.id);
 
       this.logger.log(`WebRTC conectado → user ${userId}, socket ${client.id}`);
 
@@ -120,6 +127,9 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
+    if (userId) {
+      this.userToSocket.delete(userId);
+    }
     this.socketToUser.delete(client.id);
     this.socketToRoom.delete(client.id);
 
@@ -141,6 +151,18 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: 'Usuario no autenticado',
       });
       return;
+    }
+
+    try {
+      this.rateLimitService.checkLimit(userId, 50);
+    } catch (error) {
+      if (error instanceof RateLimitExceededException) {
+        client.emit('error', {
+          code: 'RATE_LIMITED',
+          message: 'Demasiadas solicitudes. Intenta más tarde.',
+        });
+        return;
+      }
     }
 
     if (!dto.roomId) {
@@ -258,7 +280,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `✅ Usuario ${userId} se unió a room ${dto.roomId} (${participants.length}/${room.maxParticipants} participantes)`,
       );
     } catch (error) {
-      this.logger.error(`❌ Error en joinRoom para usuario ${userId}:`, error);
+      this.logger.error(`Error en joinRoom para usuario ${userId}:`, error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -314,7 +336,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Confirmar al cliente que salió exitosamente
       client.emit('leftRoom', { roomId, success: true });
 
-      this.logger.log(`👋 Usuario ${userId} salió de room ${roomId}`);
+      this.logger.log(`Usuario ${userId} salió de room ${roomId}`);
     } catch (error) {
       this.logger.error(`Error al salir de room ${roomId}:`, error);
       client.emit('error', {
@@ -338,6 +360,18 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    try {
+      this.rateLimitService.checkLimit(userId, 200);
+    } catch (error) {
+      if (error instanceof RateLimitExceededException) {
+        client.emit('error', {
+          code: 'RATE_LIMITED',
+          message: 'Demasiadas solicitudes',
+        });
+        return;
+      }
+    }
+
     if (!dto || !dto.roomId || !dto.targetUserId || !dto.sdp) {
       this.logger.warn('offer: Datos incompletos en DTO');
       client.emit('error', {
@@ -348,6 +382,16 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      // Validar que no sea peer a self
+      if (dto.targetUserId === userId) {
+        this.logger.warn('offer: Usuario no puede enviarse offer a sí mismo');
+        client.emit('error', {
+          code: 'BAD_REQUEST',
+          message: 'No puedes enviar offer a ti mismo',
+        });
+        return;
+      }
+
       // Validar que el usuario destino exista
       const targetSocket = this.getUserSocket(dto.targetUserId);
       if (!targetSocket) {
@@ -380,7 +424,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       this.logger.debug(
-        `📤 Offer: ${userId} → ${dto.targetUserId} (seq: ${dto.sequence})`,
+        `Offer: ${userId} → ${dto.targetUserId} (seq: ${dto.sequence})`,
       );
 
       client.emit('offerAck', { success: true, sequence: dto.sequence });
@@ -409,6 +453,18 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    try {
+      this.rateLimitService.checkLimit(userId, 200);
+    } catch (error) {
+      if (error instanceof RateLimitExceededException) {
+        client.emit('error', {
+          code: 'RATE_LIMITED',
+          message: 'Demasiadas solicitudes',
+        });
+        return;
+      }
+    }
+
     if (!dto || !dto.roomId || !dto.targetUserId || !dto.sdp) {
       this.logger.warn('answer: Datos incompletos en DTO');
       client.emit('error', {
@@ -419,6 +475,16 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      // Validar que no sea peer a self
+      if (dto.targetUserId === userId) {
+        this.logger.warn('answer: Usuario no puede enviarse answer a sí mismo');
+        client.emit('error', {
+          code: 'BAD_REQUEST',
+          message: 'No puedes enviar answer a ti mismo',
+        });
+        return;
+      }
+
       // Validar que el usuario destino exista
       const targetSocket = this.getUserSocket(dto.targetUserId);
       if (!targetSocket) {
@@ -478,6 +544,15 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    try {
+      this.rateLimitService.checkLimit(userId, 500);
+    } catch (error) {
+      if (error instanceof RateLimitExceededException) {
+        this.logger.warn(`Rate limit ICE candidates para ${userId}`);
+        return;
+      }
+    }
+
     if (!dto || !dto.roomId || !dto.targetUserId || !dto.candidate) {
       this.logger.warn('iceCandidate: Datos incompletos');
       return;
@@ -493,7 +568,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       if (hasDuplicate) {
-        this.logger.debug(`🔁 ICE duplicado: ${userId} → ${dto.targetUserId}`);
+        this.logger.debug(`ICE duplicado: ${userId} → ${dto.targetUserId}`);
         return;
       }
 
@@ -530,7 +605,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         messageId: dto.messageId,
       });
 
-      this.logger.debug(`🧊 ICE: ${userId} → ${dto.targetUserId}`);
+      this.logger.debug(`ICE: ${userId} → ${dto.targetUserId}`);
 
       // Marcar como aplicado
       this.iceCandidateBuffer.markAsApplied(
@@ -607,7 +682,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (canRestart) {
         this.logger.log(
-          `🔄 ICE restart recommended for ${userId} <-> ${payload.targetUserId}`,
+          `ICE restart recommended for ${userId} <-> ${payload.targetUserId}`,
         );
         this.server.to(client.id).emit('iceRestartRequired', {
           targetUserId: payload.targetUserId,
@@ -615,7 +690,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       } else {
         this.logger.warn(
-          `❌ ICE restart max attempts reached for ${userId} <-> ${payload.targetUserId}`,
+          `ICE restart max attempts reached for ${userId} <-> ${payload.targetUserId}`,
         );
         this.server.to(client.id).emit('connectionFailed', {
           targetUserId: payload.targetUserId,
@@ -746,6 +821,13 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    if (payload.message.length > 5000) {
+      client.emit('error', {
+        message: 'Mensaje muy largo (máx 5000 caracteres)',
+      });
+      return;
+    }
+
     try {
       // Verificar que el usuario esté en la sala
       const participants = await this.webrtcService.getParticipants(
@@ -782,9 +864,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private getUserSocket(userId: string): string | undefined {
-    for (const [socketId, uid] of this.socketToUser.entries()) {
-      if (uid === userId) return socketId;
-    }
-    return undefined;
+    return this.userToSocket.get(userId);
   }
 }

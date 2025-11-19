@@ -8,13 +8,22 @@ import {
   UseGuards,
   Request,
   Query,
-  Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { WebRTCService } from './webrtc.service';
 import { RoomChatService } from './room-chat.service';
 import { IceServerManagerService } from './services/ice-server-manager.service';
+import { RedisMetricsService } from '../../common/services/redis-metrics.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+
+interface RequestWithUser {
+  user: {
+    id?: string;
+    sub?: string;
+    userId?: string;
+  };
+}
 
 @Controller('webrtc')
 @UseGuards(JwtAuthGuard)
@@ -23,11 +32,17 @@ export class WebRTCController {
     private readonly webrtcService: WebRTCService,
     private readonly roomChatService: RoomChatService,
     private readonly iceServerManager: IceServerManagerService,
+    private readonly redisMetrics: RedisMetricsService,
   ) {}
 
   @Post('rooms')
-  async createRoom(@Body() dto: CreateRoomDto, @Request() req: any) {
-    const userId = req.user?.id || req.user?.sub || req.user?.userId;
+  async createRoom(
+    @Body() dto: CreateRoomDto,
+    @Request() req: RequestWithUser,
+  ) {
+    const userId = req.user.id || req.user.sub || req.user.userId;
+    if (!userId) throw new BadRequestException('User ID not found');
+
     const room = await this.webrtcService.createRoom(dto, userId);
 
     return {
@@ -83,11 +98,12 @@ export class WebRTCController {
   }
 
   @Delete('rooms/:id')
-  async deleteRoom(@Param('id') id: string, @Request() req: any) {
-    const userId = req.user?.id || req.user?.sub || req.user?.userId;
+  async deleteRoom(@Param('id') id: string, @Request() req: RequestWithUser) {
+    const userId = req.user.id || req.user.sub || req.user.userId;
+    if (!userId) throw new BadRequestException('User ID not found');
+
     const room = await this.webrtcService.getRoom(id);
 
-    // Solo el creador puede eliminar la sala
     if (room.createdBy !== userId) {
       return { message: 'No tienes permisos para eliminar esta sala' };
     }
@@ -110,8 +126,8 @@ export class WebRTCController {
   }
 
   @Get('ice-servers')
-  async getIceServers() {
-    const iceServersConfig = await this.iceServerManager.getIceServersConfig();
+  getIceServers() {
+    const iceServersConfig = this.iceServerManager.getIceServersConfig();
     return iceServersConfig;
   }
 
@@ -120,7 +136,13 @@ export class WebRTCController {
     @Param('id') roomId: string,
     @Query('limit') limit?: string,
   ) {
-    const msgLimit = limit ? parseInt(limit, 10) : 50;
+    let msgLimit = 50;
+    if (limit) {
+      const parsed = parseInt(limit, 10);
+      if (!isNaN(parsed) && parsed > 0 && parsed <= 1000) {
+        msgLimit = parsed;
+      }
+    }
     const messages = await this.roomChatService.getMessages(roomId, msgLimit);
 
     return {
@@ -130,13 +152,14 @@ export class WebRTCController {
     };
   }
 
-  // Health check específico de WebRTC
   @Get('health')
-  healthCheck() {
+  getHealth() {
+    const metrics = this.redisMetrics.getFormattedMetrics();
     return {
       status: 'ok',
       service: 'WebRTC',
       timestamp: new Date().toISOString(),
+      redis: metrics,
     };
   }
 }

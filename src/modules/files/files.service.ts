@@ -5,8 +5,13 @@ import { Repository } from 'typeorm';
 import { Post, PostType } from '../post/entities/post.entity';
 import { User } from '../user/entities/user.entity';
 import {
+  CohorteMaterial,
+  FileType,
+} from '../cohorte/cohorte/entities/cohorte-material.entity';
+import {
   detectResourceTypeFromUrl,
   extractPublicIdFromUrl,
+  getFileTypeFromUrl,
 } from 'src/common/utils/cloudinaryUtils';
 
 @Injectable()
@@ -17,6 +22,8 @@ export class FilesService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(CohorteMaterial)
+    private readonly cohortMaterialRepository: Repository<CohorteMaterial>,
   ) {}
 
   async uploadPostFile(file: Express.Multer.File, postId: string) {
@@ -302,5 +309,142 @@ export class FilesService {
       console.error('Error in deletePostFile:', error);
       throw error;
     }
+  }
+
+  async uploadCohortMaterialFile(
+    file: Express.Multer.File,
+    cohortMaterialId: string,
+  ) {
+    // console.log('========================================');
+    // console.log('INICIO uploadCohortMaterialFile');
+    // console.log('Archivo:', file.originalname, '|', file.mimetype);
+    // console.log('cohortMaterialId:', cohortMaterialId);
+
+    const cohortMaterial = await this.cohortMaterialRepository.findOneBy({
+      id: cohortMaterialId,
+    });
+
+    if (!cohortMaterial) {
+      throw new NotFoundException('cohortMaterial not found');
+    }
+
+    // console.log('cohortMaterial encontrado - Type ANTES:', cohortMaterial.type);
+
+    // Intentar eliminar el archivo anterior si existe (en Cloudinary)
+    if (
+      cohortMaterial.fileUrl &&
+      cohortMaterial.fileUrl.includes('cloudinary.com')
+    ) {
+      try {
+        const publicId = extractPublicIdFromUrl(cohortMaterial.fileUrl);
+        if (publicId) {
+          const resourceType = detectResourceTypeFromUrl(
+            cohortMaterial.fileUrl,
+          );
+          const result = await this.filesRepository.deleteFile(
+            publicId,
+            resourceType,
+          );
+          if (result.result !== 'ok') {
+            console.warn(`Previous file deletion result: ${result.result}`);
+          }
+        }
+      } catch (error) {
+        console.warn('No se pudo eliminar el archivo anterior:', error.message);
+      }
+    }
+
+    // console.log('⬆Subiendo el nuevo archivo a Cloudinary...');
+    const uploadResponse = await this.filesRepository.uploadFile(file);
+    // console.log('Cloudinary URL:', uploadResponse.secure_url);
+
+    // Determinar tipo: 'IMAGE' | 'VIDEO' | 'AUDIO' | 'PDF' | 'DOCUMENT' | 'SPREADSHEET' | 'PRESENTATION' | 'COMPRESSED' | 'OTHER'
+    const fileCategory = getFileTypeFromUrl(file.originalname);
+
+    // console.log('Tipo determinado:', fileCategory);
+    // console.log(
+    //   '¿Es enum válido?',
+    //   Object.values(fileType).includes(fileCategory),
+    // );
+
+    // Asignar valores
+    // console.log('ANTES de asignar - cohortMaterial.fileType:', cohortMaterial.fileType);
+    cohortMaterial.fileType = fileCategory;
+    cohortMaterial.fileUrl = uploadResponse.secure_url;
+    // console.log('DESPUÉS de asignar - cohortMaterial.fileType:', cohortMaterial.fileType);
+    cohortMaterial.mimeType = file.mimetype;
+    cohortMaterial.fileName = file.originalname;
+    cohortMaterial.fileSize = uploadResponse.bytes;
+
+    // Guardar
+    // console.log('Ejecutando save()...');
+    const savedcohortMaterial =
+      await this.cohortMaterialRepository.save(cohortMaterial);
+    // console.log('Resultado del save() - type:', savedcohortMaterial.type);
+
+    // Leer directamente de la DB con query nativa
+    // console.log('Verificando con query nativa...');
+    const rawResult = await this.cohortMaterialRepository.query(
+      'SELECT id, file_type, file_url FROM cohorte_materials WHERE id = $1',
+      [cohortMaterialId],
+    );
+    // console.log('Query nativa resultado:', rawResult);
+
+    // console.log('========================================');
+    return savedcohortMaterial;
+  }
+
+  async deleteCohortFile(cohortMaterialId: string) {
+    // Buscar el material
+    const cohortMaterial = await this.cohortMaterialRepository.findOneBy({
+      id: cohortMaterialId,
+    });
+
+    if (!cohortMaterial || !cohortMaterial.fileUrl) {
+      throw new NotFoundException('Material o archivo no encontrado');
+    }
+
+    let cloudinaryDeleteResult: { result: string } | null = null;
+
+    // Intentar eliminar de Cloudinary
+    if (cohortMaterial.fileUrl?.includes('cloudinary.com')) {
+      try {
+        const publicId = extractPublicIdFromUrl(cohortMaterial.fileUrl);
+        if (publicId) {
+          const resourceType = detectResourceTypeFromUrl(
+            cohortMaterial.fileUrl,
+          );
+          cloudinaryDeleteResult = await this.filesRepository.deleteFile(
+            publicId,
+            resourceType,
+          );
+
+          if (cloudinaryDeleteResult?.result !== 'ok') {
+            console.warn(
+              `Cloudinary result: ${cloudinaryDeleteResult?.result}`,
+            );
+          }
+        }
+      } catch (error) {
+        console.warn('Error eliminando de Cloudinary:', error.message);
+      }
+    }
+
+    // Limpiar campos
+    Object.assign(cohortMaterial, {
+      fileUrl: null,
+      fileType: FileType.OTHER,
+      fileName: null,
+      fileSize: null,
+      mimeType: null,
+    });
+
+    // Guardar
+    await this.cohortMaterialRepository.save(cohortMaterial);
+
+    return {
+      message: 'Archivo eliminado exitosamente',
+      cloudinaryDeleteResult,
+    };
   }
 }

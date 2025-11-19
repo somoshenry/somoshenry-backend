@@ -19,9 +19,12 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { FilesService } from './files.service';
+import { UserRole } from '../user/entities/user.entity';
+import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 
 @ApiTags('Files')
 @Controller('files')
+@AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
 export class FilesController {
   constructor(private readonly fileService: FilesService) {}
 
@@ -171,5 +174,52 @@ export class FilesController {
   })
   deleteUserCoverPicture(@Param('userId') userId: string) {
     return this.fileService.deleteUserCoverPicture(userId);
+  }
+
+  // 📸 Subir archivo a una cohorte
+  @Put('uploadCohortMaterialFile/:cohortMaterialId')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Subir archivo de cohorte',
+    description:
+      'Sube un documento, imagen o video asociado a una cohorte. Se valida tamaño y tipo de archivo.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Archivo subido exitosamente' })
+  uploadCohortMaterialFile(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 20000000,
+            message: 'El archivo debe pesar máximo 20 MB',
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Param('cohortMaterialId', ParseUUIDPipe) cohortMaterialId: string,
+  ) {
+    // console.log(file);
+    return this.fileService.uploadCohortMaterialFile(file, cohortMaterialId);
+  }
+
+  // 🗑 Eliminar archivo de una cohorte
+  @Delete('deleteCohortMaterialFile/:cohortMaterialId')
+  @ApiOperation({ summary: 'Eliminar archivo de una cohorte' })
+  @ApiResponse({ status: 200, description: 'Archivo eliminado correctamente' })
+  deleteCohortFile(@Param('cohortMaterialId') cohortMaterialId: string) {
+    return this.fileService.deleteCohortFile(cohortMaterialId);
   }
 }

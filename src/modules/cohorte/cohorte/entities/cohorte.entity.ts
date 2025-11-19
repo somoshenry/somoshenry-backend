@@ -9,6 +9,7 @@ import {
 import { CohorteMember } from './cohorte-member.entity';
 import { CohorteClass } from '../../cohorte-class/entities/cohorte-class.entity';
 import { CohorteStatusEnum, CohorteModalityEnum } from '../enums/cohorte.enums';
+import { CohorteMaterial } from './cohorte-material.entity';
 
 @Entity('cohortes')
 export class Cohorte {
@@ -52,6 +53,12 @@ export class Cohorte {
 
   @OneToMany(() => CohorteClass, (klass) => klass.cohorte)
   classes: CohorteClass[];
+
+  @OneToMany(
+    () => CohorteMaterial,
+    (cohorteMaterial) => cohorteMaterial.cohorte,
+  )
+  cohorteMaterial: CohorteMaterial[];
 
   @CreateDateColumn()
   createdAt: Date;

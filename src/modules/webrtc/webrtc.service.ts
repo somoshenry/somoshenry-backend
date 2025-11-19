@@ -9,56 +9,23 @@ import {
 import { RoomEntity, Participant } from './entities/room.entity';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomChatService } from './room-chat.service';
-import Redis from 'ioredis';
+import { EnhancedRedisService } from '../../common/services/enhanced-redis.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class WebRTCService {
   private readonly logger = new Logger(WebRTCService.name);
   private readonly rooms = new Map<string, RoomEntity>();
-  private redis: Redis | null = null;
 
-  private readonly REDIS_ROOMS_KEY = 'webrtc:rooms';
-  private readonly REDIS_ROOM_PREFIX = 'webrtc:room:';
+  private readonly REDIS_ROOMS_KEY = 'room:active';
+  private readonly REDIS_ROOM_PREFIX = 'room:';
 
   constructor(
     @Inject(forwardRef(() => RoomChatService))
     private readonly roomChatService: RoomChatService,
+    private readonly redis: EnhancedRedisService,
   ) {
-    const redisUrl = process.env.REDIS_URL;
-
-    if (redisUrl) {
-      try {
-        this.redis = new Redis(redisUrl, {
-          maxRetriesPerRequest: 1,
-          connectTimeout: 500,
-          retryStrategy: (times) => {
-            // Exponential backoff: 100ms, 200ms, 400ms, max 5s
-            const delay = Math.min(times * 100, 5000);
-            return delay;
-          },
-          enableReadyCheck: false,
-          enableOfflineQueue: false,
-        });
-
-        this.redis.on('error', (err) => {
-          this.logger.error('Redis connection error:', err);
-        });
-
-        this.redis.on('connect', () => {
-          this.logger.log('Redis conectado exitosamente');
-        });
-
-        this.logger.log('WebRTC Service inicializando conexión a Redis');
-      } catch (err) {
-        this.logger.error('Error inicializando Redis:', err);
-        this.redis = null;
-      }
-    } else {
-      this.logger.warn(
-        'REDIS_URL no configurado - modo local (sin persistencia)',
-      );
-    }
+    this.logger.log('WebRTC Service initialized with Enhanced Redis');
   }
 
   async ensureRoomExists(
@@ -75,14 +42,15 @@ export class WebRTCService {
       };
 
       const newRoom = await this.createRoom(dto, createdBy);
-      this.logger.log(`Sala creada automáticamente: ${roomId}`);
-
-      // Override ID for predictable rooms
       newRoom.id = roomId;
       this.rooms.set(roomId, newRoom);
+      await this.redis.setWithDynamicTTL(
+        `${this.REDIS_ROOM_PREFIX}${roomId}`,
+        newRoom,
+        'room',
+      );
 
-      if (this.redis) await this.saveRoomToRedis(newRoom);
-
+      this.logger.log(`🆕 Sala creada automáticamente: ${roomId}`);
       return newRoom;
     }
   }
@@ -102,21 +70,28 @@ export class WebRTCService {
     });
 
     this.rooms.set(roomId, room);
+    await this.redis.setWithDynamicTTL(
+      `${this.REDIS_ROOM_PREFIX}${roomId}`,
+      room,
+      'room',
+    );
+    await this.redis.lpush(this.REDIS_ROOMS_KEY, roomId);
 
-    if (this.redis) {
-      await this.saveRoomToRedis(room);
-    }
-
-    this.logger.log(`Room creada: ${roomId} - ${dto.name}`);
+    this.logger.log(`✅ Room creada: ${roomId} - ${dto.name}`);
     return room;
   }
 
   async getRoom(roomId: string): Promise<RoomEntity> {
-    let room: RoomEntity | null = this.rooms.get(roomId) ?? null;
+    let room = this.rooms.get(roomId);
 
-    if (!room && this.redis) {
-      room = await this.loadRoomFromRedis(roomId);
-      if (room) this.rooms.set(roomId, room);
+    if (!room) {
+      const cached = await this.redis.getWithFallback<RoomEntity>(
+        `${this.REDIS_ROOM_PREFIX}${roomId}`,
+      );
+      if (cached) {
+        this.rooms.set(roomId, cached);
+        room = cached;
+      }
     }
 
     if (!room) {
@@ -127,15 +102,17 @@ export class WebRTCService {
   }
 
   async getRooms(): Promise<RoomEntity[]> {
-    if (this.redis) {
-      const roomIds = await this.redis.smembers(this.REDIS_ROOMS_KEY);
-      const rooms = await Promise.all(
-        roomIds.map((id) => this.loadRoomFromRedis(id)),
-      );
-      return rooms.filter((room) => room !== null);
-    }
-
-    return Array.from(this.rooms.values()).filter((room) => room.isActive);
+    const roomIds = await this.redis.lrange(this.REDIS_ROOMS_KEY, 0, -1);
+    const rooms = await Promise.all(
+      roomIds.map((id) =>
+        this.redis.getWithFallback<RoomEntity>(
+          `${this.REDIS_ROOM_PREFIX}${id}`,
+        ),
+      ),
+    );
+    return rooms.filter(
+      (room): room is RoomEntity => room !== null && room.isActive,
+    );
   }
 
   async deleteRoom(roomId: string): Promise<void> {
@@ -145,32 +122,26 @@ export class WebRTCService {
       this.rooms.delete(roomId);
     }
 
-    if (this.redis) {
-      await this.redis.srem(this.REDIS_ROOMS_KEY, roomId);
-      await this.redis.del(`${this.REDIS_ROOM_PREFIX}${roomId}`);
-    }
+    await this.redis.del(`${this.REDIS_ROOM_PREFIX}${roomId}`);
 
-    // Eliminar mensajes de MongoDB
     try {
       await this.roomChatService.deleteRoomMessages(roomId);
-      this.logger.log(`🗑 Mensajes de chat de room ${roomId} eliminados`);
+      this.logger.log(`🗑️  Mensajes de chat de room ${roomId} eliminados`);
     } catch (error) {
       this.logger.error('Error eliminando mensajes de room:', error);
     }
 
-    this.logger.log(`🗑 Room eliminada: ${roomId}`);
+    this.logger.log(`🗑️  Room eliminada: ${roomId}`);
   }
 
   async addParticipant(
     roomId: string,
     userId: string,
     socketId: string,
-    audio = true,
-    video = true,
+    audio: boolean = true,
+    video: boolean = true,
   ): Promise<Participant> {
-    // si la sala no existe → crearla
     await this.ensureRoomExists(roomId, userId);
-
     const room = await this.getRoom(roomId);
 
     if (room.isFull()) {
@@ -180,14 +151,15 @@ export class WebRTCService {
     if (room.hasParticipant(userId)) {
       const existing = room.getParticipant(userId);
 
-      // refresh / reconexión → actualizar socket
       if (existing && existing.socketId !== socketId) {
         existing.socketId = socketId;
         existing.joinedAt = new Date();
-
-        if (this.redis) await this.saveRoomToRedis(room);
-
-        this.logger.log(`Usuario ${userId} reconectado en room ${roomId}`);
+        await this.redis.setWithDynamicTTL(
+          `${this.REDIS_ROOM_PREFIX}${roomId}`,
+          room,
+          'room',
+        );
+        this.logger.log(`ℹ️  Usuario ${userId} reconectado en room ${roomId}`);
         return existing;
       }
 
@@ -204,10 +176,13 @@ export class WebRTCService {
     };
 
     room.addParticipant(participant);
+    await this.redis.setWithDynamicTTL(
+      `${this.REDIS_ROOM_PREFIX}${roomId}`,
+      room,
+      'room',
+    );
 
-    if (this.redis) await this.saveRoomToRedis(room);
-
-    this.logger.log(`Participante ${userId} se unió a room ${roomId}`);
+    this.logger.log(`✅ Participante ${userId} se unió a room ${roomId}`);
     return participant;
   }
 
@@ -216,12 +191,23 @@ export class WebRTCService {
     room.removeParticipant(userId);
 
     if (room.isEmpty()) {
-      setTimeout(() => this.deleteRoom(roomId), 5 * 60 * 1000);
+      setTimeout(
+        () => {
+          this.deleteRoom(roomId).catch((error) => {
+            this.logger.error(`Error deleting empty room ${roomId}:`, error);
+          });
+        },
+        5 * 60 * 1000,
+      );
+      this.logger.log(`🕐 Room ${roomId} será eliminada en 5 minutos (vacía)`);
     }
 
-    if (this.redis) await this.saveRoomToRedis(room);
-
-    this.logger.log(`Participante ${userId} salió de room ${roomId}`);
+    await this.redis.setWithDynamicTTL(
+      `${this.REDIS_ROOM_PREFIX}${roomId}`,
+      room,
+      'room',
+    );
+    this.logger.log(`👋 Participante ${userId} salió de room ${roomId}`);
   }
 
   async getParticipants(roomId: string): Promise<Participant[]> {
@@ -247,74 +233,12 @@ export class WebRTCService {
     if (video !== undefined) participant.video = video;
     if (screen !== undefined) participant.screen = screen;
 
-    if (this.redis) await this.saveRoomToRedis(room);
+    await this.redis.setWithDynamicTTL(
+      `${this.REDIS_ROOM_PREFIX}${roomId}`,
+      room,
+      'room',
+    );
 
     return participant;
-  }
-
-  private async saveRoomToRedis(room: RoomEntity): Promise<void> {
-    if (!this.redis) return;
-
-    try {
-      const roomData = {
-        id: room.id,
-        name: room.name,
-        description: room.description || '',
-        createdBy: room.createdBy,
-        maxParticipants: room.maxParticipants,
-        createdAt: room.createdAt.toISOString(),
-        isActive: room.isActive,
-        participants: JSON.stringify(Array.from(room.participants.entries())),
-      };
-
-      await Promise.all([
-        this.redis.sadd(this.REDIS_ROOMS_KEY, room.id),
-        this.redis.hmset(`${this.REDIS_ROOM_PREFIX}${room.id}`, roomData),
-        this.redis.expire(`${this.REDIS_ROOM_PREFIX}${room.id}`, 86400),
-      ]);
-    } catch (error) {
-      // Log but don't throw - Redis es opcional
-      this.logger.warn(`Error guardando room en Redis: ${room.id}`, error);
-    }
-  }
-
-  private async loadRoomFromRedis(roomId: string): Promise<RoomEntity | null> {
-    if (!this.redis) return null;
-
-    try {
-      const data = await this.redis.hgetall(
-        `${this.REDIS_ROOM_PREFIX}${roomId}`,
-      );
-      if (!data || !data.id) {
-        return null;
-      }
-
-      let participants: Map<string, Participant>;
-      try {
-        participants = new Map<string, Participant>(
-          JSON.parse(data.participants || '[]'),
-        );
-      } catch (parseError) {
-        this.logger.warn(
-          `Error parseando participantes de Redis para room ${roomId}`,
-        );
-        participants = new Map();
-      }
-
-      return new RoomEntity({
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        createdBy: data.createdBy,
-        maxParticipants: parseInt(data.maxParticipants, 10),
-        createdAt: new Date(data.createdAt),
-        isActive: data.isActive === 'true',
-        participants,
-      });
-    } catch (error) {
-      // Log pero no throw - Redis es opcional
-      this.logger.warn(`Error cargando room desde Redis: ${roomId}`, error);
-      return null;
-    }
   }
 }

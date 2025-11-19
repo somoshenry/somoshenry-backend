@@ -28,7 +28,7 @@ export class SeederService {
   ) {}
 
   async run(): Promise<void> {
-    console.log('🌱 Iniciando mockeo…');
+    console.log('Iniciando mockeo...');
 
     const savedUsers = await this.userRepo.save(
       usersData.map((u) => this.userRepo.create(u)),
@@ -92,8 +92,8 @@ export class SeederService {
     ]);
 
     console.log(
-      `✅ Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`,
+      ` Usuarios: ${uc} | Posts: ${pc} | Comments: ${cc} | PostLikes: ${plc} | CommentLikes: ${clc}`,
     );
-    console.log('✅ Mockeo completado.');
+    console.log(' Mockeo completado.');
   }
 }

@@ -9,7 +9,9 @@ import { CreatePostDto } from '../dto/create-post.dto';
 
 export function CreatePostDocs() {
   return applyDecorators(
-    ApiOperation({ summary: 'Crear un nuevo post' }),
+    ApiOperation({
+      summary: 'Crear un nuevo post (con verificación de límite)',
+    }),
     ApiBearerAuth('JWT-auth'),
     ApiBody({
       type: CreatePostDto,

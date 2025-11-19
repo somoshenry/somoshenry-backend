@@ -1,7 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { MercadoPagoService } from './mercadopago.service';
-import { RequestPreferenceDto } from './request.preference.dto';
 import type { MercadoPagoWebhookBody } from './mercadopago.interface';
+import { RequestPreferenceDto } from './dto/request.preference.dto';
 
 @Controller('mercadopago')
 export class MercadoPagoController {
@@ -17,7 +17,7 @@ export class MercadoPagoController {
 
   @Post('webhook')
   async webhook(@Body() body: MercadoPagoWebhookBody) {
-    console.log('🔔 Webhook de Mercado Pago recibido:', body);
+    console.log('Webhook de Mercado Pago recibido:', body);
     return await this.mercadoPagoService.webhook(body);
   }
 }

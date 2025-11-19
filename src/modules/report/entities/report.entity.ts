@@ -33,6 +33,7 @@ export class Report {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // 🧑 REPORTER
   @Column('uuid')
   reporterId: string;
 
@@ -40,6 +41,7 @@ export class Report {
   @JoinColumn({ name: 'reporterId' })
   reporter: User;
 
+  // 📝 POST
   @Column({ type: 'uuid', nullable: true })
   postId?: string | null;
 
@@ -47,6 +49,7 @@ export class Report {
   @JoinColumn({ name: 'postId' })
   post?: Post | null;
 
+  // 💬 COMMENT
   @Column({ type: 'uuid', nullable: true })
   commentId?: string | null;
 
@@ -54,6 +57,15 @@ export class Report {
   @JoinColumn({ name: 'commentId' })
   comment?: Comment | null;
 
+  // 👤 USER
+  @Column({ type: 'uuid', nullable: true })
+  reportedUserId?: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'reportedUserId' })
+  reportedUser?: User | null;
+
+  // 📎 INFO
   @Column({ type: 'enum', enum: ReportReason })
   reason: ReportReason;
 
@@ -63,6 +75,7 @@ export class Report {
   @Column({ type: 'enum', enum: ReportStatus, default: ReportStatus.PENDING })
   status: ReportStatus;
 
+  // 🧑‍⚖ REVIEW
   @Column({ type: 'uuid', nullable: true })
   reviewedBy?: string | null;
 
@@ -73,6 +86,7 @@ export class Report {
   @Column({ type: 'timestamp', nullable: true })
   reviewedAt?: Date | null;
 
+  // 🕒 DATES
   @CreateDateColumn()
   createdAt: Date;
 

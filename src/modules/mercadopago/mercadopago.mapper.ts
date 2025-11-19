@@ -6,10 +6,10 @@ import {
   PreferenceResponse,
 } from 'mercadopago/dist/clients/preference/commonTypes';
 import { PreferenceCreateData } from 'mercadopago/dist/clients/preference/create/types';
-import { RequestPreferenceDto } from './request.preference.dto';
-import { RequestProductDto } from './request.product.dto';
+import { RequestPreferenceDto } from './dto/request.preference.dto';
+import { RequestProductDto } from './dto/request.product.dto';
 import { Injectable } from '@nestjs/common';
-import { ResponsePreferenceDto } from './responce.preference.dto';
+import { ResponsePreferenceDto } from './dto/responce.preference.dto';
 import { ConfigService } from '@nestjs/config';
 
 function buidItem(product: RequestProductDto) {
@@ -27,7 +27,7 @@ function buildBackUrls(frontUrl: string) {
   const backUrls: BackUrls = {
     // Cambia el nombre del archivo en el servidor y usa solo la barra (/).
     success: `${frontUrl}/redirect?status=success`,
-    pending: `${frontUrl}/redirect?status==pending`,
+    pending: `${frontUrl}/redirect?status=pending`,
     failure: `${frontUrl}/redirect?status=failure`,
   };
   return backUrls;
@@ -51,6 +51,7 @@ export class MercadopagoMapper {
     const backUrls: BackUrls = buildBackUrls(this.frontUrl);
 
     const preferenceRequest: PreferenceRequest = {
+      external_reference: requestPreferenceDto.userId,
       items: items,
       payer: payer,
       back_urls: backUrls,

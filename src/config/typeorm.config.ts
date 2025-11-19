@@ -6,17 +6,18 @@ export default registerAs('typeorm', () => {
   const isRender = !!process.env.DATABASE_URL;
 
   if (isRender) {
-    console.log('🟢 Conectando a base de datos Render...');
+    console.log('Conectando a base de datos Render...');
     return {
       type: 'postgres',
       url: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       autoLoadEntities: true,
       synchronize: true,
+      timezone: 'UTC', // Base de datos en UTC
     };
   }
 
-  console.log('🧩 Conectando a base de datos local...');
+  console.log('Conectando a base de datos local...');
   return {
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -27,5 +28,6 @@ export default registerAs('typeorm', () => {
     autoLoadEntities: true,
     synchronize: true,
     ssl: { rejectUnauthorized: false },
+    timezone: 'UTC', // Base de datos en UTC
   };
 });

@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { UserRole } from '../user/entities/user.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -13,10 +15,13 @@ import { PostLike } from './entities/post-like.entity';
 import { User } from '../user/entities/user.entity';
 import { PostDislike } from './entities/post-dislike.entity';
 import { PostView } from './entities/post-view.entity';
-import { Report } from '../report/entities/report.entity';
+import { Report, ReportReason } from '../report/entities/report.entity';
 import { FilterPostsDto } from './dto/filter-posts.dto';
 import { NotificationService } from '../notifications/socket/notification.service';
 import { NotificationType } from '../notifications/socket/entities/notification.entity';
+import { OpenAIService } from '../open-ai/openai.service';
+import { CreateReportDto } from '../report/dto/create-report.dto';
+import { ReportService } from '../report/report.service';
 
 @Injectable()
 export class PostService {
@@ -34,6 +39,9 @@ export class PostService {
     @InjectRepository(PostLike)
     private readonly postLikeRepository: Repository<PostLike>,
     private readonly notificationService: NotificationService,
+    private readonly openAiService: OpenAIService,
+    @Inject(forwardRef(() => ReportService))
+    private readonly reportService: ReportService,
   ) {}
 
   async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {
@@ -44,6 +52,9 @@ export class PostService {
     if (!user) {
       throw new Error('Usuario no encontrado');
     }
+    const isInappropriate = await this.openAiService.isInappropriate(
+      createPostDto.content,
+    );
 
     const post = this.postRepository.create({
       userId,
@@ -51,6 +62,13 @@ export class PostService {
     });
 
     const savedPost = await this.postRepository.save(post);
+
+    if (isInappropriate) {
+      const createReportDto = new CreateReportDto();
+      createReportDto.postId = post.id;
+      createReportDto.reason = ReportReason.INAPPROPRIATE;
+      await this.reportService.create(createReportDto, userId);
+    }
 
     const createdPost = await this.postRepository.findOne({
       where: { id: savedPost.id },
@@ -384,7 +402,7 @@ export class PostService {
       post.isInappropriate = true;
       await this.postRepository.save(post);
       console.log(
-        `⚠️ Auto-flag aplicado al post ${postId} (ratio ${(ratio * 100).toFixed(2)}%)`,
+        `Auto-flag aplicado al post ${postId} (ratio ${(ratio * 100).toFixed(2)}%)`,
       );
     }
   }
@@ -490,5 +508,20 @@ export class PostService {
         hasPreviousPage: page > 1,
       },
     };
+  }
+
+  // Método para contar posts en un período
+  async countPostsInPeriod(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<number> {
+    const count = await this.postRepository.count({
+      where: {
+        userId,
+        createdAt: Between(startDate, endDate),
+      },
+    });
+    return count;
   }
 }

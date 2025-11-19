@@ -19,9 +19,12 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { FilesService } from './files.service';
+import { UserRole } from '../user/entities/user.entity';
+import { AuthProtected } from '../auth/decorator/auth-protected.decorator';
 
 @ApiTags('Files')
 @Controller('files')
+@AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
 export class FilesController {
   constructor(private readonly fileService: FilesService) {}
 
@@ -105,7 +108,7 @@ export class FilesController {
     return this.fileService.uploadProfilePicture(file, userId);
   }
 
-  // 🖼️ Subir foto de portada
+  // 🖼 Subir foto de portada
   @Put('uploadCoverPicture/:userId')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
@@ -143,7 +146,7 @@ export class FilesController {
     return this.fileService.uploadCoverPicture(file, userId);
   }
 
-  // 🗑️ Eliminar archivo de post
+  // 🗑 Eliminar archivo de post
   @Delete('deletePostFile/:postId')
   @ApiOperation({ summary: 'Eliminar archivo de post' })
   @ApiResponse({ status: 200, description: 'Archivo eliminado correctamente' })
@@ -151,7 +154,7 @@ export class FilesController {
     return this.fileService.deletePostFile(postId);
   }
 
-  // 🗑️ Eliminar foto de perfil
+  // 🗑 Eliminar foto de perfil
   @Delete('deleteUserProfilePicture/:userId')
   @ApiOperation({ summary: 'Eliminar foto de perfil' })
   @ApiResponse({
@@ -162,7 +165,7 @@ export class FilesController {
     return this.fileService.deleteUserProfilePicture(userId);
   }
 
-  // 🗑️ Eliminar foto de portada
+  // 🗑 Eliminar foto de portada
   @Delete('deleteUserCoverPicture/:userId')
   @ApiOperation({ summary: 'Eliminar foto de portada' })
   @ApiResponse({
@@ -171,5 +174,64 @@ export class FilesController {
   })
   deleteUserCoverPicture(@Param('userId') userId: string) {
     return this.fileService.deleteUserCoverPicture(userId);
+  }
+
+  // 📸 Subir archivo a una cohorte
+  @Put('uploadCohortMaterialFile/:cohortMaterialId')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Sube un documento, imagen o video asociado a una cohorte. ',
+    description:
+      'Solo debes enviar el archivo binario **(máximo 20 MB)**.\n\n' +
+      '⚠️ **IMPORTANTE: Los siguientes campos se extraen automáticamente y se llenan en cohorte-materials:**\n\n' +
+      '- `fileName` - nombre del archivo\n' +
+      '- `fileUrl` - URL de Cloudinary\n' +
+      '- `fileType` - PDF, IMAGE, VIDEO, etc.\n' +
+      '- `mimeType` - tipo MIME (application/pdf, image/png, etc.)\n' +
+      '- `fileSize` - tamaño en bytes',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'Archivo a subir. Los metadatos (nombre, tipo, tamaño, URL, mimeType) se extraen automáticamente.',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Archivo subido exitosamente. Metadatos extraídos automáticamente.',
+  })
+  uploadCohortMaterialFile(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 20000000,
+            message: 'El archivo debe pesar máximo 20 MB',
+          }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Param('cohortMaterialId', ParseUUIDPipe) cohortMaterialId: string,
+  ) {
+    // console.log(file);
+    return this.fileService.uploadCohortMaterialFile(file, cohortMaterialId);
+  }
+
+  // 🗑 Eliminar archivo de una cohorte
+  @Delete('deleteCohortMaterialFile/:cohortMaterialId')
+  @ApiOperation({ summary: 'Eliminar archivo de una cohorte' })
+  @ApiResponse({ status: 200, description: 'Archivo eliminado correctamente' })
+  deleteCohortFile(@Param('cohortMaterialId') cohortMaterialId: string) {
+    return this.fileService.deleteCohortFile(cohortMaterialId);
   }
 }

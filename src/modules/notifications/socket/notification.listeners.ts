@@ -110,7 +110,7 @@ export class NotificationListeners {
 
       this.logger.debug(`[notification] ${type}`);
     } catch (e) {
-      this.logger.error('[comment.created] error', e as any);
+      this.logger.error('[comment.created] error', e);
     }
   }
 
@@ -147,7 +147,7 @@ export class NotificationListeners {
         }),
       );
     } catch (e) {
-      this.logger.error('[comment.liked] error', e as any);
+      this.logger.error('[comment.liked] error', e);
     }
   }
 
@@ -180,7 +180,7 @@ export class NotificationListeners {
         }),
       );
     } catch (e) {
-      this.logger.error('[post.liked] error', e as any);
+      this.logger.error('[post.liked] error', e);
     }
   }
 
@@ -208,7 +208,7 @@ export class NotificationListeners {
         }),
       );
     } catch (e) {
-      this.logger.error('[user.followed] error', e as any);
+      this.logger.error('[user.followed] error', e);
     }
   }
 
@@ -243,7 +243,7 @@ export class NotificationListeners {
         }),
       );
     } catch (e) {
-      this.logger.error('[message.created] error', e as any);
+      this.logger.error('[message.created] error', e);
     }
   }
 

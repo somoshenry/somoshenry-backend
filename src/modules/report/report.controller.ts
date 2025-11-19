@@ -38,8 +38,7 @@ export class ReportController {
     @Body() dto: CreateReportDto,
     @Req() req: Request & { user: { id: string } },
   ) {
-    const reporterId = req.user.id;
-    const created = await this.service.create(dto, reporterId);
+    const created = await this.service.create(dto, req.user.id);
     return { message: 'Reporte creado correctamente', report: created };
   }
 
@@ -47,16 +46,14 @@ export class ReportController {
   @AuthProtected(UserRole.ADMIN)
   @GetPendingReportsDocs
   async findPending() {
-    const data = await this.service.findPending();
-    return { data };
+    return { data: await this.service.findPending() };
   }
 
   @Get()
   @AuthProtected(UserRole.ADMIN)
   @GetAllReportsDocs
   async findAll(@Query('status') status?: ReportStatus) {
-    const data = await this.service.findAll(status);
-    return { data };
+    return { data: await this.service.findAll(status) };
   }
 
   @Patch(':id/status')
@@ -67,12 +64,13 @@ export class ReportController {
     @Body() dto: UpdateReportDto,
     @Req() req: Request & { user: { id: string; role: UserRole } },
   ) {
-    const updated = await this.service.updateStatus(
+    const result = await this.service.updateStatus(
       id,
       dto,
       req.user.id,
       req.user.role,
     );
-    return { message: 'Reporte actualizado', report: updated };
+
+    return { message: 'Reporte actualizado', report: result };
   }
 }

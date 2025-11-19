@@ -116,8 +116,7 @@ export class AdminAuditService {
         ...(filters.targetType ? { targetType: filters.targetType } : {}),
         ...(from || to
           ? {
-              createdAt:
-                where.createdAt as FindOptionsWhere<AuditLog>['createdAt'],
+              createdAt: where.createdAt,
             }
           : {}),
       },

@@ -15,7 +15,7 @@ export const postDisabledTemplate = `
           <tr>
             <td style="background-color: #ff9800; padding: 40px 30px; text-align: center;">
               <div style="width: 60px; height: 60px; background-color: #ffffff; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                <span style="color: #ff9800; font-size: 36px; line-height: 60px;">⚠</span>
+                <span style="color: #ff9800; font-size: 36px; line-height: 60px;"></span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Post Deshabilitado</h1>
             </td>

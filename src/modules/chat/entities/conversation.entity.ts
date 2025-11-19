@@ -1,33 +1,55 @@
 import {
   Entity,
   PrimaryGeneratedColumn,
+  OneToMany,
   ManyToMany,
   JoinTable,
-  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  Column,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { Message } from './message.entity';
+import { ConversationParticipant } from './conversation-participant.entity';
+
+export enum ConversationType {
+  PRIVATE = 'PRIVATE',
+  GROUP = 'GROUP',
+  COHORT = 'COHORT',
+}
 
 @Entity('conversations')
-// @Unique(['participants'])
 export class Conversation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @ManyToMany(() => User, { eager: true })
   @JoinTable({
-    name: 'conversation_participants',
+    name: 'conversation_users',
     joinColumn: { name: 'conversation_id' },
     inverseJoinColumn: { name: 'user_id' },
   })
   participants: User[];
 
-  @OneToMany(() => Message, (message) => message.conversation, {
+  @OneToMany(() => ConversationParticipant, (p) => p.conversation, {
     cascade: true,
   })
-  messages: Message[];
+  participantsWithRoles: ConversationParticipant[];
+
+  @Column({
+    type: 'enum',
+    enum: ConversationType,
+    default: ConversationType.PRIVATE,
+  })
+  type: ConversationType;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  name?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  imageUrl?: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -9,13 +9,17 @@ import {
 import { ReportReason } from '../entities/report.entity';
 
 export class CreateReportDto {
-  @ValidateIf((o: CreateReportDto) => !o.commentId)
+  @ValidateIf((o: CreateReportDto) => !o.commentId && !o.reportedUserId)
   @IsUUID()
   postId?: string;
 
-  @ValidateIf((o: CreateReportDto) => !o.postId)
+  @ValidateIf((o: CreateReportDto) => !o.postId && !o.reportedUserId)
   @IsUUID()
   commentId?: string;
+
+  @ValidateIf((o: CreateReportDto) => !o.postId && !o.commentId)
+  @IsUUID()
+  reportedUserId?: string;
 
   @IsEnum(ReportReason)
   reason: ReportReason;

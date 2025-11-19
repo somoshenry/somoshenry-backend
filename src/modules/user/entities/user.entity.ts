@@ -7,12 +7,17 @@ import {
   DeleteDateColumn,
   Index,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Follow } from '../../follow/entities/follow.entity';
 import { Post } from '../../post/entities/post.entity';
 import { Comment } from '../../comment/entities/comment.entity';
 import { Notification } from '../../notifications/socket/entities/notification.entity';
+import { Subscription } from 'src/modules/subscription/entities/subscription.entity';
+import { Payment } from 'src/modules/subscription/entities/payment.entity';
+import { CohorteMember } from 'src/modules/cohorte/cohorte/entities/cohorte-member.entity';
+import { CohorteMaterial } from 'src/modules/cohorte/cohorte/entities/cohorte-material.entity';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -100,4 +105,21 @@ export class User {
 
   @OneToMany(() => Notification, (notification) => notification.sender)
   sentNotifications: Notification[];
+
+  @OneToOne(() => Subscription, (subscription) => subscription.user)
+  subscription: Subscription;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: Date | null;
+
+  @OneToMany(() => Payment, (payment) => payment.user)
+  payments: Payment[];
+
+  @OneToMany(() => CohorteMember, (member) => member.user)
+  cohorteMembers: CohorteMember[];
+
+  @OneToMany(
+    () => CohorteMaterial,
+    (cohorteMaterial) => cohorteMaterial.uploader,
+  )
+  cohorteMaterial: CohorteMaterial[];
 }

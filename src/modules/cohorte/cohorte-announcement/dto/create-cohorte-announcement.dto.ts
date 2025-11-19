@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MinLength, MaxLength } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
 
 export class CreateCohorteAnnouncementDto {
   @ApiProperty({ example: 'Recordatorio importante' })

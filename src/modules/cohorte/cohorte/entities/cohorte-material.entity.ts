@@ -65,6 +65,7 @@ export class CohorteMaterial {
     name: 'file_type',
     type: 'enum',
     enum: FileType,
+    nullable: true,
   })
   fileType: FileType;
 

@@ -155,26 +155,15 @@ export class MercadoPagoService {
     const nextMonth = DateUtil.addMonth(now, 1);
     const nextBillingDate = DateUtil.addDays(nextMonth, -1);
 
+    // ✅ Verificar ANTES de la transacción si el pago ya existe
+    const paymentExists = await this.paymentRepository.findOne({
+      where: { mercadoPagoId: id?.toString() },
+    });
+
+    // ✅ Guardar en base de datos dentro de una transacción
     await this.executeInTransaction(async (manager) => {
       const paymentRepo = manager.getRepository(Payment);
       const subscriptionRepo = manager.getRepository(Subscription);
-
-      const paymentExisting = await paymentRepo.findOne({
-        where: { mercadoPagoId: id?.toString() },
-      });
-
-      if (!paymentExisting) {
-        console.log('################################################');
-        console.log('################################################');
-        console.log('################################################');
-        console.log('################################################');
-        console.log('################################################');
-        console.log('Enviando notificación de pago exitoso al usuario');
-        await this.notificationService.sendPaymentSuccessNotification(
-          user.email,
-        );
-        console.log('Notificación enviada');
-      }
 
       const paymentRecord = paymentRepo.create({
         userId: user.id,
@@ -210,11 +199,17 @@ export class MercadoPagoService {
       await subscriptionRepo.save(updatedSubscription);
     });
 
-    await this.sendNotificationSafely(() =>
-      this.notificationService.sendPaymentSuccessNotification(user.email),
-    );
+    // ✅ Enviar notificación SOLO si es un pago nuevo (DESPUÉS de la transacción)
+    if (!paymentExists) {
+      await this.sendNotificationSafely(() =>
+        this.notificationService.sendPaymentSuccessNotification(user.email),
+      );
+      console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
+    } else {
+      console.log(`⚠️ Pago duplicado detectado. No se envió notificación.`);
+    }
 
-    console.log(`Subscripción actualizada → Plan: ${purchasedPlan}`);
+    console.log(`✅ Subscripción actualizada → Plan: ${purchasedPlan}`);
   }
 
   private async handleRejectedPayment(paymentDetails: PaymentResponse) {

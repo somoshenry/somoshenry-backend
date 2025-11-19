@@ -271,7 +271,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client.data as UserSocketData).userId;
     if (!userId) throw new UnauthorizedException();
 
-    // Record offer in state machine to detect duplicates
+    // Record offer sent by this user
     this.signalingStateMachine.recordOfferSent(
       dto.roomId,
       userId,
@@ -279,13 +279,16 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       dto.sequence ?? 0,
     );
 
-    // Check if this is a duplicate offer by checking recent timestamp
+    // Check if this is a duplicate offer (same sequence within timeout window)
     const existingContext = this.signalingStateMachine.getContext(
       dto.roomId,
       userId,
       dto.targetUserId,
     );
+
+    // If we just sent an offer with the same sequence number, it's a duplicate
     if (
+      existingContext?.offerSequence === (dto.sequence ?? 0) &&
       existingContext?.lastOfferTimestamp &&
       Date.now() - existingContext.lastOfferTimestamp < 1000
     ) {
@@ -300,8 +303,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const peerKey = `${dto.roomId}:${userId}:${dto.targetUserId}`;
-
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -312,9 +313,12 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sequence: dto.sequence,
         messageId: dto.messageId,
       });
-      this.logger.log(`📤 Offer: ${userId} -> ${dto.targetUserId}`);
+      this.logger.log(
+        `📤 Offer: ${userId} -> ${dto.targetUserId} (sequence: ${dto.sequence})`,
+      );
       client.emit('offerAck', { success: true, sequence: dto.sequence });
     } else {
+      this.logger.warn(`Target user ${dto.targetUserId} not connected`);
       client.emit('error', { message: 'Usuario objetivo no conectado' });
     }
   }
@@ -327,7 +331,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = (client.data as UserSocketData).userId;
     if (!userId) throw new UnauthorizedException();
 
-    // Record answer in state machine to detect duplicates
+    // Record answer sent by this user
     this.signalingStateMachine.recordAnswerSent(
       dto.roomId,
       userId,
@@ -335,13 +339,15 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       dto.sequence ?? 0,
     );
 
-    // Check if this is a duplicate answer
+    // Check if this is a duplicate answer (same sequence within timeout window)
     const existingContext = this.signalingStateMachine.getContext(
       dto.roomId,
       userId,
       dto.targetUserId,
     );
+
     if (
+      existingContext?.answerSequence === (dto.sequence ?? 0) &&
       existingContext?.lastAnswerTimestamp &&
       Date.now() - existingContext.lastAnswerTimestamp < 1000
     ) {
@@ -356,8 +362,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const peerKey = `${dto.roomId}:${userId}:${dto.targetUserId}`;
-
     const targetSocket = this.getUserSocket(dto.targetUserId);
 
     if (targetSocket) {
@@ -368,9 +372,12 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
         sequence: dto.sequence,
         messageId: dto.messageId,
       });
-      this.logger.log(`📥 Answer: ${userId} -> ${dto.targetUserId}`);
+      this.logger.log(
+        `📥 Answer: ${userId} -> ${dto.targetUserId} (sequence: ${dto.sequence})`,
+      );
       client.emit('answerAck', { success: true, sequence: dto.sequence });
     } else {
+      this.logger.warn(`Target user ${dto.targetUserId} not connected`);
       client.emit('error', { message: 'Usuario objetivo no conectado' });
     }
   }

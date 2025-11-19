@@ -19,14 +19,16 @@ export class CreateMaterialDto {
     description: 'Nombre del archivo',
     example: 'JavaScript_Avanzado.pdf',
   })
+  @IsOptional()
   @IsString()
   @MaxLength(255)
-  fileName: string;
+  fileName?: string;
 
   @ApiProperty({
     description: 'URL del archivo (S3, Cloudinary, etc)',
     example: 'https://s3.amazonaws.com/bucket/files/js-avanzado.pdf',
   })
+  @IsOptional()
   @IsUrl()
   @MaxLength(1000)
   fileUrl: string;
@@ -36,8 +38,9 @@ export class CreateMaterialDto {
     enum: FileType,
     example: FileType.PDF,
   })
+  @IsOptional()
   @IsEnum(FileType)
-  fileType: FileType;
+  fileType?: FileType;
 
   @ApiPropertyOptional({
     description: 'Tamaño del archivo en bytes',

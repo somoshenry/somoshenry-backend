@@ -4,6 +4,7 @@ import { gmail } from '@googleapis/gmail';
 import { OAuth2Client } from 'google-auth-library';
 import { GmailMessageEncode } from './dto/gmail.message.encode';
 import { ConfigService } from '@nestjs/config';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 @Injectable()
 export class GmailConnector {
@@ -55,7 +56,7 @@ export class GmailConnector {
       const result = await this.sendEncodedMessage(gmailClient, encoded);
       return result.data;
     } catch (error) {
-      console.error(' Error:', error);
+      DevLogger.error(' Error:', error);
       throw new Error(`Fallo al enviar email: ${error}`);
     }
   }

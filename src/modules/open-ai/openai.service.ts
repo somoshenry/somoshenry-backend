@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 export type ClasificacionContenido = 'inapropiado' | 'apropiado';
 
@@ -31,7 +32,7 @@ export class OpenAIService {
       const esFlagged = moderacion.results[0].flagged;
       return esFlagged ? 'inapropiado' : 'apropiado';
     } catch (error) {
-      console.error(' Error al clasificar texto:', error);
+      DevLogger.error(' Error al clasificar texto:', error);
       throw error;
     }
   }
@@ -41,7 +42,7 @@ export class OpenAIService {
       const clasificacion = await this.clasificarTexto(texto);
       return clasificacion === 'inapropiado';
     } catch (error) {
-      console.error(' Error al procesar texto (isInappropriate):', error);
+      DevLogger.error(' Error al procesar texto (isInappropriate):', error);
       throw error;
     }
   }

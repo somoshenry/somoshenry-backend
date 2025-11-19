@@ -11,6 +11,7 @@ import { PreferenceCreateData } from 'mercadopago/dist/clients/preference/create
 import { PreferenceResponse } from 'mercadopago/dist/clients/preference/commonTypes';
 import { MerchantOrderResponse } from 'mercadopago/dist/clients/merchantOrder/commonTypes';
 import { PaymentResponse } from 'mercadopago/dist/clients/payment/commonTypes';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 @Injectable()
 export class MercadopagoConnector {
@@ -43,7 +44,7 @@ export class MercadopagoConnector {
     try {
       return await this.preference.create(preferenceCreateData);
     } catch (error) {
-      console.error(error);
+      DevLogger.error(error);
       throw error;
     }
   }
@@ -52,7 +53,7 @@ export class MercadopagoConnector {
     try {
       return await this.payment.get({ id: paymentId });
     } catch (error) {
-      console.error(' Error obteniendo detalles del pago:', error);
+      DevLogger.error(' Error obteniendo detalles del pago:', error);
       throw error;
     }
   }
@@ -61,12 +62,12 @@ export class MercadopagoConnector {
     orderId: string,
   ): Promise<MerchantOrderResponse> {
     try {
-      console.log(`Obteniendo detalles de la orden para ID: ${orderId}`);
+      DevLogger.log(`Obteniendo detalles de la orden para ID: ${orderId}`);
       const order = await this.merchantOrders.get({ merchantOrderId: orderId });
-      console.log('Detalles de la orden obtenidos:', order);
+      DevLogger.log('Detalles de la orden obtenidos:', order);
       return order;
     } catch (error) {
-      console.error('Error obteniendo detalles de la orden:', error);
+      DevLogger.error('Error obteniendo detalles de la orden:', error);
       throw error;
     }
   }

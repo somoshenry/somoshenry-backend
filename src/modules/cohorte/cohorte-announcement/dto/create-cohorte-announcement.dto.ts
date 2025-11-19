@@ -13,6 +13,7 @@ export class CreateCohorteAnnouncementDto {
   @MinLength(1)
   content: string;
 
-  // El controller se lo setea, no lo envía el usuario
+  @IsOptional()
+  @IsString()
   cohorteId?: string;
 }

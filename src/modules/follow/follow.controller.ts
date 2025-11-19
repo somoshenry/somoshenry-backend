@@ -21,7 +21,7 @@ export class FollowController {
   @ApiResponse({
     status: 201,
     description: 'Usuario seguido correctamente',
-    schema: { example: { message: 'Usuario seguido correctamente' } },
+    schema: { example: { success: true } },
   })
   @ApiResponse({
     status: 400,
@@ -33,13 +33,9 @@ export class FollowController {
   async seguir(
     @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguido') idSeguido: string,
-  ): Promise<{ message: string }> {
+  ): Promise<{ success: boolean; statusCode?: number }> {
     const idSeguidor = req.user.id;
-    const result = (await this.followService.seguirUsuario(
-      idSeguidor,
-      idSeguido,
-    )) as { message?: string; mensaje?: string };
-    return { message: result.message ?? result.mensaje ?? 'Usuario seguido' };
+    return await this.followService.seguirUsuario(idSeguidor, idSeguido);
   }
 
   @Delete('unfollow/:idSeguido')
@@ -48,7 +44,7 @@ export class FollowController {
     status: 200,
     description: 'Dejaste de seguir al usuario correctamente',
     schema: {
-      example: { message: 'Dejaste de seguir al usuario correctamente' },
+      example: { success: true },
     },
   })
   @ApiBearerAuth('JWT-auth')
@@ -56,18 +52,14 @@ export class FollowController {
   async dejarDeSeguir(
     @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguido') idSeguido: string,
-  ): Promise<{ message: string }> {
+  ): Promise<{ success: boolean; statusCode?: number }> {
     const idSeguidor = req.user.id;
-    const result = (await this.followService.dejarDeSeguirByFollower(
+    return await this.followService.dejarDeSeguirByFollower(
       idSeguidor,
       idSeguido,
       req.user.id,
       req.user.role,
-    )) as { message?: string; mensaje?: string };
-    return {
-      message:
-        result.message ?? result.mensaje ?? 'Dejaste de seguir al usuario',
-    };
+    );
   }
 
   @Delete('remove-follower/:idSeguidor')
@@ -75,24 +67,21 @@ export class FollowController {
   @ApiResponse({
     status: 200,
     description: 'Seguidor eliminado correctamente',
-    schema: { example: { message: 'Seguidor eliminado correctamente' } },
+    schema: { example: { success: true } },
   })
   @ApiBearerAuth('JWT-auth')
   @AuthProtected(UserRole.MEMBER, UserRole.TEACHER, UserRole.ADMIN)
   async removeFollower(
     @Req() req: Request & { user: { id: string; role: UserRole } },
     @Param('idSeguidor') idSeguidor: string,
-  ): Promise<{ message: string }> {
+  ): Promise<{ success: boolean; statusCode?: number }> {
     const idSeguido = req.user.id;
-    const result = (await this.followService.removeFollower(
+    return await this.followService.removeFollower(
       idSeguido,
       idSeguidor,
       req.user.id,
       req.user.role,
-    )) as { message?: string; mensaje?: string };
-    return {
-      message: result.message ?? result.mensaje ?? 'Seguidor eliminado',
-    };
+    );
   }
 
   @Get('seguidores/:idUsuario')

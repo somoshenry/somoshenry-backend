@@ -22,6 +22,7 @@ import { NotificationType } from '../notifications/socket/entities/notification.
 import { OpenAIService } from '../open-ai/openai.service';
 import { CreateReportDto } from '../report/dto/create-report.dto';
 import { ReportService } from '../report/report.service';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 @Injectable()
 export class PostService {
@@ -401,7 +402,7 @@ export class PostService {
     if (ratio >= 0.1 && !post.isInappropriate) {
       post.isInappropriate = true;
       await this.postRepository.save(post);
-      console.log(
+      DevLogger.log(
         `Auto-flag aplicado al post ${postId} (ratio ${(ratio * 100).toFixed(2)}%)`,
       );
     }

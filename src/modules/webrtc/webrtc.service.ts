@@ -46,7 +46,7 @@ export class WebRTCService {
       this.rooms.set(roomId, newRoom);
       await this.redis.setWithDynamicTTL(
         `${this.REDIS_ROOM_PREFIX}${roomId}`,
-        newRoom,
+        this.serializeRoom(newRoom),
         'room',
       );
 
@@ -72,7 +72,7 @@ export class WebRTCService {
     this.rooms.set(roomId, room);
     await this.redis.setWithDynamicTTL(
       `${this.REDIS_ROOM_PREFIX}${roomId}`,
-      room,
+      this.serializeRoom(room),
       'room',
     );
     await this.redis.lpush(this.REDIS_ROOMS_KEY, roomId);
@@ -81,16 +81,73 @@ export class WebRTCService {
     return room;
   }
 
+  private hydrateRoom(room: any): RoomEntity {
+    if (room instanceof RoomEntity) {
+      return room;
+    }
+
+    // Convertir participants a Map
+    const participants = new Map<string, Participant>();
+    
+    if (room.participants) {
+      if (room.participants instanceof Map) {
+        // Si ya es una Map, copiarla
+        room.participants.forEach((p: Participant, userId: string) => {
+          participants.set(userId, p);
+        });
+      } else if (Array.isArray(room.participants)) {
+        // Si es un array de [userId, participant], convertirlo a Map
+        room.participants.forEach(([userId, p]: [string, Participant]) => {
+          if (userId && p && typeof p === 'object') {
+            participants.set(userId, p);
+          }
+        });
+      } else if (typeof room.participants === 'object') {
+        // Si es un objeto plano (de JSON), convertirlo a Map
+        Object.entries(room.participants).forEach(([userId, p]: [string, any]) => {
+          if (p && typeof p === 'object') {
+            participants.set(userId, p as Participant);
+          }
+        });
+      }
+    }
+
+    return new RoomEntity({
+      id: room.id,
+      name: room.name,
+      description: room.description,
+      createdBy: room.createdBy,
+      maxParticipants: room.maxParticipants || 10,
+      participants,
+      createdAt: room.createdAt ? new Date(room.createdAt) : new Date(),
+      isActive: room.isActive !== false, // Default true
+    });
+  }
+
+  private serializeRoom(room: RoomEntity): any {
+    // Convertir Map a array de [key, value] para que JSON.stringify lo preserve
+    return {
+      id: room.id,
+      name: room.name,
+      description: room.description,
+      createdBy: room.createdBy,
+      maxParticipants: room.maxParticipants,
+      participants: Array.from(room.participants.entries()), // Map → array
+      createdAt: room.createdAt,
+      isActive: room.isActive,
+    };
+  }
+
   async getRoom(roomId: string): Promise<RoomEntity> {
     let room = this.rooms.get(roomId);
 
     if (!room) {
-      const cached = await this.redis.getWithFallback<RoomEntity>(
+      const cached = await this.redis.getWithFallback<any>(
         `${this.REDIS_ROOM_PREFIX}${roomId}`,
       );
       if (cached) {
-        this.rooms.set(roomId, cached);
-        room = cached;
+        room = this.hydrateRoom(cached);
+        this.rooms.set(roomId, room);
       }
     }
 
@@ -105,14 +162,12 @@ export class WebRTCService {
     const roomIds = await this.redis.lrange(this.REDIS_ROOMS_KEY, 0, -1);
     const rooms = await Promise.all(
       roomIds.map((id) =>
-        this.redis.getWithFallback<RoomEntity>(
-          `${this.REDIS_ROOM_PREFIX}${id}`,
-        ),
+        this.redis.getWithFallback<any>(`${this.REDIS_ROOM_PREFIX}${id}`),
       ),
     );
-    return rooms.filter(
-      (room): room is RoomEntity => room !== null && room.isActive,
-    );
+    return rooms
+      .filter((room): room is any => room !== null && room.isActive)
+      .map((room) => this.hydrateRoom(room));
   }
 
   async deleteRoom(roomId: string): Promise<void> {
@@ -156,7 +211,7 @@ export class WebRTCService {
         existing.joinedAt = new Date();
         await this.redis.setWithDynamicTTL(
           `${this.REDIS_ROOM_PREFIX}${roomId}`,
-          room,
+          this.serializeRoom(room),
           'room',
         );
         this.logger.log(`Usuario ${userId} reconectado en room ${roomId}`);
@@ -178,7 +233,7 @@ export class WebRTCService {
     room.addParticipant(participant);
     await this.redis.setWithDynamicTTL(
       `${this.REDIS_ROOM_PREFIX}${roomId}`,
-      room,
+      this.serializeRoom(room),
       'room',
     );
 
@@ -204,7 +259,7 @@ export class WebRTCService {
 
     await this.redis.setWithDynamicTTL(
       `${this.REDIS_ROOM_PREFIX}${roomId}`,
-      room,
+      this.serializeRoom(room),
       'room',
     );
     this.logger.log(`Participante ${userId} salió de room ${roomId}`);
@@ -235,7 +290,7 @@ export class WebRTCService {
 
     await this.redis.setWithDynamicTTL(
       `${this.REDIS_ROOM_PREFIX}${roomId}`,
-      room,
+      this.serializeRoom(room),
       'room',
     );
 

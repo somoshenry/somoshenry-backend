@@ -16,6 +16,7 @@ import type { Cache } from 'cache-manager';
 // EVENT
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EventDispatcherService } from '../../common/events/event-dispatcher.service';
+import { DevLogger } from '../../common/utils/dev-logger';
 // ENTITIES (solo las que necesitamos)
 import { Conversation, ConversationType } from './entities/conversation.entity';
 import { MessageType } from './entities/message.entity'; // Solo el enum
@@ -69,7 +70,7 @@ export class ChatService {
     const cached = await this.cacheManager.get<any[]>(cacheKey);
 
     if (cached) {
-      console.log('Conversaciones desde Redis');
+      DevLogger.log('Conversaciones desde Redis');
       return cached;
     }
 
@@ -95,7 +96,7 @@ export class ChatService {
             messages,
           };
         } catch (error) {
-          console.error(`Error cargando mensajes para ${conv.id}:`, error);
+          DevLogger.error(`Error cargando mensajes para ${conv.id}:`, error);
           return {
             ...conv,
             messages: [],
@@ -146,6 +147,15 @@ export class ChatService {
     await this.cacheManager.del(`user:conversations:${userId}`);
     await this.cacheManager.del(`user:conversations:${peerUserId}`);
 
+    this.eventDispatcher.dispatch({
+      name: 'conversation.created',
+      payload: {
+        conversationId: saved.id,
+        participants: [userId, peerUserId],
+        conversation: saved,
+      },
+    });
+
     return saved;
   }
 
@@ -178,9 +188,9 @@ export class ChatService {
         await this.messageMongoService.deleteMessagesByConversation(
           conversationId,
         );
-      console.log(`${deleted} mensajes eliminados de MongoDB`);
+      DevLogger.log(`${deleted} mensajes eliminados de Redis`);
     } catch (error) {
-      console.error('Error eliminando mensajes de MongoDB:', error);
+      DevLogger.error('Error eliminando mensajes de Redis:', error);
     }
 
     // Eliminar conversación de PostgreSQL
@@ -213,11 +223,11 @@ export class ChatService {
     }>(cacheKey);
 
     if (cached) {
-      console.log('Mensajes desde Redis');
+      DevLogger.log('Mensajes desde Redis');
       return cached;
     }
 
-    console.log('Consultando mensajes desde MongoDB...');
+    DevLogger.log('Consultando mensajes desde MongoDB...');
 
     const total = await this.messageMongoService.countMessages(conversationId);
     const messagesDesc = await this.messageMongoService.getMessagesPaginated(
@@ -308,11 +318,11 @@ export class ChatService {
     try {
       const updated = await this.messageMongoService.markAsRead(messageId);
       if (updated) {
-        console.log('Mensaje marcado como leído');
+        DevLogger.log('Mensaje marcado como leído');
         return updated;
       }
     } catch (error) {
-      console.error('Error marcando mensaje como leído:', error);
+      DevLogger.error('Error marcando mensaje como leído:', error);
     }
 
     return {
@@ -774,9 +784,9 @@ export class ChatService {
     try {
       const deleted =
         await this.messageMongoService.deleteMessagesByConversation(groupId);
-      console.log(`${deleted} mensajes del grupo eliminados`);
+      DevLogger.log(`${deleted} mensajes del grupo eliminados`);
     } catch (error) {
-      console.error('Error eliminando mensajes del grupo:', error);
+      DevLogger.error('Error eliminando mensajes del grupo:', error);
     }
 
     await this.conversationRepo.remove(convo);

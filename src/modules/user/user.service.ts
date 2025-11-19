@@ -16,6 +16,7 @@ import {
   SubscriptionStatus,
 } from '../subscription/entities/subscription.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 @Injectable()
 export class UserService {
@@ -67,12 +68,12 @@ export class UserService {
         });
 
         await this.subscriptionRepository.save(subscription);
-        console.log('Suscripción creada para usuario ID:', userCreated.id);
+        DevLogger.log('Suscripción creada para usuario ID:', userCreated.id);
       }
     }
-    console.log('Usuario creado →', userCreated.id);
+    DevLogger.log('Usuario creado →', userCreated.id);
     await this.notificationService.sendWelcomeNotification(userCreated.email);
-    console.log('Notificación de bienvenida enviada a:', userCreated.email);
+    DevLogger.log('Notificación de bienvenida enviada a:', userCreated.email);
 
     // Devolver usuario final
     return userCreated;

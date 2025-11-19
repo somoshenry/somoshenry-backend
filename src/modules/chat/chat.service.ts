@@ -146,6 +146,15 @@ export class ChatService {
     await this.cacheManager.del(`user:conversations:${userId}`);
     await this.cacheManager.del(`user:conversations:${peerUserId}`);
 
+    this.eventDispatcher.dispatch({
+      name: 'conversation.created',
+      payload: {
+        conversationId: saved.id,
+        participants: [userId, peerUserId],
+        conversation: saved,
+      },
+    });
+
     return saved;
   }
 

@@ -378,6 +378,24 @@ export class ChatGateway
       const data = payload as { groupId: string };
       this.server.to(data.groupId).emit('groupDeleted', data);
     });
+
+    emitter.on('conversation.created', (payload) => {
+      const data = payload as {
+        conversationId: string;
+        participants: string[];
+        conversation: Record<string, unknown>;
+      };
+      for (const userId of data.participants) {
+        const socketId = this.onlineUsers.get(userId);
+        if (socketId) {
+          this.server.to(socketId).emit('conversationCreated', {
+            conversationId: data.conversationId,
+            conversation: data.conversation,
+            createdAt: new Date(),
+          });
+        }
+      }
+    });
   }
 
   // MÉTODO AUXILIAR PÚBLICO

@@ -20,6 +20,13 @@ import { RolesGuard } from '../../auth/guard/roles.guard';
 import { UserRole } from '../../user/entities/user.entity';
 import { Request } from 'express';
 import { CohorteClassDocs } from '../docs/cohorte-class.docs';
+import {
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+} from '@nestjs/swagger';
+import { ClassResponseDto } from '../docs';
 
 @CohorteClassDocs.tag()
 @CohorteClassDocs.auth()
@@ -48,6 +55,44 @@ export class CohorteClassController {
   @CohorteClassDocs.findAll.ok()
   findAll() {
     return this.classService.findAll();
+  }
+
+  @Get('by-cohorte/:cohorteId')
+  @AuthProtected()
+  // @CohorteClassDocs.findAllbyCohort.summary()
+  // @CohorteClassDocs.findAllbyCohort.param()
+  // @CohorteClassDocs.findAllbyCohort.ok()
+  // @CohorteClassDocs.findAllbyCohort.notFound()
+  @ApiOperation({
+    summary: 'Obtener todas las clases de una cohorte',
+    description:
+      'Retorna todas las clases asociadas a una cohorte específica, ordenadas por fecha programada de forma descendente.',
+    operationId: 'getClassesByCohort',
+  })
+  @ApiParam({
+    name: 'cohorteId',
+    type: 'string',
+    format: 'uuid',
+    description: 'ID de la cohorte',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiOkResponse({
+    description: 'Lista de clases de la cohorte obtenida exitosamente',
+    type: [ClassResponseDto],
+  })
+  @ApiNotFoundResponse({
+    description: 'No se encontraron clases para la cohorte',
+    schema: {
+      example: {
+        statusCode: 404,
+        message:
+          'No se encontraron clases para la cohorte 550e8400-e29b-41d4-a716-446655440000',
+        error: 'Not Found',
+      },
+    },
+  })
+  findAllbyCohort(@Param('cohorteId') cohorteId: string) {
+    return this.classService.findAllbyCohort(cohorteId);
   }
 
   @Get(':id')

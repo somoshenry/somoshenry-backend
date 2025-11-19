@@ -68,6 +68,41 @@ export const CohorteClassDocs = {
       }),
   },
 
+  // findAllbyCohort: {
+  //   summary: () =>
+  //     ApiOperation({
+  //       summary: 'Obtener todas las clases de una cohorte',
+  //       description:
+  //         'Retorna todas las clases asociadas a una cohorte específica, ordenadas por fecha programada de forma ascendente.',
+  //       operationId: 'getClassesByCohort',
+  //     }),
+  //   param: () =>
+  //     ApiParam({
+  //       name: 'cohorteId',
+  //       type: 'string',
+  //       format: 'uuid',
+  //       description: 'ID de la cohorte',
+  //       example: '550e8400-e29b-41d4-a716-446655440000',
+  //     }),
+  //   ok: () =>
+  //     ApiOkResponse({
+  //       description: 'Lista de clases de la cohorte obtenida exitosamente',
+  //       type: [ClassResponseDto],
+  //     }),
+  //   notFound: () =>
+  //     ApiNotFoundResponse({
+  //       description: 'No se encontraron clases para la cohorte',
+  //       schema: {
+  //         example: {
+  //           statusCode: 404,
+  //           message:
+  //             'No se encontraron clases para la cohorte 550e8400-e29b-41d4-a716-446655440000',
+  //           error: 'Not Found',
+  //         },
+  //       },
+  //     }),
+  // },
+
   findOne: {
     summary: () =>
       ApiOperation({

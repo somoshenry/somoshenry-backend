@@ -6,6 +6,7 @@ import {
   Inject,
   forwardRef,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,6 +21,8 @@ import { NotificationType } from '../../notifications/socket/entities/notificati
 
 @Injectable()
 export class CohorteService {
+  private readonly logger = new Logger(CohorteService.name);
+
   constructor(
     @InjectRepository(Cohorte)
     private readonly cohorteRepo: Repository<Cohorte>,
@@ -110,7 +113,7 @@ export class CohorteService {
     await this.notificationService.create({
       receiverId: userId,
       senderId,
-      type: NotificationType.COHORTE_INVITATION,
+      type: NotificationType.COHORTE_ASSIGNED,
       metadata: {
         cohorteId: cohorte.id,
         cohorteName: cohorte.name,
@@ -132,48 +135,75 @@ export class CohorteService {
   }
 
   // ============================================
-  // OBTENER MIS COHORTES (COHORTES DONDE ESTOY INSCRITO)
+  // OBTENER MIS COHORTES (TODAS LAS COHORTES DONDE ESTOY)
   // ============================================
   async getMyCohortes(userId: string) {
-    // Verificar que el usuario existe
-    const userExists = await this.userRepo.exists({ where: { id: userId } });
-    if (!userExists) {
-      throw new UnauthorizedException('Usuario no válido');
+    try {
+      this.logger.log(`[getMyCohortes] Iniciando para usuario: ${userId}`);
+
+      // Verificar que el usuario existe
+      const userExists = await this.userRepo.exists({ where: { id: userId } });
+      if (!userExists) {
+        this.logger.warn(`Usuario ${userId} no existe`);
+        throw new UnauthorizedException('Usuario no válido');
+      }
+
+      // Buscar memberships del usuario
+      const members = await this.memberRepo.find({
+        where: { user: { id: userId } },
+        relations: ['cohorte'],
+        order: { joinedAt: 'DESC' },
+      });
+
+      this.logger.log(
+        `[getMyCohortes] Encontrados ${members?.length || 0} memberships`,
+      );
+
+      if (!members || members.length === 0) {
+        return [];
+      }
+
+      // Mapear los resultados
+      const result = members
+        .map((member) => {
+          // Validar que el cohorte existe
+          if (!member.cohorte) {
+            this.logger.warn(`Member ${member.id} sin cohorte asociado`);
+            return null;
+          }
+
+          return {
+            cohorte: {
+              id: member.cohorte.id,
+              name: member.cohorte.name,
+              description: member.cohorte.description ?? null,
+              startDate: member.cohorte.startDate ?? null,
+              endDate: member.cohorte.endDate ?? null,
+              status: member.cohorte.status,
+              schedule: member.cohorte.schedule ?? null,
+              modality: member.cohorte.modality,
+            },
+            myRole: member.role,
+            myStatus: member.status,
+            joinedAt: member.joinedAt,
+            attendance:
+              member.role === CohorteRoleEnum.STUDENT
+                ? (member.attendance ?? null)
+                : undefined,
+            finalGrade:
+              member.role === CohorteRoleEnum.STUDENT
+                ? (member.finalGrade ?? null)
+                : undefined,
+          };
+        })
+        .filter((item): item is Exclude<typeof item, null> => item !== null);
+
+      this.logger.log(`[getMyCohortes] Retornando ${result.length} cohortes`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[getMyCohortes] Error: ${error.message}`, error.stack);
+      throw error;
     }
-
-    // Buscar en la tabla intermedia cohorte_members
-    const members = await this.memberRepo.find({
-      where: {
-        user: { id: userId },
-        // status: MemberStatusEnum.ACTIVE, // Solo cohortes activos
-      },
-      relations: ['cohorte'], // Traer info del cohorte
-      order: { joinedAt: 'DESC' }, // Más recientes primero
-    });
-
-    // Mapear para devolver info útil
-    return members.map((member) => ({
-      // Info del cohorte
-      cohorte: {
-        id: member.cohorte.id,
-        name: member.cohorte.name,
-        description: member.cohorte.description,
-        startDate: member.cohorte.startDate,
-        endDate: member.cohorte.endDate,
-        status: member.cohorte.status,
-        schedule: member.cohorte.schedule,
-        modality: member.cohorte.modality,
-      },
-      // Info de mi membresía
-      myRole: member.role, // TEACHER, STUDENT, TA
-      myStatus: member.status,
-      joinedAt: member.joinedAt,
-      // Si soy estudiante - usando operador ternario
-      ...(member.role === 'STUDENT' && {
-        attendance: member.attendance,
-        finalGrade: member.finalGrade,
-      }),
-    }));
   }
 
   // ============================================

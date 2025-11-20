@@ -52,6 +52,47 @@ export class CohorteController {
     return this.cohorteService.findAll();
   }
 
+  // ============================================
+  // ⚠️ RUTAS ESPECÍFICAS DEBEN ESTAR ANTES DE @Get(':id')
+  // ============================================
+
+  // ============================================
+  // MIS COHORTES (ACTIVAS E INACTIVAS)
+  // ============================================
+  @Get('me')
+  @AuthProtected()
+  @Roles(UserRole.ADMIN, UserRole.MEMBER, UserRole.TEACHER)
+  @ApiGetMyCohortes()
+  async getMyCohortes(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohortes(userId);
+  }
+
+  // ============================================
+  // MIS COHORTES COMO PROFESOR
+  // ============================================
+  @Get('me/teaching')
+  @AuthProtected()
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
+  @ApiGetMyCohorteAsTeacher()
+  async getMyCohorteAsTeacher(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohorteAsTeacher(userId);
+  }
+
+  // ============================================
+  // MIS COHORTES COMO ESTUDIANTE
+  // ============================================
+  @Get('me/studying')
+  @AuthProtected()
+  @Roles(UserRole.ADMIN, UserRole.MEMBER)
+  @ApiGetMyCohortesAsStudent()
+  async getMyCohortesAsStudent(@CurrentUser('id') userId: string) {
+    return this.cohorteService.getMyCohortesAsStudent(userId);
+  }
+
+  // ============================================
+  // RUTAS PARAMETRIZADAS (DESPUÉS DE RUTAS ESPECÍFICAS)
+  // ============================================
+
   @Get(':id')
   @AuthProtected()
   @CohorteDocs.findOne.summary()
@@ -115,38 +156,5 @@ export class CohorteController {
     @Param('userId') userId: string,
   ) {
     return this.cohorteService.removeMember(cohorteId, userId);
-  }
-
-  // ============================================
-  // MIS COHORTES (ACTIVAS E INACTIVAS)
-  // ============================================
-  @Get('me')
-  @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.MEMBER, UserRole.TEACHER)
-  @ApiGetMyCohortes()
-  async getMyCohortes(@CurrentUser('id') userId: string) {
-    return this.cohorteService.getMyCohortes(userId);
-  }
-
-  // ============================================
-  // MIS COHORTES COMO PROFESOR (OPCIONAL)
-  // ============================================
-  @Get('me/teaching')
-  @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.TEACHER)
-  @ApiGetMyCohorteAsTeacher()
-  async getMyCohorteAsTeacher(@CurrentUser('id') userId: string) {
-    return this.cohorteService.getMyCohorteAsTeacher(userId);
-  }
-
-  // ============================================
-  // MIS COHORTES COMO ESTUDIANTE (OPCIONAL)
-  // ============================================
-  @Get('me/studying')
-  @AuthProtected()
-  @Roles(UserRole.ADMIN, UserRole.MEMBER)
-  @ApiGetMyCohortesAsStudent()
-  async getMyCohortesAsStudent(@CurrentUser('id') userId: string) {
-    return this.cohorteService.getMyCohortesAsStudent(userId);
   }
 }

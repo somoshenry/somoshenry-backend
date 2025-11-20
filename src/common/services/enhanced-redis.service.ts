@@ -26,7 +26,8 @@ interface LatencyHistogram {
 @Injectable()
 export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EnhancedRedisService.name);
-  private redis: Redis;
+  private redis: Redis | null = null;
+  private redisDisabled = false;
 
   private healthCheckInterval: NodeJS.Timeout | null = null;
 
@@ -64,9 +65,27 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
   constructor() {
     /**
      * Config flexible:
+     * - Si DISABLE_REDIS=true O estamos en desarrollo local sin Redis configurado -> Solo fallback
      * - Si hay REDIS_URL -> Render KV / cloud Redis (rediss:// o redis://)
      * - Si no, usamos host/port locales
      */
+    const disableRedis =
+      process.env.DISABLE_REDIS === 'true' ||
+      (process.env.NODE_ENV === 'development' &&
+        !process.env.REDIS_URL &&
+        !process.env.REDIS_HOST);
+
+    if (disableRedis) {
+      this.logger.warn(
+        '⚠️ Redis está DESHABILITADO. Usando solo caché en memoria (fallback mode).',
+      );
+      this.redisDisabled = true;
+      this.metrics.fallbackActive = true;
+      this.healthState.healthy = false;
+      this.redis = null;
+      return;
+    }
+
     const redisUrl = process.env.REDIS_URL;
 
     if (redisUrl) {
@@ -106,6 +125,13 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
+    // Si Redis está deshabilitado, no intentamos conectar
+    if (this.redisDisabled || !this.redis) {
+      this.logger.log('Redis deshabilitado, usando caché en memoria');
+      this.startHealthCheck();
+      return;
+    }
+
     // Nunca dejamos que esto rompa el bootstrap
     try {
       const start = Date.now();
@@ -132,6 +158,12 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
       this.healthCheckInterval = null;
     }
 
+    // Si Redis está deshabilitado, no intentamos cerrar conexión
+    if (this.redisDisabled || !this.redis) {
+      this.logger.log('Redis estaba deshabilitado, limpieza completada');
+      return;
+    }
+
     try {
       await this.redis.quit();
       this.logger.log('Redis connection closed');
@@ -152,6 +184,11 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async performHealthCheck(): Promise<void> {
+    // Si Redis está deshabilitado, saltamos el health check
+    if (this.redisDisabled || !this.redis) {
+      return;
+    }
+
     const now = Date.now();
     this.healthState.nextCheck = now + this.HEALTH_CHECK_INTERVAL;
 
@@ -232,7 +269,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
-      if (this.metrics.fallbackActive) {
+      if (this.metrics.fallbackActive || !this.redis) {
         // Solo memoria
         this.fallbackCache.set(key, {
           data: value,
@@ -279,7 +316,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Redis
-      const buffer = await this.redis.getBuffer(key);
+      const buffer = await this.redis!.getBuffer(key);
       if (!buffer) {
         this.recordOperation(Date.now() - startTime);
         return null;
@@ -319,7 +356,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
 
     try {
-      if (this.metrics.fallbackActive) {
+      if (this.metrics.fallbackActive || !this.redis) {
         keys.forEach((k) => this.fallbackCache.delete(k));
         this.recordOperation(Date.now() - startTime);
         return keys.length;
@@ -342,7 +379,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
 
     try {
-      if (this.metrics.fallbackActive) {
+      if (this.metrics.fallbackActive || !this.redis) {
         const count = keys.filter((key) => {
           const entry = this.fallbackCache.get(key);
           return entry && entry.timestamp > Date.now();
@@ -366,7 +403,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
 
     try {
-      if (this.metrics.fallbackActive) {
+      if (this.metrics.fallbackActive || !this.redis) {
         const entry = this.fallbackCache.get(key);
         if (entry) {
           entry.timestamp = Date.now() + seconds * 1000;
@@ -392,7 +429,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
 
     try {
-      if (this.metrics.fallbackActive) {
+      if (this.metrics.fallbackActive || !this.redis) {
         const list = (this.fallbackCache.get(key)?.data as unknown[]) || [];
         list.unshift(...values);
         this.fallbackCache.set(key, {
@@ -423,7 +460,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
 
     try {
-      if (this.metrics.fallbackActive) {
+      if (this.metrics.fallbackActive || !this.redis) {
         const list = (
           (this.fallbackCache.get(key)?.data as unknown[]) || []
         ).map((v) => String(v));
@@ -444,7 +481,7 @@ export class EnhancedRedisService implements OnModuleInit, OnModuleDestroy {
 
   async publish(channel: string, message: string): Promise<number> {
     try {
-      if (this.metrics.fallbackActive) {
+      if (this.metrics.fallbackActive || !this.redis) {
         this.logger.warn(`[FALLBACK] Publish ignored on channel ${channel}`);
         return 0;
       }

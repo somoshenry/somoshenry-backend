@@ -155,38 +155,48 @@ export class CohorteService {
         order: { joinedAt: 'DESC' },
       });
 
-      this.logger.log(`[getMyCohortes] Encontrados ${members?.length || 0} memberships`);
+      this.logger.log(
+        `[getMyCohortes] Encontrados ${members?.length || 0} memberships`,
+      );
 
       if (!members || members.length === 0) {
         return [];
       }
 
       // Mapear los resultados
-      const result = members.map((member) => {
-        // Validar que el cohorte existe
-        if (!member.cohorte) {
-          this.logger.warn(`Member ${member.id} sin cohorte asociado`);
-          return null;
-        }
+      const result = members
+        .map((member) => {
+          // Validar que el cohorte existe
+          if (!member.cohorte) {
+            this.logger.warn(`Member ${member.id} sin cohorte asociado`);
+            return null;
+          }
 
-        return {
-          cohorte: {
-            id: member.cohorte.id,
-            name: member.cohorte.name,
-            description: member.cohorte.description ?? null,
-            startDate: member.cohorte.startDate ?? null,
-            endDate: member.cohorte.endDate ?? null,
-            status: member.cohorte.status,
-            schedule: member.cohorte.schedule ?? null,
-            modality: member.cohorte.modality,
-          },
-          myRole: member.role,
-          myStatus: member.status,
-          joinedAt: member.joinedAt,
-          attendance: member.role === CohorteRoleEnum.STUDENT ? (member.attendance ?? null) : undefined,
-          finalGrade: member.role === CohorteRoleEnum.STUDENT ? (member.finalGrade ?? null) : undefined,
-        };
-      }).filter((item): item is Exclude<typeof item, null> => item !== null);
+          return {
+            cohorte: {
+              id: member.cohorte.id,
+              name: member.cohorte.name,
+              description: member.cohorte.description ?? null,
+              startDate: member.cohorte.startDate ?? null,
+              endDate: member.cohorte.endDate ?? null,
+              status: member.cohorte.status,
+              schedule: member.cohorte.schedule ?? null,
+              modality: member.cohorte.modality,
+            },
+            myRole: member.role,
+            myStatus: member.status,
+            joinedAt: member.joinedAt,
+            attendance:
+              member.role === CohorteRoleEnum.STUDENT
+                ? (member.attendance ?? null)
+                : undefined,
+            finalGrade:
+              member.role === CohorteRoleEnum.STUDENT
+                ? (member.finalGrade ?? null)
+                : undefined,
+          };
+        })
+        .filter((item): item is Exclude<typeof item, null> => item !== null);
 
       this.logger.log(`[getMyCohortes] Retornando ${result.length} cohortes`);
       return result;

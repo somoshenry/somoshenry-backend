@@ -71,18 +71,28 @@ export class CohorteClassService {
   }
 
   async findAllbyCohort(cohorteId: string): Promise<CohorteClass[]> {
+    // Validar que el cohorte existe
+    const cohorte = await this.cohorteRepo.findOne({
+      where: { id: cohorteId },
+    });
+
+    if (!cohorte) {
+      throw new NotFoundException(`Cohorte ${cohorteId} no encontrado`);
+    }
+
     const classes = await this.classRepo.find({
       where: { cohorte: { id: cohorteId } },
       relations: ['cohorte', 'teacher'],
       order: { createdAt: 'DESC' },
     });
     // Verificar longitud del array
-    if (classes.length === 0) {
-      throw new NotFoundException(
-        `No se encontraron clases para la cohorte ${cohorteId}`,
-      );
-    }
+    // if (classes.length === 0) {
+    //   throw new NotFoundException(
+    //     `No se encontraron clases para la cohorte ${cohorteId}`,
+    //   );
+    // }
 
+    // Buscar clases (retornar [] si no hay)
     return classes;
   }
 

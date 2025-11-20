@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Follow } from './entities/follow.entity';
@@ -22,7 +17,7 @@ export class FollowService {
 
   async seguirUsuario(idSeguidor: string, idSeguido: string) {
     if (idSeguidor === idSeguido) {
-      throw new BadRequestException('No puedes seguirte a ti mismo');
+      return { success: false, statusCode: 400 };
     }
 
     const seguidor = await this.usuarioRepo.findOne({
@@ -33,7 +28,7 @@ export class FollowService {
     });
 
     if (!seguidor || !seguido) {
-      throw new NotFoundException('Usuario no encontrado');
+      return { success: false, statusCode: 404 };
     }
 
     const existe = await this.followRepo.findOne({
@@ -44,7 +39,7 @@ export class FollowService {
     });
 
     if (existe) {
-      throw new BadRequestException('Ya sigues a este usuario');
+      return { success: false, statusCode: 400 };
     }
 
     const follow = this.followRepo.create({
@@ -52,15 +47,14 @@ export class FollowService {
       following: seguido,
     });
 
-    const savedFollow = await this.followRepo.save(follow);
+    await this.followRepo.save(follow);
 
-    // 🔔 Emitimos el evento del nuevo seguidor
     this.eventEmitter.emit('user.followed', {
       sender: seguidor,
       receiver: seguido,
     });
 
-    return savedFollow;
+    return { success: true };
   }
 
   async dejarDeSeguir(idSeguidor: string, idSeguido: string) {
@@ -71,10 +65,10 @@ export class FollowService {
       },
     });
 
-    if (!follow) throw new NotFoundException('No sigues a este usuario');
+    if (!follow) return { success: false, statusCode: 404 };
 
     await this.followRepo.remove(follow);
-    return { mensaje: 'Has dejado de seguir a este usuario' };
+    return { success: true };
   }
 
   async dejarDeSeguirByFollower(
@@ -91,17 +85,15 @@ export class FollowService {
     });
 
     if (!follow) {
-      throw new NotFoundException('No sigues a este usuario');
+      return { success: false, statusCode: 404 };
     }
 
     if (requestUserId !== idSeguidor && userRole !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        'No tienes permiso para dejar de seguir por otro usuario',
-      );
+      return { success: false, statusCode: 403 };
     }
 
     await this.followRepo.remove(follow);
-    return { mensaje: 'Has dejado de seguir a este usuario' };
+    return { success: true };
   }
 
   async removeFollower(
@@ -118,17 +110,15 @@ export class FollowService {
     });
 
     if (!follow) {
-      throw new NotFoundException('Este usuario no te sigue');
+      return { success: false, statusCode: 404 };
     }
 
     if (requestUserId !== idSeguido && userRole !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        'No tienes permiso para eliminar este seguidor',
-      );
+      return { success: false, statusCode: 403 };
     }
 
     await this.followRepo.remove(follow);
-    return { mensaje: 'Seguidor eliminado correctamente' };
+    return { success: true };
   }
 
   async obtenerSeguidores(idUsuario: string) {

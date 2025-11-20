@@ -13,6 +13,7 @@ import {
   extractPublicIdFromUrl,
   getFileTypeFromUrl,
 } from 'src/common/utils/cloudinaryUtils';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 @Injectable()
 export class FilesService {
@@ -220,7 +221,7 @@ export class FilesService {
       return { message: 'File successfully deleted', result };
     } catch (error) {
       // Log para debugging
-      console.error('Error in deletePostFile:', error);
+      DevLogger.error('Error in deletePostFile:', error);
       throw error;
     }
   }
@@ -263,7 +264,7 @@ export class FilesService {
       return { message: 'Profile picture successfully deleted', result };
     } catch (error) {
       // Log para debugging
-      console.error('Error in deletePostFile:', error);
+      DevLogger.error('Error in deleteUserProfilePicture:', error);
       throw error;
     }
   }
@@ -306,7 +307,7 @@ export class FilesService {
       return { message: 'Cover image successfully deleted', result };
     } catch (error) {
       // Log para debugging
-      console.error('Error in deletePostFile:', error);
+      DevLogger.error('Error in deleteUserCoverPicture:', error);
       throw error;
     }
   }
@@ -346,11 +347,14 @@ export class FilesService {
             resourceType,
           );
           if (result.result !== 'ok') {
-            console.warn(`Previous file deletion result: ${result.result}`);
+            DevLogger.warn(`Previous file deletion result: ${result.result}`);
           }
         }
       } catch (error) {
-        console.warn('No se pudo eliminar el archivo anterior:', error.message);
+        DevLogger.warn(
+          'No se pudo eliminar el archivo anterior:',
+          error.message,
+        );
       }
     }
 
@@ -420,13 +424,13 @@ export class FilesService {
           );
 
           if (cloudinaryDeleteResult?.result !== 'ok') {
-            console.warn(
+            DevLogger.warn(
               `Cloudinary result: ${cloudinaryDeleteResult?.result}`,
             );
           }
         }
       } catch (error) {
-        console.warn('Error eliminando de Cloudinary:', error.message);
+        DevLogger.warn('Error eliminando de Cloudinary:', error.message);
       }
     }
 

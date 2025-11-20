@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import toStream from 'buffer-to-stream';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 @Injectable()
 export class FilesRepository {
@@ -28,7 +29,7 @@ export class FilesRepository {
       });
       return result; // Devuelve { result: 'ok' } si se eliminó correctamente
     } catch (error) {
-      console.error(`Error deleting file ${publicId}:`, error.message);
+      DevLogger.error(`Error deleting file ${publicId}:`, error.message);
       // Devolvemos un resultado indicando que falló, pero sin lanzar excepción
       return { result: 'error' };
     }

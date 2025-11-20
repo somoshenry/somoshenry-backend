@@ -13,7 +13,13 @@ export function ApiCreateMaterial() {
     ApiOperation({
       summary: 'Subir un nuevo material al cohorte',
       description:
-        'Permite a profesores subir archivos (PDFs, imágenes, videos, etc.) al cohorte. Solo profesores y admins pueden usar este endpoint.',
+        'Permite a profesores subir archivos (PDFs, imágenes, videos, etc.) a la cohorte. Solo profesores y admins pueden usar este endpoint.\n\n' +
+        '⚠️ **IMPORTANTE: Los siguientes campos se extraen automáticamente al cargar un archivo:**\n\n' +
+        '- `fileName` - nombre del archivo\n' +
+        '- `fileUrl` - URL de Cloudinary\n' +
+        '- `fileType` - PDF, IMAGE, VIDEO, etc.\n' +
+        '- `mimeType` - tipo MIME (application/pdf, image/png, etc.)\n' +
+        '- `fileSize` - tamaño en bytes',
     }),
     ApiParam({
       name: 'cohorteId',
@@ -198,7 +204,13 @@ export function ApiUpdateMaterial() {
     ApiOperation({
       summary: 'Actualizar un material',
       description:
-        'Solo el profesor que subió el material puede actualizarlo. Permite cambiar título, descripción, categoría, etc.',
+        'Solo el profesor que subió el material puede actualizarlo. Permite cambiar título, descripción, categoría, etc.\n\n' +
+        '⚠️ **IMPORTANTE: Los siguientes campos se extraen automáticamente al cargar un archivo:**\n\n' +
+        '- `fileName` - nombre del archivo\n' +
+        '- `fileUrl` - URL de Cloudinary\n' +
+        '- `fileType` - PDF, IMAGE, VIDEO, etc.\n' +
+        '- `mimeType` - tipo MIME (application/pdf, image/png, etc.)\n' +
+        '- `fileSize` - tamaño en bytes',
     }),
     ApiParam({ name: 'cohorteId', description: 'ID del cohorte' }),
     ApiParam({ name: 'id', description: 'ID del material' }),

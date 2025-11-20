@@ -1,3 +1,4 @@
+/* eslint-disable @stylistic/quotes */
 import { Injectable } from '@nestjs/common';
 import { MercadopagoMapper } from './mercadopago.mapper';
 import { RequestPreferenceDto } from './dto/request.preference.dto';
@@ -16,6 +17,7 @@ import {
   SubscriptionStatus,
 } from '../subscription/entities/subscription.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { DevLogger } from '../../common/utils/dev-logger';
 
 type MercadoPagoItem = {
   title?: string | null;
@@ -48,7 +50,7 @@ export class MercadoPagoService {
     body: RequestPreferenceDto,
   ): Promise<ResponsePreferenceDto> {
     try {
-      console.log('🚀 Creando preferencia de pago en Mercado Pago', body);
+      DevLogger.log('🚀 Creando preferencia de pago en Mercado Pago', body);
       const preferenceCreateData =
         this.mercadopagoMapper.mapToPreferenceCreateData(body);
 
@@ -57,13 +59,13 @@ export class MercadoPagoService {
           preferenceCreateData,
         );
 
-      console.log(preferenceResponse);
+      DevLogger.log(preferenceResponse);
 
       return this.mercadopagoMapper.mapToResponsePreferenceDto(
         preferenceResponse,
       );
     } catch (error) {
-      console.error(error);
+      DevLogger.error(error);
       throw error;
     }
   }
@@ -76,42 +78,53 @@ export class MercadoPagoService {
       if (!resourceId && body.resource) {
         const parts = body.resource.split('/');
         resourceId = parts[parts.length - 1].toString();
-        console.log(`ID extraído de 'resource': ${resourceId}`);
+        DevLogger.log(`ID extraído de 'resource': ${resourceId}`);
       }
 
-      if (!resourceId) {
-        console.warn(
-          'No se pudo obtener el ID del recurso. Terminando procesamiento',
-        );
-        return { success: true, received: true };
-      }
-
-      console.log(
+      DevLogger.log(
         `Webhook recibido. Tema: ${topic}, Recurso ID: ${resourceId}`,
       );
 
-      if (topic === 'payment') {
-        await this.processPaymentNotification(resourceId);
-      }
-
-      if (topic === 'merchant_order') {
-        console.log('Procesando ORDEN DE COMERCIO (Merchant Order)');
+      // ✅ PROCESAR MERCHANT ORDER (tiene prioridad)
+      if (topic === 'merchant_order' && resourceId) {
+        DevLogger.log('Procesando ORDEN DE COMERCIO (Merchant Order)');
         const orderDetails =
           await this.percadopagoConnector.getMerchantOrderDetails(resourceId);
+
+        DevLogger.log('Detalles de la orden obtenidos:', orderDetails);
 
         if (orderDetails.payments && orderDetails.payments.length > 0) {
           const paymentId = orderDetails.payments[0].id as number;
           const paymentIdString = paymentId.toString();
-          console.log(`Pago asociado encontrado: ${paymentId}`);
-          const paymentDetails =
-            await this.percadopagoConnector.getPaymentDetails(paymentIdString);
-          console.log('Detalles del pago obtenidos:', paymentDetails);
+          DevLogger.log(`✅ Pago asociado encontrado: ${paymentId}`);
+
+          // ✅ PROCESAR EL PAGO AQUÍ
+          await this.processPaymentNotification(paymentIdString);
+        } else {
+          DevLogger.log(
+            '⚠️ Orden sin pagos asociados (posiblemente abandonada)',
+          );
         }
+
+        return { success: true, received: true };
+      }
+
+      // ✅ PROCESAR PAYMENT (solo si tiene ID válido)
+      if (topic === 'payment') {
+        if (!resourceId || resourceId === 'null') {
+          DevLogger.log(
+            '⚠️ Webhook de payment sin ID válido (pago no iniciado)',
+          );
+          return { success: true, received: true };
+        }
+
+        await this.processPaymentNotification(resourceId);
+        return { success: true, received: true };
       }
 
       return { success: true, received: true };
     } catch (error) {
-      console.error('Error fatal en Webhook:', error);
+      DevLogger.error('Error fatal en Webhook:', error);
       return { success: false, error: 'Internal error', received: true };
     }
   }
@@ -119,13 +132,18 @@ export class MercadoPagoService {
   private async processPaymentNotification(paymentId: string) {
     const paymentDetails =
       await this.percadopagoConnector.getPaymentDetails(paymentId);
-    console.log('Detalles del pago obtenidos:', paymentDetails);
+    DevLogger.log('Detalles del pago obtenidos:', paymentDetails);
+
     const { status } = paymentDetails;
+    DevLogger.log(`📊 Status del pago: ${status}`);
+
     if (status === 'approved') {
       await this.handleApprovedPayment(paymentDetails);
     } else if (status === 'rejected') {
+      DevLogger.log('🚨 Entrando a handleRejectedPayment');
       await this.handleRejectedPayment(paymentDetails);
     } else if (status === 'pending') {
+      DevLogger.log('⏳ Entrando a handlePendingPayment');
       await this.handlePendingPayment(paymentDetails);
     }
   }
@@ -142,7 +160,7 @@ export class MercadoPagoService {
       external_reference,
     } = paymentDetails;
 
-    console.log(`PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
+    DevLogger.log(`PAGO APROBADO ID: ${id}. Detalle: ${status_detail}`);
 
     const userContext = await this.getUserAndSubscription(external_reference);
     if (!userContext) {
@@ -204,12 +222,12 @@ export class MercadoPagoService {
       await this.sendNotificationSafely(() =>
         this.notificationService.sendPaymentSuccessNotification(user.email),
       );
-      console.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
+      DevLogger.log(`📧 Notificación de pago exitoso enviada a ${user.email}`);
     } else {
-      console.log(`⚠️ Pago duplicado detectado. No se envió notificación.`);
+      DevLogger.log(`⚠️ Pago duplicado detectado. No se envió notificación.`);
     }
 
-    console.log(`✅ Subscripción actualizada → Plan: ${purchasedPlan}`);
+    DevLogger.log(`✅ Subscripción actualizada → Plan: ${purchasedPlan}`);
   }
 
   private async handleRejectedPayment(paymentDetails: PaymentResponse) {
@@ -224,7 +242,7 @@ export class MercadoPagoService {
       external_reference,
     } = paymentDetails;
 
-    console.error(`PAGO RECHAZADO ID: ${id}. Motivo: ${status_detail}`);
+    DevLogger.error(`PAGO RECHAZADO ID: ${id}. Motivo: ${status_detail}`);
 
     const userContext = await this.getUserAndSubscription(external_reference);
     if (!userContext) {
@@ -276,7 +294,7 @@ export class MercadoPagoService {
     );
 
     if (shouldExpireSubscription) {
-      console.log('Suscripción expirada por rechazo de pago');
+      DevLogger.log('Suscripción expirada por rechazo de pago');
     }
   }
 
@@ -292,7 +310,7 @@ export class MercadoPagoService {
       external_reference,
     } = paymentDetails;
 
-    console.warn(`PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
+    DevLogger.log(`PAGO PENDIENTE ID: ${id}. Detalle: ${status_detail}`);
 
     const userContext = await this.getUserAndSubscription(external_reference);
     if (!userContext) {
@@ -324,14 +342,14 @@ export class MercadoPagoService {
       });
     });
 
-    console.log('Pago pendiente registrado en BD.');
+    DevLogger.log('Pago pendiente registrado en BD.');
   }
 
   private async getUserAndSubscription(
     externalReference?: string | null,
   ): Promise<{ user: User; subscription: Subscription } | null> {
     if (!externalReference) {
-      console.error('No vino external_reference en el pago');
+      DevLogger.error('No vino external_reference en el pago');
       return null;
     }
 
@@ -340,7 +358,7 @@ export class MercadoPagoService {
     });
 
     if (!user) {
-      console.error('No existe el usuario con id:', externalReference);
+      DevLogger.error('No existe el usuario con id:', externalReference);
       return null;
     }
 
@@ -349,7 +367,7 @@ export class MercadoPagoService {
     });
 
     if (!subscription) {
-      console.error(`El usuario ${user.id} no tiene subscripción`);
+      DevLogger.error(`El usuario ${user.id} no tiene subscripción`);
       return null;
     }
 
@@ -388,7 +406,7 @@ export class MercadoPagoService {
     try {
       await action();
     } catch (error) {
-      console.error('No se pudo enviar la notificación de pago:', error);
+      DevLogger.error('No se pudo enviar la notificación de pago:', error);
     }
   }
 }

@@ -3,21 +3,23 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 export default registerAs('typeorm', () => {
-  const isRender = !!process.env.DATABASE_URL;
+  const useSSL = process.env.DB_SSL === 'true';
 
-  if (isRender) {
-    console.log('Conectando a base de datos Render...');
-    return {
-      type: 'postgres',
-      url: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      autoLoadEntities: true,
-      synchronize: true,
-      timezone: 'UTC', // Base de datos en UTC
-    };
+  // Determinar si es conexión remota basada en el host
+  const host = process.env.DB_HOST || 'localhost';
+  const isRemote =
+    host.includes('render.com') ||
+    host.includes('amazonaws.com') ||
+    !!process.env.DATABASE_URL;
+
+  if (isRemote) {
+    console.log(
+      `Conectando a base de datos remota (${host}) con SSL: ${useSSL}...`,
+    );
+  } else {
+    console.log('Conectando a base de datos local...');
   }
 
-  console.log('Conectando a base de datos local...');
   return {
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -26,8 +28,10 @@ export default registerAs('typeorm', () => {
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'somoshenry',
     autoLoadEntities: true,
-    synchronize: true,
-    // ssl: { rejectUnauthorized: false },
-    timezone: 'UTC', // Base de datos en UTC
+    synchronize: process.env.NODE_ENV !== 'production',
+    ssl: useSSL ? { rejectUnauthorized: false } : false,
+    timezone: 'UTC',
+    retryAttempts: 5,
+    retryDelay: 3000,
   };
 });

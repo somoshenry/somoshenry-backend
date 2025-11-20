@@ -17,6 +17,7 @@ export enum NotificationType {
   NEW_FOLLOWER = 'NEW_FOLLOWER',
   NEW_MESSAGE = 'NEW_MESSAGE',
   COHORTE_INVITATION = 'COHORTE_INVITATION',
+  COHORTE_ASSIGNED = 'COHORTE_ASSIGNED',
 }
 
 @Entity('notifications')
